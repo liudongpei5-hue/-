@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>卢夫人墓 · 铅笔骨架实验</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js",
+          "three/addons/": "/node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="scene" aria-label="卢夫人墓三维铅笔骨架"></canvas>
+      <div class="paper-grain" aria-hidden="true"></div>
+      <header>
+        <p class="eyebrow">TANG TOMB / VISUAL TEST 01</p>
+        <h1>卢夫人墓<br><span>三维铅笔骨架</span></h1>
+        <p class="intro">Z 轴向上 · 透视相机<br>拖动旋转，滚轮缩放，点击结构检查分组。</p>
+      </header>
+      <aside class="controls">
+        <div class="control-head">
+          <span>结构选择</span>
+          <button id="reset-view" type="button">回到整体</button>
+        </div>
+        <div id="structure-list" class="structure-list"></div>
+        <div class="sliders">
+          <label>线稿浓度 <output id="density-value">72</output><input id="density" type="range" min="25" max="100" value="72"></label>
+          <label>复描偏移 <output id="jitter-value">55</output><input id="jitter" type="range" min="0" max="100" value="55"></label>
+          <label>纸张颗粒 <output id="grain-value">34</output><input id="grain" type="range" min="0" max="100" value="34"></label>
+        </div>
+      </aside>
+      <footer><span id="status">正在读取几何数据…</span><span>74 vertices / 111 edges</span></footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
