@@ -811,8 +811,8 @@ function setupInterface() {
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
   const artifactAssets = {
-    "镇墓武士俑": "/public/assets/artifacts/guardian-warrior-m2338-1.png",
-    "镇墓兽": "/public/assets/artifacts/tomb-beast-m2338-2.png"
+    "镇墓武士俑": "/assets/artifacts/guardian-warrior-m2338-1.png",
+    "镇墓兽": "/assets/artifacts/tomb-beast-m2338-2.png"
   };
   Object.values(artifactAssets).forEach(src => {
     const image = new Image();
@@ -866,7 +866,7 @@ bindSlider("jitter", value => objects.forEach(group => [group.userData.lines.mai
 bindSlider("grain", value => document.querySelector(".paper-grain").style.opacity = value / 100);
 
 async function init() {
-  const response = await fetch("/public/geometry-export.json?v=20260711-new-13");
+  const response = await fetch("/geometry-export.json?v=20260711-new-13");
   if (!response.ok) throw new Error("无法读取 geometry-export.json");
   const data = await response.json();
   data.geometries.forEach(addStructure);
