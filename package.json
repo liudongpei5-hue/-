@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build"
+    "build": "vite build",
+    "verify": "node --check src/main.js && node scripts/verify.mjs"
   },
   "dependencies": {
     "three": "^0.178.0"

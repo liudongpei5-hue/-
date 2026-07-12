@@ -3,20 +3,20 @@
   "source": {
     "dataset": "elements.json",
     "exported_from": "backend/data/陕西咸阳唐李将军魏公故卢夫人墓/elements.json",
-    "dataset_updated_at": "2026-07-11T12:29:21.404327+00:00",
+    "dataset_updated_at": "2026-07-11T07:18:40.704015+00:00",
     "coordinate_system": "world-space, right-handed XYZ, meters",
     "transform_note": "Vertices are already in world coordinates. Transform values are retained as editing metadata."
   },
   "summary": {
-    "geometry_count": 13,
-    "vertex_count": 118,
-    "edge_count": 177
+    "geometry_count": 10,
+    "vertex_count": 74,
+    "edge_count": 111
   },
   "geometries": [
     {
       "id": "cc4d0eec-61d2-4bdb-807b-d40627c3ca71",
       "name": "墓室",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -229,7 +229,7 @@
     {
       "id": "ccbf4888-47d1-465f-b162-bcf2fdc48be3",
       "name": "甬道",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -378,7 +378,7 @@
     {
       "id": "7daa744c-b4c1-47f8-a2ad-0087a11e6c05",
       "name": "第三天井",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -527,7 +527,7 @@
     {
       "id": "67902877-31ad-4ab5-92f8-f70262d7e4c0",
       "name": "第三过洞",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -676,7 +676,7 @@
     {
       "id": "d425fffe-9e6c-4267-b749-6deb751e516a",
       "name": "第二天井",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -825,7 +825,7 @@
     {
       "id": "e70a64bc-de77-4357-afb1-9ea63f19c50e",
       "name": "第二过洞",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -974,7 +974,7 @@
     {
       "id": "db05c076-a7a7-4c09-9836-25a45261fa8c",
       "name": "第一天井",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -1123,7 +1123,7 @@
     {
       "id": "cab69be0-9299-4773-a4dd-2e79fba63ba4",
       "name": "第一过洞",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -1272,7 +1272,7 @@
     {
       "id": "e2374b4e-d006-4068-bd5b-8612465067ee",
       "name": "墓道",
-      "visible": false,
+      "visible": true,
       "transform": {
         "translation_m": [
           0.0,
@@ -1388,221 +1388,8 @@
     },
     {
       "id": "773d31b3-8c11-45ab-8b03-b1de13ed66e9",
-      "name": "D2",
-      "visible": true,
-      "transform": {
-        "translation_m": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation_degrees_xyz": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "vertices": [
-        {
-          "index": 0,
-          "id": "104e76f7-1d6e-401b-8de9-262e284bae4f",
-          "label": "P75",
-          "xyz_m": [
-            5.78,
-            -0.12099831836675667,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 1,
-          "id": "0293c231-c322-40ba-83df-24c0bad63fca",
-          "label": "P76",
-          "xyz_m": [
-            5.57,
-            0.17,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 2,
-          "id": "daad13ee-a857-49d7-a905-4aa8f4ffc46c",
-          "label": "P77",
-          "xyz_m": [
-            5.3,
-            0.13,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 3,
-          "id": "0e668e5e-b7c5-4b0d-bbe8-8d22d6271f41",
-          "label": "P78",
-          "xyz_m": [
-            5.18,
-            -0.0803605284359954,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 4,
-          "id": "fcc5037b-678a-4903-91f5-c2d69e79082d",
-          "label": "P79",
-          "xyz_m": [
-            5.35,
-            -0.36,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 5,
-          "id": "e27a29bc-fa93-4128-aeff-ab42510db0d5",
-          "label": "P80",
-          "xyz_m": [
-            5.69,
-            -0.4,
-            3.8560768765927604
-          ]
-        },
-        {
-          "index": 6,
-          "id": "5dbb1dfe-588c-423a-97d9-a4a6408f939a",
-          "label": "P81",
-          "xyz_m": [
-            5.57,
-            0.17,
-            -2.495283265467112
-          ]
-        },
-        {
-          "index": 7,
-          "id": "ec6d9fb8-d94e-4529-8372-53d0e975f379",
-          "label": "P82",
-          "xyz_m": [
-            5.18,
-            -0.0803605284359954,
-            -2.495283265467112
-          ]
-        },
-        {
-          "index": 8,
-          "id": "e266cc08-1306-4dca-9cd0-be54f26bd929",
-          "label": "P83",
-          "xyz_m": [
-            5.35,
-            -0.36,
-            -2.495283265467112
-          ]
-        },
-        {
-          "index": 9,
-          "id": "e70e0543-82ac-469a-a37f-90ec33c706f9",
-          "label": "P84",
-          "xyz_m": [
-            5.69,
-            -0.4,
-            -2.495283265467112
-          ]
-        },
-        {
-          "index": 10,
-          "id": "d78a75db-2274-4f55-904f-9496eed9c695",
-          "label": "P85",
-          "xyz_m": [
-            5.3,
-            0.13,
-            -2.495283265467112
-          ]
-        },
-        {
-          "index": 11,
-          "id": "4a71721c-94eb-43c1-a576-d5e26e85aed6",
-          "label": "P86",
-          "xyz_m": [
-            5.78,
-            -0.12099831836675667,
-            -2.495283265467112
-          ]
-        }
-      ],
-      "edges": [
-        {
-          "from_vertex_index": 6,
-          "to_vertex_index": 10
-        },
-        {
-          "from_vertex_index": 10,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 7,
-          "to_vertex_index": 8
-        },
-        {
-          "from_vertex_index": 8,
-          "to_vertex_index": 9
-        },
-        {
-          "from_vertex_index": 9,
-          "to_vertex_index": 11
-        },
-        {
-          "from_vertex_index": 11,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 2
-        },
-        {
-          "from_vertex_index": 2,
-          "to_vertex_index": 3
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 4
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 0
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 1
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 2,
-          "to_vertex_index": 10
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 8
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 9
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 11
-        }
-      ]
-    },
-    {
-      "id": "c53205c5-2362-4ad7-952d-5ecaea51f610",
       "name": "D1",
-      "visible": true,
+      "visible": false,
       "transform": {
         "translation_m": [
           0.0,
@@ -1615,564 +1402,8 @@
           0.0
         ]
       },
-      "vertices": [
-        {
-          "index": 0,
-          "id": "8f14de64-19eb-4938-99e5-50030ede31bf",
-          "label": "P88",
-          "xyz_m": [
-            4.086709101551685,
-            0.7287050467868676,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 1,
-          "id": "37c0294c-3d81-420d-8d8a-47b581f4d9fd",
-          "label": "P89",
-          "xyz_m": [
-            4.118030989033588,
-            0.07938772636648228,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 2,
-          "id": "85c1e2bd-d4a7-4fea-9b86-368ee58a90ef",
-          "label": "P90",
-          "xyz_m": [
-            3.9340828685643334,
-            -0.5640808014377213,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 3,
-          "id": "d140e7b7-f9cd-4de9-aa11-8227fd6c2f6b",
-          "label": "P91",
-          "xyz_m": [
-            3.0049307299065195,
-            -0.49623640125341717,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 4,
-          "id": "85753bf2-bd45-4ca5-ab04-83c8867c53fc",
-          "label": "P92",
-          "xyz_m": [
-            2.815184528492631,
-            0.028974932294223488,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 5,
-          "id": "38a9722c-9036-4760-9bd8-2f0a766909b0",
-          "label": "P93",
-          "xyz_m": [
-            3.0518290974857503,
-            0.6837421134489803,
-            3.8736148169460387
-          ]
-        },
-        {
-          "index": 6,
-          "id": "3e5c95cf-926f-4cb0-b8a5-53782f9a8b2a",
-          "label": "P94",
-          "xyz_m": [
-            4.118030989033588,
-            0.07938772636648228,
-            -2.1758394271508923
-          ]
-        },
-        {
-          "index": 7,
-          "id": "98b22c93-0115-447b-9861-0d5aaf6bb852",
-          "label": "P95",
-          "xyz_m": [
-            4.086709101551685,
-            0.7287050467868676,
-            -2.1758394271508923
-          ]
-        },
-        {
-          "index": 8,
-          "id": "b3edeb41-b7cd-4bb2-b106-eefaf236fb62",
-          "label": "P96",
-          "xyz_m": [
-            3.9340828685643334,
-            -0.5640808014377213,
-            -2.1758394271508923
-          ]
-        },
-        {
-          "index": 9,
-          "id": "e213e996-28fc-4045-8dab-caa0a58fd3bc",
-          "label": "P97",
-          "xyz_m": [
-            3.0518290974857503,
-            0.6837421134489803,
-            -2.1758394271508923
-          ]
-        },
-        {
-          "index": 10,
-          "id": "19526c6b-fbc6-4733-9b0d-4775ac5b69c3",
-          "label": "P98",
-          "xyz_m": [
-            3.0049307299065195,
-            -0.49623640125341717,
-            -2.1758394271508923
-          ]
-        },
-        {
-          "index": 11,
-          "id": "043466f3-18f6-47c5-bb17-ef34d1e62a62",
-          "label": "P98",
-          "xyz_m": [
-            2.815184528492631,
-            0.028974932294223488,
-            -2.1758394271508923
-          ]
-        }
-      ],
-      "edges": [
-        {
-          "from_vertex_index": 7,
-          "to_vertex_index": 9
-        },
-        {
-          "from_vertex_index": 9,
-          "to_vertex_index": 11
-        },
-        {
-          "from_vertex_index": 11,
-          "to_vertex_index": 10
-        },
-        {
-          "from_vertex_index": 10,
-          "to_vertex_index": 8
-        },
-        {
-          "from_vertex_index": 8,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 6,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 4
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 3
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 2
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 2
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 1
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 9,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 11
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 10
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 8,
-          "to_vertex_index": 2
-        }
-      ]
-    },
-    {
-      "id": "979ec994-c2d6-42e7-9e55-88e699bcc752",
-      "name": "东壁龛",
-      "visible": true,
-      "transform": {
-        "translation_m": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation_degrees_xyz": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "vertices": [
-        {
-          "index": 0,
-          "id": "c0c1ef75-e911-4cf6-8331-2aaa229a101d",
-          "label": "P99",
-          "xyz_m": [
-            1.2541608371019008,
-            -0.5100000000000027,
-            -2.299936425314962
-          ]
-        },
-        {
-          "index": 1,
-          "id": "f189ec85-293b-464b-b7ef-1590b7d96596",
-          "label": "P100",
-          "xyz_m": [
-            1.249184977390041,
-            -0.5100000000000001,
-            -1.1974634693860355
-          ]
-        },
-        {
-          "index": 2,
-          "id": "b7951ab6-5e8a-4cc1-a1a2-78c478b0b023",
-          "label": "P101",
-          "xyz_m": [
-            1.6850808566029678,
-            -0.5100000000000002,
-            -0.9359828722046685
-          ]
-        },
-        {
-          "index": 3,
-          "id": "a4fbb063-bfa2-4ffb-988c-427aceff4ad5",
-          "label": "P102",
-          "xyz_m": [
-            2.3157820226899375,
-            -0.5100000000000002,
-            -0.9625584040144918
-          ]
-        },
-        {
-          "index": 4,
-          "id": "73b54a69-320d-4d99-bce6-0bb5496ff8bc",
-          "label": "P103",
-          "xyz_m": [
-            2.6559719965682063,
-            -0.5099999999999973,
-            -1.247467493844046
-          ]
-        },
-        {
-          "index": 5,
-          "id": "2e4ecf40-2d32-4097-aab5-b8b886574c61",
-          "label": "P104",
-          "xyz_m": [
-            2.659729867417088,
-            -0.5099999999999999,
-            -2.2952083498267295
-          ]
-        },
-        {
-          "index": 6,
-          "id": "dc5d4b29-a498-4b07-acac-3105587ff790",
-          "label": "P105",
-          "xyz_m": [
-            1.2898314786523795,
-            -2.400374225051922,
-            -1.1974634693860355
-          ]
-        },
-        {
-          "index": 7,
-          "id": "a6d2c3d5-ffae-4896-b5a6-72ba4c694336",
-          "label": "P106",
-          "xyz_m": [
-            2.683845409496726,
-            -2.310625763220657,
-            -1.247467493844046
-          ]
-        },
-        {
-          "index": 8,
-          "id": "24a281eb-f7bc-4b6c-bac5-9b7436411e97",
-          "label": "P107",
-          "xyz_m": [
-            2.3459432534863334,
-            -2.31,
-            -0.9625584040144918
-          ]
-        },
-        {
-          "index": 9,
-          "id": "7b534eb5-fa1c-49af-a7ea-189dd5f3d792",
-          "label": "P108",
-          "xyz_m": [
-            1.658044615576065,
-            -2.37,
-            -0.9359828722046685
-          ]
-        },
-        {
-          "index": 10,
-          "id": "70040e08-cb29-4c25-a851-1a0cc0cc5a11",
-          "label": "P109",
-          "xyz_m": [
-            1.283113081839092,
-            -2.379782459583435,
-            -2.35
-          ]
-        },
-        {
-          "index": 11,
-          "id": "1813d925-aa0e-40a9-b784-c8a8ad5488e9",
-          "label": "P110",
-          "xyz_m": [
-            2.679343062656704,
-            -2.3027979166148462,
-            -2.35
-          ]
-        }
-      ],
-      "edges": [
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 2
-        },
-        {
-          "from_vertex_index": 2,
-          "to_vertex_index": 3
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 4
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 0
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 1
-        },
-        {
-          "from_vertex_index": 6,
-          "to_vertex_index": 9
-        },
-        {
-          "from_vertex_index": 9,
-          "to_vertex_index": 8
-        },
-        {
-          "from_vertex_index": 8,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 7,
-          "to_vertex_index": 11
-        },
-        {
-          "from_vertex_index": 11,
-          "to_vertex_index": 10
-        },
-        {
-          "from_vertex_index": 10,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 10,
-          "to_vertex_index": 0
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 11
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 2,
-          "to_vertex_index": 9
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 8
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 7
-        }
-      ]
-    },
-    {
-      "id": "31d4db30-6980-47e7-ae9b-dc7c20d607e9",
-      "name": "西壁龛",
-      "visible": true,
-      "transform": {
-        "translation_m": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation_degrees_xyz": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "vertices": [
-        {
-          "index": 0,
-          "id": "709bfd9f-abc3-4938-9b82-b94d1707aeef",
-          "label": "P111",
-          "xyz_m": [
-            3.0016762997955384,
-            0.7025275180413775,
-            -0.5513542106200521
-          ]
-        },
-        {
-          "index": 1,
-          "id": "44d5bde3-aaed-4d2c-815f-a3bc983b66e2",
-          "label": "P112",
-          "xyz_m": [
-            1.0803043930637313,
-            0.7134028798925325,
-            -0.5513542106200521
-          ]
-        },
-        {
-          "index": 2,
-          "id": "e3a092a2-bfbc-4995-8e5f-ff653d52d28f",
-          "label": "P113",
-          "xyz_m": [
-            1.0649601683162995,
-            3.054874719966059,
-            -0.5513542106200521
-          ]
-        },
-        {
-          "index": 3,
-          "id": "c6da01ea-45ad-4b26-bae0-38afdd045795",
-          "label": "P114",
-          "xyz_m": [
-            3.0818994320123094,
-            3.092016722932962,
-            -0.5513542106200521
-          ]
-        },
-        {
-          "index": 4,
-          "id": "5df3c732-67c6-4b06-9845-7c700858c5af",
-          "label": "P115",
-          "xyz_m": [
-            3.002230419652065,
-            0.7171708775031767,
-            -2.350000000000001
-          ]
-        },
-        {
-          "index": 5,
-          "id": "f8317945-906d-4310-9b96-73f97bb41c2f",
-          "label": "P116",
-          "xyz_m": [
-            1.09869821751492,
-            0.716500259657687,
-            -2.35
-          ]
-        },
-        {
-          "index": 6,
-          "id": "2109d6aa-0e0c-4dbb-8433-bf62e48f30e7",
-          "label": "P117",
-          "xyz_m": [
-            1.0558507404076256,
-            3.0515540112246184,
-            -2.35
-          ]
-        },
-        {
-          "index": 7,
-          "id": "677ad90d-2d90-44a0-be1c-583c0e040fd2",
-          "label": "P118",
-          "xyz_m": [
-            3.072071860316453,
-            3.0898584590556664,
-            -2.350000000000001
-          ]
-        }
-      ],
-      "edges": [
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 2
-        },
-        {
-          "from_vertex_index": 2,
-          "to_vertex_index": 1
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 0
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 3
-        },
-        {
-          "from_vertex_index": 5,
-          "to_vertex_index": 4
-        },
-        {
-          "from_vertex_index": 4,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 7,
-          "to_vertex_index": 6
-        },
-        {
-          "from_vertex_index": 6,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 1,
-          "to_vertex_index": 5
-        },
-        {
-          "from_vertex_index": 0,
-          "to_vertex_index": 4
-        },
-        {
-          "from_vertex_index": 3,
-          "to_vertex_index": 7
-        },
-        {
-          "from_vertex_index": 6,
-          "to_vertex_index": 2
-        }
-      ]
+      "vertices": [],
+      "edges": []
     }
   ]
 }

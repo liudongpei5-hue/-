@@ -3,40 +3,104 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>卢夫人墓 · 铅笔骨架实验</title>
-    <link rel="stylesheet" href="/src/style.css" />
+    <title>唐代卢夫人墓｜数字考古档案</title>
+    <link rel="preload" as="fetch" href="/public/geometry-export.json?v=20260711-new-13" crossorigin="anonymous" />
+    <link rel="preload" as="image" href="/public/assets/artifacts/guardian-warrior-m2338-1.png" />
+    <link rel="preload" as="image" href="/public/assets/artifacts/tomb-beast-m2338-2.png" />
+    <link rel="stylesheet" href="/src/style.css?v=20260712-layout" />
     <script type="importmap">
-      {
-        "imports": {
-          "three": "/node_modules/three/build/three.module.js",
-          "three/addons/": "/node_modules/three/examples/jsm/"
-        }
-      }
+      {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
   </head>
   <body>
-    <main id="app">
+    <main id="app" data-view="model">
       <canvas id="scene" aria-label="卢夫人墓三维铅笔骨架"></canvas>
       <div class="paper-grain" aria-hidden="true"></div>
-      <header>
-        <p class="eyebrow">TANG TOMB / VISUAL TEST 01</p>
-        <h1>卢夫人墓<br><span>三维铅笔骨架</span></h1>
-        <p class="intro">Z 轴向上 · 透视相机<br>拖动旋转，滚轮缩放，点击结构检查分组。</p>
+      <div class="layout-grid" aria-hidden="true"></div>
+      <div id="transition-veil" class="transition-veil" aria-hidden="true"></div>
+
+      <button class="menu-trigger" id="menu-trigger" type="button" aria-label="打开目录">
+        <span>ME</span><span>NU</span>
+      </button>
+      <button class="about-trigger" type="button">关于项目</button>
+
+      <header class="site-brand">
+        <p class="eyebrow">3D VISUALIZATION OF THE SPACE-TIME ARCHAEOLOGY</p>
+        <h1>唐代卢夫人墓</h1>
+        <p class="brand-sub">陕西咸阳 · 麟德元年（664）</p>
       </header>
-      <aside class="controls">
-        <div class="control-head">
-          <span>结构选择</span>
-          <button id="reset-view" type="button">回到整体</button>
+
+      <section class="model-interface" aria-label="墓葬结构导航">
+        <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
+        <aside class="controls">
+          <div class="control-head">
+            <div><small>STRUCTURE INDEX</small><span>结构索引</span></div>
+            <button id="reset-view" type="button">返回整体 ↗</button>
+          </div>
+          <div id="structure-list" class="structure-list"></div>
+          <details class="sliders">
+            <summary>线稿参数 <small>STYLE</small></summary>
+            <label>线稿浓度 <output id="density-value">84</output><input id="density" type="range" min="25" max="100" value="84"></label>
+            <label>复描偏移 <output id="jitter-value">55</output><input id="jitter" type="range" min="0" max="100" value="55"></label>
+            <label>纸张颗粒 <output id="grain-value">42</output><input id="grain" type="range" min="0" max="100" value="42"></label>
+          </details>
+        </aside>
+        <div id="dimension-callout" class="dimension-callout" aria-live="polite" aria-hidden="true">
+          <i></i><span class="dimension-origin"></span>
+          <div><small>MEASURED · 考古简报</small><strong></strong><p></p></div>
         </div>
-        <div id="structure-list" class="structure-list"></div>
-        <div class="sliders">
-          <label>线稿浓度 <output id="density-value">72</output><input id="density" type="range" min="25" max="100" value="72"></label>
-          <label>复描偏移 <output id="jitter-value">55</output><input id="jitter" type="range" min="0" max="100" value="55"></label>
-          <label>纸张颗粒 <output id="grain-value">34</output><input id="grain" type="range" min="0" max="100" value="34"></label>
+        <div class="north-axis" aria-label="墓葬方向176度，北在墓室方向，南在墓道入口方向">
+          <span>北 N</span><i></i><b>176°</b><em>南 S</em>
         </div>
-      </aside>
-      <footer><span id="status">正在读取几何数据…</span><span>74 vertices / 111 edges</span></footer>
+      </section>
+
+      <section id="menu-page" class="page-layer menu-page" aria-hidden="true">
+        <div class="menu-title">
+          <strong>唐代卢夫人墓</strong>
+          <span>DIGITAL ARCHAEOLOGICAL ARCHIVE</span>
+        </div>
+        <nav class="chapter-nav" aria-label="章节目录">
+          <button data-target="model"><em>01</em><strong>MODEL</strong><span>三维示意图</span></button>
+          <button data-target="artifacts"><em>02</em><strong>ARTIFACTS</strong><span>文物详情</span></button>
+          <button data-target="data"><em>03</em><strong>DATA BASIS</strong><span>数据来源</span></button>
+          <button data-target="workflow"><em>04</em><strong>WORKFLOW</strong><span>工作展望</span></button>
+        </nav>
+        <div class="menu-progress"><i></i><span>01 / 04</span></div>
+        <footer class="page-footer"><span>CN　EN</span><span>REPORT SOURCE FILE</span></footer>
+      </section>
+
+      <section id="artifacts-page" class="page-layer artifacts-page" aria-hidden="true">
+        <div class="artifact-no">02 <span>ARTIFACTS</span></div>
+        <nav class="artifact-list" aria-label="文物类别">
+          <button class="active" data-artifact="镇墓武士俑">镇墓武士俑</button>
+          <button data-artifact="镇墓兽">镇墓兽</button>
+          <button data-artifact="骑马俑">骑马俑</button>
+          <button data-artifact="铜钵">铜钵</button>
+          <button data-artifact="银环">银环</button>
+          <button data-artifact="贝壳">贝壳</button>
+          <button data-artifact="玻璃串珠">玻璃串珠</button>
+          <button data-artifact="铜钱">铜钱</button>
+        </nav>
+        <div class="artifact-stage has-image" aria-hidden="true">
+          <div class="artifact-halo"></div>
+          <img id="artifact-image" class="artifact-image" src="/public/assets/artifacts/guardian-warrior-m2338-1.png" alt="" />
+          <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
+          <span class="artifact-shadow"></span>
+        </div>
+        <article class="artifact-copy">
+          <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
+          <h2>FIGURINE <span>镇墓武士俑</span></h2>
+          <p>泥质红陶，模制。出土于墓室入口处东侧，通高约65厘米。体表原施白、红彩，胸甲与护肩残存少量金箔痕迹。</p>
+          <button type="button">查看考古记录　↓</button>
+        </article>
+        <footer class="page-footer"><span>CN　EN</span><span>02 / 04</span></footer>
+      </section>
+
+      <section id="data-page" class="page-layer text-page" aria-hidden="true"><span>03</span><h2>DATA BASIS</h2><p>发掘简报、测绘数据与数字复原依据。</p></section>
+      <section id="workflow-page" class="page-layer text-page" aria-hidden="true"><span>04</span><h2>WORKFLOW</h2><p>制作流程、实现方式与应用场景。</p></section>
+
+      <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.js?v=20260712-camera-ui"></script>
   </body>
 </html>

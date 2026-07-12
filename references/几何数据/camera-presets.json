@@ -1,0 +1,15 @@
+{
+  "coordinateSystem": "world-space, right-handed XYZ, Z-up, meters",
+  "method": "camera positions read from the '特写' reference screenshots; projection testing shows the original editor retained the global origin as OrbitControls target; FOV follows the supplied editor setting of 48 degrees",
+  "presets": [
+    {"id":"tomb-passage","geometryIndex":8,"name":"墓道","position":[-12.8,5.2,8.3],"target":[0,0,0],"fov":48,"source":"墓道特写.png"},
+    {"id":"passage-1","geometryIndex":7,"name":"第一过洞","position":[-9.9,6.0,6.4],"target":[0,0,0],"fov":48,"source":"第一过洞特写.png"},
+    {"id":"courtyard-1","geometryIndex":6,"name":"第一天井","position":[-7.6,5.2,9.0],"target":[0,0,0],"fov":48,"source":"第一天井特写.png"},
+    {"id":"passage-2","geometryIndex":5,"name":"第二过洞","position":[-5.3,6.4,4.3],"target":[0,0,0],"fov":48,"source":"第二过洞特写.png"},
+    {"id":"courtyard-2","geometryIndex":4,"name":"第二天井","position":[-5.6,5.4,8.9],"target":[0,0,0],"fov":48,"source":"第二天井特写.png"},
+    {"id":"passage-3","geometryIndex":3,"name":"第三过洞","position":[-4.8,7.7,4.1],"target":[0,0,0],"fov":48,"source":"第三过洞特写.png"},
+    {"id":"courtyard-3","geometryIndex":2,"name":"第三天井","position":[-1.7,8.7,10.6],"target":[0,0,0],"fov":48,"source":"第三天井特写.png"},
+    {"id":"corridor","geometryIndex":1,"name":"甬道","position":[-1.2,10.8,-0.2],"target":[0,0,0],"fov":48,"source":"甬道特写.png"},
+    {"id":"chamber","geometryIndex":0,"name":"墓室","position":[15.4,10.8,-2.1],"target":[0,0,0],"fov":48,"source":"墓室.png"}
+  ]
+}
