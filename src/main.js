@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
@@ -9,9 +10,19 @@ const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
 scene.up.set(0, 0, 1);
+scene.add(new THREE.HemisphereLight(0xf8efe0, 0x6f6255, 2.2));
+const artifactKeyLight = new THREE.DirectionalLight(0xfff4df, 2.8);
+artifactKeyLight.position.set(3.5, -5.5, 7.5);
+scene.add(artifactKeyLight);
+const artifactFillLight = new THREE.DirectionalLight(0xd7e8ff, .9);
+artifactFillLight.position.set(-5.5, 4.5, 3.2);
+scene.add(artifactFillLight);
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 500);
 camera.up.set(0, 0, 1);
 camera.position.set(20, -25, 18);
@@ -27,6 +38,69 @@ controls.screenSpacePanning = true;
 controls.touches.ONE = THREE.TOUCH.ROTATE;
 controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
 
+const twoFingerGesture = {
+  startDistance: 0,
+  lastDistance: 0,
+  lastCenter: new THREE.Vector2(),
+  mode: "idle"
+};
+
+function getTouchPair(event) {
+  if (event.touches.length !== 2) return null;
+  const a = event.touches[0];
+  const b = event.touches[1];
+  const dx = b.clientX - a.clientX;
+  const dy = b.clientY - a.clientY;
+  return {
+    distance: Math.hypot(dx, dy),
+    center: new THREE.Vector2((a.clientX + b.clientX) * .5, (a.clientY + b.clientY) * .5)
+  };
+}
+
+function startTwoFingerGesture(event) {
+  const pair = getTouchPair(event);
+  if (!pair) return;
+  twoFingerGesture.startDistance = pair.distance;
+  twoFingerGesture.lastDistance = pair.distance;
+  twoFingerGesture.lastCenter.copy(pair.center);
+  twoFingerGesture.mode = "pending";
+  controls.enableZoom = true;
+}
+
+function updateTwoFingerGesture(event) {
+  const pair = getTouchPair(event);
+  if (!pair || twoFingerGesture.mode === "idle") return;
+  const centerMove = pair.center.distanceTo(twoFingerGesture.lastCenter);
+  const totalDistanceChange = Math.abs(pair.distance - twoFingerGesture.startDistance);
+  const frameDistanceChange = Math.abs(pair.distance - twoFingerGesture.lastDistance);
+
+  if (twoFingerGesture.mode === "pending") {
+    if (totalDistanceChange > 10 && totalDistanceChange > centerMove * .55) {
+      twoFingerGesture.mode = "pinch";
+    } else if (centerMove > 3 && frameDistanceChange < 9) {
+      twoFingerGesture.mode = "pan";
+    }
+  }
+
+  controls.enableZoom = twoFingerGesture.mode !== "pan";
+  twoFingerGesture.lastDistance = pair.distance;
+  twoFingerGesture.lastCenter.copy(pair.center);
+}
+
+function endTwoFingerGesture(event) {
+  if (event.touches.length >= 2) {
+    startTwoFingerGesture(event);
+    return;
+  }
+  twoFingerGesture.mode = "idle";
+  controls.enableZoom = true;
+}
+
+canvas.addEventListener("touchstart", startTwoFingerGesture, { passive: true, capture: true });
+canvas.addEventListener("touchmove", updateTwoFingerGesture, { passive: true, capture: true });
+canvas.addEventListener("touchend", endTwoFingerGesture, { passive: true, capture: true });
+canvas.addEventListener("touchcancel", endTwoFingerGesture, { passive: true, capture: true });
+
 const root = new THREE.Group();
 scene.add(root);
 const measurementGroup = new THREE.Group();
@@ -38,11 +112,18 @@ let selectedIndex = -1;
 let perspectiveGuides;
 let naturalShell;
 let groundLayer;
+let sketchVolumeLayer;
+let burialGoodsLayer;
+let groundCompass;
 let overallView;
 let cameraMoveToken = 0;
+let autoDemoTimer = 0;
+let autoDemoActive = false;
+let autoDemoStep = 0;
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
+const DEMO_ROUTE = [8, 7, 6, 5, 4, 3, 2, 1, 0];
 const STRUCTURE_MEASURES = {
   0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
   1: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.28 m"},{axis:"z",label:"1.92 m"}],
@@ -185,6 +266,149 @@ function addStructure(item, index) {
   objects.push(group);
 }
 
+function annotationLabel(text) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(246,242,232,.92)";
+  ctx.strokeStyle = "rgba(154,73,59,.9)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(24, 9, 80, 38, 18);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#4b4339";
+  ctx.font = "bold 24px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 64, 29);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(.28, .14, 1);
+  sprite.renderOrder = 24;
+  sprite.userData.opacityMaterial = material;
+  return sprite;
+}
+
+function createPointMarker(annotation) {
+  const group = new THREE.Group();
+  const height = Number(annotation.properties?.["高度"]) || .22;
+  const ringGeometry = new THREE.RingGeometry(.045, .07, 32);
+  const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x9a493b, transparent: true, opacity: .86, side: THREE.DoubleSide, depthWrite: false });
+  const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+  ring.rotation.x = Math.PI / 2;
+  ring.renderOrder = 18;
+  group.add(ring);
+
+  const stemGeometry = new THREE.BufferGeometry();
+  stemGeometry.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, .02, 0, 0, height + .08], 3));
+  const stemMaterial = new THREE.LineBasicMaterial({ color: 0x9a493b, transparent: true, opacity: .32, depthWrite: false });
+  const stem = new THREE.Line(stemGeometry, stemMaterial);
+  group.add(stem);
+
+  const label = annotationLabel(annotation.properties?.["平面图编号"] || "");
+  label.position.set(0, 0, height + .16);
+  group.add(label);
+  group.userData.opacityMaterials = [ringMaterial, stemMaterial, label.userData.opacityMaterial];
+  return group;
+}
+
+function normalizeArtifactModel(model, targetHeight) {
+  model.rotation.x = Math.PI / 2;
+  model.updateMatrixWorld(true);
+  let box = new THREE.Box3().setFromObject(model);
+  if (box.isEmpty()) return;
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.sub(new THREE.Vector3(center.x, center.y, box.min.z));
+  model.updateMatrixWorld(true);
+  box = new THREE.Box3().setFromObject(model);
+  const normalizedHeight = box.getSize(new THREE.Vector3()).z || size.y || 1;
+  const scale = targetHeight / normalizedHeight;
+  model.scale.multiplyScalar(scale);
+}
+
+function tuneArtifactMaterials(model, opacityMaterials) {
+  model.traverse(child => {
+    if (!child.isMesh) return;
+    child.castShadow = false;
+    child.receiveShadow = false;
+    const source = child.material || new THREE.MeshStandardMaterial();
+    const material = source.clone();
+    material.transparent = true;
+    material.opacity = .96;
+    material.depthWrite = true;
+    material.depthTest = true;
+    material.roughness = Math.max(material.roughness ?? .75, .64);
+    material.metalness = Math.min(material.metalness ?? 0, .08);
+    if (material.color && !material.map) material.color.lerp(new THREE.Color(0xb98f66), .28);
+    if ("envMapIntensity" in material) material.envMapIntensity = .8;
+    child.material = material;
+    opacityMaterials.push(material);
+  });
+}
+
+async function loadBurialGoods() {
+  const [pointsResponse] = await Promise.all([
+    fetch("/data/burial-goods-points.json?v=20260713-models")
+  ]);
+  if (!pointsResponse.ok) throw new Error("无法读取随葬品点位数据");
+  const pointData = await pointsResponse.json();
+  const annotations = pointData.points
+    .filter(point => point.properties?.["三维模型"] && point.worldXYZ)
+    .sort((a, b) => Number(a.properties?.["平面图编号"] || 0) - Number(b.properties?.["平面图编号"] || 0));
+  const modelIds = [...new Set(annotations.map(point => point.properties["三维模型"]))];
+  const loader = new GLTFLoader();
+  const library = new Map();
+  await Promise.all(modelIds.map(async modelId => {
+    const gltf = await loader.loadAsync(`/models/burial-goods/${modelId}.glb`);
+    library.set(modelId, gltf.scene);
+  }));
+
+  const layer = new THREE.Group();
+  layer.name = "随葬品三维模型与点位";
+  layer.userData.opacityMaterials = [];
+  const chamberCenter = structureTargets.get(0) || new THREE.Vector3(7.6, .8, -4.12);
+  annotations.forEach((annotation, index) => {
+    const source = library.get(annotation.properties["三维模型"]);
+    if (!source) return;
+    const anchor = annotation.worldXYZ;
+    const targetHeight = Number(annotation.properties?.["高度"]) || .22;
+    const instance = new THREE.Group();
+    instance.name = `${annotation.properties?.["器号"] || annotation.properties?.["平面图编号"]} ${annotation.properties?.["具体名称"] || ""}`;
+    instance.position.set(anchor.x, anchor.y, anchor.z + .018);
+    instance.rotation.z = Math.atan2(chamberCenter.y - anchor.y, chamberCenter.x - anchor.x) - Math.PI / 2 + (index % 5 - 2) * .045;
+    const model = source.clone(true);
+    normalizeArtifactModel(model, targetHeight);
+    tuneArtifactMaterials(model, layer.userData.opacityMaterials);
+    instance.add(model);
+    const marker = createPointMarker(annotation);
+    layer.userData.opacityMaterials.push(...marker.userData.opacityMaterials);
+    instance.add(marker);
+    layer.add(instance);
+  });
+  scene.add(layer);
+  burialGoodsLayer = layer;
+  return annotations.length;
+}
+
+function setBurialGoodsOpacity(multiplier) {
+  if (!burialGoodsLayer) return;
+  burialGoodsLayer.visible = multiplier > .01;
+  burialGoodsLayer.userData.opacityMaterials.forEach(material => {
+    const base = material.userData.baseOpacity ?? material.opacity ?? .9;
+    material.userData.baseOpacity = base;
+    material.opacity = base * multiplier;
+  });
+  burialGoodsLayer.traverse(child => {
+    if (child.type === "Sprite" && child.material) child.material.opacity = .9 * multiplier;
+  });
+}
+
 function boundsOf(item) {
   const box = new THREE.Box3();
   item.vertices.forEach(vertex => box.expandByPoint(new THREE.Vector3(...vertex.xyz_m)));
@@ -277,6 +501,204 @@ function buildNaturalShell(data) {
     shell.add(naturalLine(points, .34, 0x5e5951));
   });
   return shell;
+}
+
+function sketchWashMaterial(color = 0x8f7a5f, opacity = .18) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uOpacity: { value: opacity }
+    },
+    vertexShader: `
+      attribute float aShade;
+      attribute float aGrain;
+      varying float vShade;
+      varying float vGrain;
+      varying vec3 vWorld;
+      void main(){
+        vShade=aShade;
+        vGrain=aGrain;
+        vWorld=position;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      varying float vShade;
+      varying float vGrain;
+      varying vec3 vWorld;
+      float hatch(vec2 p){ return fract(sin(dot(floor(p),vec2(41.2,91.7)))*43758.5453); }
+      void main(){
+        float tooth=.72+.28*hatch(vWorld.xy*18.0+vWorld.z*3.0);
+        float edge=pow(abs(sin((vWorld.x-vWorld.y)*7.5+vGrain*4.0)),10.0)*.16;
+        float graphite=(.48+(1.0-vShade)*.88+edge)*tooth;
+        gl_FragColor=vec4(uColor,uOpacity*graphite);
+      }`
+  });
+}
+
+function trackOpacity(group, material, baseOpacity) {
+  material.userData.baseOpacity = baseOpacity;
+  group.userData.opacityMaterials.push(material);
+  return material;
+}
+
+function jitteredPoint(point, seed, scale = .025) {
+  return [
+    point[0] + (seededNoise(seed) * 2 - 1) * scale,
+    point[1] + (seededNoise(seed + 13) * 2 - 1) * scale,
+    point[2] + (seededNoise(seed + 29) * 2 - 1) * scale * .72
+  ];
+}
+
+function addSketchQuad(group, corners, options = {}) {
+  const divisionsU = options.divisionsU || 5;
+  const divisionsV = options.divisionsV || 4;
+  const color = options.color || 0x927b5c;
+  const opacity = options.opacity || .16;
+  const normal = new THREE.Vector3(...(options.normal || [0, 0, 1])).normalize();
+  const light = new THREE.Vector3(-.42, -.58, .7).normalize();
+  const shade = THREE.MathUtils.clamp(normal.dot(light) * .5 + .5, .18, .98);
+  const positions = [];
+  const shades = [];
+  const grains = [];
+  const pointAt = (u, v) => {
+    const a = new THREE.Vector3(...corners[0]).lerp(new THREE.Vector3(...corners[1]), u);
+    const b = new THREE.Vector3(...corners[3]).lerp(new THREE.Vector3(...corners[2]), u);
+    return a.lerp(b, v).toArray();
+  };
+  for (let uIndex = 0; uIndex < divisionsU; uIndex++) for (let vIndex = 0; vIndex < divisionsV; vIndex++) {
+    const u0 = uIndex / divisionsU, u1 = (uIndex + 1) / divisionsU;
+    const v0 = vIndex / divisionsV, v1 = (vIndex + 1) / divisionsV;
+    const seed = (options.seed || 0) + uIndex * 47 + vIndex * 89;
+    const quad = [
+      jitteredPoint(pointAt(u0, v0), seed),
+      jitteredPoint(pointAt(u1, v0), seed + 5),
+      jitteredPoint(pointAt(u1, v1), seed + 11),
+      jitteredPoint(pointAt(u0, v1), seed + 17)
+    ];
+    [0, 1, 2, 0, 2, 3].forEach(index => {
+      positions.push(...quad[index]);
+      shades.push(THREE.MathUtils.clamp(shade + (seededNoise(seed + index) - .5) * .16, .12, 1));
+      grains.push(Math.abs(seededNoise(seed + index * 19)));
+    });
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute("aShade", new THREE.Float32BufferAttribute(shades, 1));
+  geo.setAttribute("aGrain", new THREE.Float32BufferAttribute(grains, 1));
+  const mat = trackOpacity(group, sketchWashMaterial(color, opacity), opacity);
+  group.add(new THREE.Mesh(geo, mat));
+
+  if (options.hatching !== false) {
+    const hatch = [];
+    const hatchCount = Math.ceil((divisionsU + divisionsV) * (1.8 - shade));
+    for (let i = 0; i < hatchCount; i++) {
+      const t = (i + .35) / hatchCount;
+      const start = pointAt(.08 + t * .72, .12 + Math.abs(seededNoise(i + options.seed)) * .18);
+      const end = pointAt(.18 + t * .74, .72 + Math.abs(seededNoise(i + options.seed + 9)) * .18);
+      hatch.push(...jitteredPoint(start, i + 201, .018), ...jitteredPoint(end, i + 229, .018));
+    }
+    const hatchGeo = new THREE.BufferGeometry();
+    hatchGeo.setAttribute("position", new THREE.Float32BufferAttribute(hatch, 3));
+    const hatchOpacity = opacity * THREE.MathUtils.clamp(1.35 - shade, .35, 1.15);
+    const hatchMat = trackOpacity(group, new THREE.LineBasicMaterial({ color: 0x4f463b, transparent: true, opacity: hatchOpacity, depthWrite: false }), hatchOpacity);
+    group.add(new THREE.LineSegments(hatchGeo, hatchMat));
+  }
+}
+
+function addArchedEndTone(group, box, x, seed, opacity = .12) {
+  const wallTop = box.max.z - .42;
+  const centerY = (box.min.y + box.max.y) / 2;
+  const halfY = (box.max.y - box.min.y) / 2;
+  const points = [[x, box.min.y, box.min.z], [x, box.max.y, box.min.z]];
+  for (let i = 10; i >= 0; i--) {
+    const t = i / 10;
+    points.push([x, centerY + Math.cos(t * Math.PI) * halfY, wallTop + Math.sin(t * Math.PI) * (box.max.z - wallTop)]);
+  }
+  const center = [x, centerY, box.min.z + (box.max.z - box.min.z) * .42];
+  for (let i = 0; i < points.length - 1; i++) {
+    addSketchQuad(group, [center, points[i], points[i + 1], center], {
+      normal: x < 0 ? [-1, 0, 0] : [1, 0, 0],
+      color: 0x856b51,
+      opacity,
+      divisionsU: 2,
+      divisionsV: 2,
+      seed: seed + i * 23
+    });
+  }
+}
+
+function buildSketchVolumeLayer(data) {
+  const group = new THREE.Group();
+  group.name = "sketched-earth-volume";
+  group.userData.opacityMaterials = [];
+  const mainIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  mainIndexes.forEach((index, order) => {
+    const box = boundsOf(data.geometries[index]);
+    const seed = 500 + index * 113;
+    const isCourtyard = [2, 4, 6, 8].includes(index);
+    const isCave = [0, 1, 3, 5, 7].includes(index);
+    const inset = isCourtyard ? .03 : .015;
+    addSketchQuad(group, [
+      [box.min.x, box.min.y, box.min.z + inset],
+      [box.max.x, box.min.y, box.min.z + inset],
+      [box.max.x, box.max.y, box.min.z + inset],
+      [box.min.x, box.max.y, box.min.z + inset]
+    ], { normal: [0, 0, 1], color: 0xb19773, opacity: isCourtyard ? .12 : .18, divisionsU: 7, divisionsV: 3, seed });
+    addSketchQuad(group, [
+      [box.min.x, box.min.y, box.min.z],
+      [box.max.x, box.min.y, box.min.z],
+      [box.max.x, box.min.y, box.max.z],
+      [box.min.x, box.min.y, box.max.z]
+    ], { normal: [0, -1, 0], color: 0x876f55, opacity: .18, divisionsU: 7, divisionsV: 4, seed: seed + 31 });
+    addSketchQuad(group, [
+      [box.max.x, box.max.y, box.min.z],
+      [box.min.x, box.max.y, box.min.z],
+      [box.min.x, box.max.y, box.max.z],
+      [box.max.x, box.max.y, box.max.z]
+    ], { normal: [0, 1, 0], color: 0x7f664d, opacity: .22, divisionsU: 7, divisionsV: 4, seed: seed + 59 });
+    if (isCave) {
+      const crownZ = box.max.z;
+      const springZ = box.max.z - (index === 0 ? .78 : .46);
+      const centerY = (box.min.y + box.max.y) / 2;
+      const archSegments = 8;
+      for (let i = 0; i < archSegments; i++) {
+        const a = i / archSegments, b = (i + 1) / archSegments;
+        const ya = THREE.MathUtils.lerp(box.min.y, box.max.y, a);
+        const yb = THREE.MathUtils.lerp(box.min.y, box.max.y, b);
+        const za = springZ + Math.sin(a * Math.PI) * (crownZ - springZ);
+        const zb = springZ + Math.sin(b * Math.PI) * (crownZ - springZ);
+        const midY = (ya + yb) / 2;
+        const normalY = midY < centerY ? -.45 : .45;
+        addSketchQuad(group, [
+          [box.min.x, ya, za],
+          [box.max.x, ya, za],
+          [box.max.x, yb, zb],
+          [box.min.x, yb, zb]
+        ], { normal: [0, normalY, .6], color: 0x80684f, opacity: .13, divisionsU: 7, divisionsV: 2, seed: seed + 101 + i * 17 });
+      }
+      if (order === 0 || index === 7) addArchedEndTone(group, box, index === 7 ? box.min.x : box.max.x, seed + 301, .11);
+    } else {
+      addSketchQuad(group, [
+        [box.min.x, box.min.y, box.max.z],
+        [box.max.x, box.min.y, box.max.z],
+        [box.max.x, box.max.y, box.max.z],
+        [box.min.x, box.max.y, box.max.z]
+      ], { normal: [0, 0, 1], color: 0xc4aa82, opacity: .08, divisionsU: 5, divisionsV: 3, seed: seed + 137, hatching: false });
+    }
+  });
+  [11, 12].forEach((index, nicheIndex) => {
+    const box = boundsOf(data.geometries[index]);
+    const seed = 1800 + index * 37;
+    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [0, -1, 0], color: nicheIndex ? 0x765d49 : 0x8b7157, opacity: .12, seed });
+    addSketchQuad(group, [[box.min.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 1, 0], color: 0x735a45, opacity: .16, seed: seed + 61 });
+    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.min.z]], { normal: [0, 0, 1], color: 0xa98b67, opacity: .12, divisionsU: 4, divisionsV: 3, seed: seed + 103 });
+  });
+  return group;
 }
 
 function buildGroundLayer(data) {
@@ -551,6 +973,69 @@ function createTombInterior(chamber) {
   return interior;
 }
 
+function groundCompassLabel(text, color = "#9a493b") {
+  const labelCanvas = document.createElement("canvas");
+  labelCanvas.width = 256;
+  labelCanvas.height = 128;
+  const context = labelCanvas.getContext("2d");
+  context.clearRect(0, 0, 256, 128);
+  context.fillStyle = color;
+  context.font = "56px Georgia, serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(text, 128, 61);
+  const texture = new THREE.CanvasTexture(labelCanvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false }));
+  sprite.scale.set(.62, .31, 1);
+  sprite.renderOrder = 24;
+  return sprite;
+}
+
+function addGroundCompass() {
+  const box = new THREE.Box3().setFromObject(root);
+  const min = box.min, max = box.max;
+  const group = new THREE.Group();
+  group.name = "ground-parallel-north-south-axis";
+  const y = min.y - 1.18;
+  const z = min.z - .06;
+  const southX = min.x + .28;
+  const northX = max.x - .22;
+  const midX = (southX + northX) / 2;
+  const linePositions = [
+    southX, y, z, northX, y, z,
+    midX, y - .18, z, midX, y + .18, z,
+    southX, y - .1, z, southX, y + .1, z
+  ];
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
+  const line = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ color: 0x8f4537, transparent: true, opacity: .72, depthWrite: false }));
+  line.renderOrder = 23;
+  group.add(line);
+
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(.13, .38, 3),
+    new THREE.MeshBasicMaterial({ color: 0x8f4537, transparent: true, opacity: .78, depthWrite: false })
+  );
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0));
+  arrow.position.set(northX + .16, y, z);
+  arrow.renderOrder = 23;
+  group.add(arrow);
+
+  const north = groundCompassLabel("N", "#9a493b");
+  north.position.set(northX + .55, y, z + .1);
+  const south = groundCompassLabel("S", "#746b60");
+  south.position.set(southX - .48, y, z + .1);
+  group.add(north, south);
+
+  const annotation = groundCompassLabel("墓道 S  /  墓室 N", "#6d6258");
+  annotation.scale.set(1.6, .34, 1);
+  annotation.position.set(midX, y - .38, z + .08);
+  group.add(annotation);
+  scene.add(group);
+  groundCompass = group;
+}
+
 function addConstructionGuides() {
   const box = new THREE.Box3().setFromObject(root);
   const min = box.min, max = box.max;
@@ -685,10 +1170,26 @@ function selectStructure(index) {
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   // Keep the post-JSON replacement skeleton appearance: only the 13 exported geometries render.
-  if (naturalShell) naturalShell.visible = false;
+  if (naturalShell) naturalShell.visible = index < 0;
+  if (sketchVolumeLayer) {
+    sketchVolumeLayer.visible = true;
+    sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? 1 : .32);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? 1 : .3);
+    });
+  }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
-  document.querySelectorAll(".structure-list button").forEach(button => button.classList.toggle("active", Number(button.dataset.index) === index));
-  document.querySelector(".structure-list .overall")?.classList.toggle("active", index < 0);
+  setBurialGoodsOpacity(index < 0 || index === 0 ? 1 : .14);
+  document.querySelectorAll(".structure-list button").forEach(button => {
+    const active = button.classList.contains("overall") ? index < 0 : Number(button.dataset.index) === index;
+    button.classList.toggle("active", active);
+    if (active) {
+      button.classList.remove("axis-hit");
+      void button.offsetWidth;
+      button.classList.add("axis-hit");
+      button.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  });
   const selected = objects.find(group => group.userData.index === index);
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${selected?.userData.name || "结构"} · 结构已突出`;
   showMeasurements(index,selected);
@@ -700,7 +1201,7 @@ function buildControls(data) {
   overallButton.type = "button";
   overallButton.className = "overall active";
   overallButton.textContent = "整体";
-  overallButton.addEventListener("click", navigateToOverall);
+  overallButton.addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
   list.append(overallButton);
   STRUCTURE_ORDER.forEach(index => {
     const item = data.geometries[index];
@@ -709,10 +1210,10 @@ function buildControls(data) {
     button.type = "button";
     button.dataset.index = index;
     button.textContent = item.name || FALLBACK_NAMES[index] || `结构 ${index + 1}`;
-    button.addEventListener("click", () => navigateToStructure(index));
+    button.addEventListener("click", () => { noteUserActivity(); navigateToStructure(index); });
     list.append(button);
   });
-  document.querySelector("#reset-view").addEventListener("click", navigateToOverall);
+  document.querySelector("#reset-view").addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
 }
 
 function easeBreath(t) {
@@ -752,7 +1253,7 @@ function animateCamera(endPosition, endTarget, endFov, onComplete) {
   requestAnimationFrame(step);
 }
 
-function navigateToStructure(index) {
+function navigateToStructure(index, options = {}) {
   const group = objects.find(item => item.userData.index === index);
   if (!group) return;
   const geometricTarget = structureTargets.get(index) || new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
@@ -767,12 +1268,58 @@ function navigateToStructure(index) {
   });
 }
 
-function navigateToOverall() {
+function navigateToOverall(options = {}) {
   if (!overallView) return;
   selectStructure(-1);
   animateCamera(overallView.position.clone(), overallView.target.clone(), overallView.fov, () => {
     document.querySelector("#status").textContent = "整体结构 · OVERVIEW";
   });
+}
+
+function clearAutoDemoTimer() {
+  if (!autoDemoTimer) return;
+  clearTimeout(autoDemoTimer);
+  autoDemoTimer = 0;
+}
+
+function stopAutoDemo() {
+  clearAutoDemoTimer();
+  if (!autoDemoActive) return;
+  cameraMoveToken++;
+  controls.enabled = true;
+  autoDemoActive = false;
+  document.querySelector("#app")?.classList.remove("auto-demo");
+}
+
+function scheduleAutoDemo(delay = 9000) {
+  clearAutoDemoTimer();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  autoDemoTimer = setTimeout(startAutoDemo, delay);
+}
+
+function noteUserActivity() {
+  stopAutoDemo();
+  scheduleAutoDemo();
+}
+
+function startAutoDemo() {
+  if (document.querySelector("#app")?.dataset.view !== "model" || controls.enabled === false) {
+    scheduleAutoDemo(5000);
+    return;
+  }
+  autoDemoActive = true;
+  document.querySelector("#app")?.classList.add("auto-demo");
+  const current = DEMO_ROUTE.indexOf(selectedIndex);
+  autoDemoStep = current >= 0 ? (current + 1) % DEMO_ROUTE.length : 0;
+  runAutoDemoStep();
+}
+
+function runAutoDemoStep() {
+  if (!autoDemoActive) return;
+  const index = DEMO_ROUTE[autoDemoStep % DEMO_ROUTE.length];
+  autoDemoStep++;
+  navigateToStructure(index, { auto: true });
+  autoDemoTimer = setTimeout(runAutoDemoStep, 6600);
 }
 
 function playTransition(origin) {
@@ -883,29 +1430,31 @@ function setupInterface() {
   const artifactLocationMap = document.querySelector(".artifact-location-map");
   const artifactLocationImage = document.querySelector("#artifact-location-image");
   const artifactCatalog = {
-    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]] },
-    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["材质","陶"]] },
-    "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质，志文二十三行，共五百一十六字。", facts:[["编号","M2338:52"],["年代","麟德元年"],["字数","516 字"],["材质","青石"]] },
-    "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”，是墓葬断代的重要参照。", facts:[["编号","M2338:14"],["类别","钱币"],["形制","圆形方孔"],["材质","铜"]] },
-    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"多枚玻璃珠串联成组，色泽与尺寸各异。", facts:[["编号","M2338:13"],["类别","饰件"],["形制","串珠"],["材质","玻璃"]] },
-    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", location:"/assets/artifacts/location-shell.jpg", description:"天然贝壳随葬品，反映初唐墓葬中多样的日常物质组合。", facts:[["编号","M2338:12"],["类别","随葬品"],["材质","贝壳"],["年代","唐初"]] },
-    "银杯": { en:"SILVER CUP", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银质随葬器物，出土于墓室随葬品集中区域。", facts:[["类别","银器"],["位置","墓室随葬品集中区"],["材质","银"],["年代","唐初"]] },
-    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"敛口、深弧腹、圜底，器表饰数周暗弦纹。", facts:[["编号","M2338:10"],["位置","墓室东壁"],["器形","敛口圜底"],["材质","铜"]] },
-    "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"骑马俑主要出土于墓室东南隅，人物服饰与马具保留了明确的时代信息。", facts:[["编号","M2338:33"],["位置","墓室东南隅"],["类别","陶骑马俑"],["年代","唐初"]] }
+    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。PDF 简报记载通高 36 cm，尺寸标注保留在此处，展示图按版面统一放大。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
+    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。PDF 图版列为 M2338:1，当前简报页未列单件尺寸。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["尺寸","简报未列单件尺寸"]], display:{ scale:1.02, x:"0%", y:"0%" } },
+    "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质。志盖边长 30 cm、厚 8 cm；志石边长 37 cm、厚 8 cm，正文 23 行、满行 23 字，共 516 字。", facts:[["编号","M2338:52"],["志盖","边长 30 cm / 厚 8 cm"],["志石","边长 37 cm / 厚 8 cm"],["字数","516 字"]], display:{ scale:1.16, x:"0%", y:"0%" } },
+    "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”。PDF 简报记载钱径 2.4 cm、穿径 0.8 cm，是墓葬断代的重要参照。", facts:[["编号","M2338:57-4"],["钱径","2.4 cm"],["穿径","0.8 cm"],["材质","铜"]], display:{ scale:1.42, x:"0%", y:"0%" } },
+    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"玻璃串珠共 3 枚，绿色。PDF 简报记载直径 0.4-0.5 cm、孔径 0.3 cm，出自棺内北侧。", facts:[["编号","M2338:56"],["数量","3 枚"],["直径","0.4-0.5 cm"],["孔径","0.3 cm"]], display:{ scale:1.44, x:"0%", y:"0%" } },
+    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", location:"/assets/artifacts/location-shell.jpg", description:"天然贝壳随葬品，出自棺内北侧。PDF 简报记载最宽 4.5 cm、长 5.5 cm。", facts:[["编号","M2338:55"],["最宽","4.5 cm"],["长","5.5 cm"],["材质","贝壳"]], display:{ scale:1.44, x:"0%", y:"0%" } },
+    "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银环出自棺内北侧，扁圆环状。PDF 简报记载直径 1.8 cm。", facts:[["编号","M2338:54"],["类别","银环"],["直径","1.8 cm"],["材质","银"]], display:{ scale:1.34, x:"0%", y:"0%" } },
+    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"铜钵敛口、深弧腹、圜底，器表饰数周暗弦纹。PDF 简报记载口径 13 cm、腹径 13.2 cm、底径 8.5 cm、通高 6 cm。", facts:[["编号","M2338:53"],["口径","13 cm"],["腹径","13.2 cm"],["通高","6 cm"]], display:{ scale:1.26, x:"0%", y:"2%" } },
+    "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"骑马俑主要出土于墓室东南隅。PDF 简报中 I 型标本 M2338:32 马体长 23.5 cm、通高 32 cm；II 型标本 M2338:44 马体长 24 cm、通高 32.5 cm。", facts:[["编号","M2338:29-32 等"],["I 型","长 23.5 cm / 通高 32 cm"],["II 型","长 24 cm / 通高 32.5 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } }
   };
   artifactCatalog["东镇墓兽"] = artifactCatalog["镇墓兽"];
   artifactCatalog["西镇墓兽"] = { ...artifactCatalog["镇墓兽"], en:"WEST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-west.png" };
   artifactCatalog["卢夫人墓志"] = artifactCatalog["墓志"];
   artifactCatalog["开元通宝"] = artifactCatalog["铜钱"];
   artifactCatalog["胡人骑马俑"] = artifactCatalog["骑马俑"];
-  artifactCatalog["银环"] = artifactCatalog["银杯"];
   [...new Set(Object.values(artifactCatalog).flatMap(({ asset, location }) => [asset, location].filter(Boolean)))].forEach(src => {
     const image = new Image();
     image.src = src;
     image.decode?.().catch(() => {});
   });
   const artifactButtons = [...document.querySelectorAll(".artifact-list button")];
+  let activeArtifactName = "";
   const activateArtifact = button => {
+    if (activeArtifactName === button.dataset.artifact) return;
+    activeArtifactName = button.dataset.artifact;
     const artifact = artifactCatalog[button.dataset.artifact];
     artifactButtons.forEach(item => item.classList.toggle("active", item === button));
     document.querySelector(".artifact-copy h2 span").textContent = button.dataset.artifact;
@@ -913,6 +1462,10 @@ function setupInterface() {
     document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifact?.description || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
     const asset = artifact?.asset;
     stage.classList.toggle("has-image", Boolean(asset));
+    const display = artifact?.display || {};
+    stage.style.setProperty("--artifact-scale", display.scale ?? 1);
+    stage.style.setProperty("--artifact-x", display.x || "0%");
+    stage.style.setProperty("--artifact-y", display.y || "0%");
     if (asset) artifactImage.src = asset;
     if (artifact?.location) {
       artifactLocationImage.src = artifact.location;
@@ -920,9 +1473,11 @@ function setupInterface() {
     } else {
       artifactLocationMap?.classList.remove("visible");
     }
-    stage.classList.remove("swap"); void stage.offsetWidth; stage.classList.add("swap");
+    stage.classList.remove("swap");
+    requestAnimationFrame(() => stage.classList.add("swap"));
   };
-  artifactButtons.forEach(button => { button.addEventListener("mouseenter", () => activateArtifact(button)); button.addEventListener("click", () => activateArtifact(button)); });
+  artifactButtons.forEach(button => { button.addEventListener("pointerenter", () => activateArtifact(button)); button.addEventListener("click", () => activateArtifact(button)); });
+  activateArtifact(document.querySelector(".artifact-list button.active") || artifactButtons[0]);
 
   const popover = document.querySelector("#artifact-popover");
   document.body.append(popover);
@@ -965,12 +1520,16 @@ function setupInterface() {
   document.addEventListener("click", closeArtifactPopover);
   const canParallax = matchMedia("(pointer:fine) and (prefers-reduced-motion:no-preference)").matches;
   document.addEventListener("pointermove", event => {
+    noteUserActivity();
     if (!canParallax) return;
     pointer.x = event.clientX / innerWidth - .5; pointer.y = event.clientY / innerHeight - .5;
     canvas.style.transform = `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
     stage.style.transform = `rotateY(${pointer.x * 5}deg) rotateX(${-pointer.y * 3}deg)`;
   });
+  ["pointerdown", "wheel", "touchstart"].forEach(type => document.addEventListener(type, noteUserActivity, { passive: true }));
+  controls.addEventListener("start", noteUserActivity);
   document.addEventListener("keydown", event => {
+    noteUserActivity();
     if (event.key === "Escape") { if (closeArtifactPopover()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
     if (app.dataset.view !== "model") return;
     const order = [8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -981,6 +1540,7 @@ function setupInterface() {
     const next = current < 0 ? (direction > 0 ? 0 : order.length - 1) : (current + direction + order.length) % order.length;
     navigateToStructure(order[next]);
   });
+  scheduleAutoDemo();
 }
 
 function bindSlider(id, callback) {
@@ -1001,14 +1561,19 @@ async function init() {
     if (item.vertices.length) structureTargets.set(index, boundsOf(item).getCenter(new THREE.Vector3()));
   });
   document.querySelector("#geometry-summary").textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges`;
+  const burialGoodsCount = await loadBurialGoods();
   naturalShell = buildNaturalShell(data);
+  sketchVolumeLayer = buildSketchVolumeLayer(data);
   groundLayer = buildGroundLayer(data);
-  scene.add(naturalShell, groundLayer);
+  sketchVolumeLayer.renderOrder = -1;
+  scene.add(sketchVolumeLayer, naturalShell, groundLayer);
   addConstructionGuides();
+  addGroundCompass();
   buildControls(data);
   fitView();
   overallView = { position: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
   selectStructure(-1);
+  document.querySelector("#geometry-summary").textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
   setupInterface();
 }
 
