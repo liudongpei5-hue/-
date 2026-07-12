@@ -29,6 +29,9 @@ controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
 
 const root = new THREE.Group();
 scene.add(root);
+const measurementGroup = new THREE.Group();
+measurementGroup.name = "结构尺寸刻度";
+scene.add(measurementGroup);
 const objects = [];
 const wideMaterials = [];
 let selectedIndex = -1;
@@ -37,24 +40,23 @@ let naturalShell;
 let groundLayer;
 let overallView;
 let cameraMoveToken = 0;
-let dimensionAnchor = null;
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
-const STRUCTURE_DIMENSIONS = {
-  0: ["进深 3.68 米", "宽 3.04 米", "高 2.52 米"],
-  1: ["进深 1.08 米", "宽 1.28 米", "高 1.92 米"],
-  2: ["上口长 2.04 米", "南宽 1.16 米 · 北宽 1.28 米", "底长 1.80 米 · 宽 1.40-1.48 米"],
-  3: ["进深 1.08 米", "宽 1.24 米", "高 1.76 米"],
-  4: ["上口长 1.96 米", "南宽 1.00 米 · 北宽 0.96 米", "底长 1.80 米 · 宽 1.24-1.32 米"],
-  5: ["进深 0.90 米", "宽 0.92 米", "高 1.60 米"],
-  6: ["上口长 1.96 米 · 宽 1.08 米", "底长 1.70 米 · 宽 1.34 米", "南壁上口略有坍塌"],
-  7: ["进深 1.08 米", "宽 1.24 米", "高 1.52 米"],
-  8: ["开口长 5.52 米", "南宽 1.52 米 · 北宽 1.20 米", "最深 3.32 米 · 坡度 27°"],
-  9: ["长约 0.60 米", "宽约 0.40 米", "椭圆形盗洞"],
-  10: ["直径约 1.30 米", "圆形盗洞", "直达壁龛位置"],
-  11: ["进深 1.80-1.90 米", "宽 1.40 米", "高 1.40 米 · 拱顶平底"],
-  12: ["口深 0.50 米 · 口宽 1.92 米", "内宽 2.08 米", "进深 2.36-2.40 米 · 高 1.60 米"]
+const STRUCTURE_MEASURES = {
+  0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
+  1: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.28 m"},{axis:"z",label:"1.92 m"}],
+  2: [{axis:"x",label:"2.04 m",level:"top"},{axis:"y",label:"1.16 m",level:"top",side:"minx"},{axis:"y",label:"1.28 m",level:"top",side:"maxx"},{axis:"x",label:"1.80 m",offset:.36},{axis:"y",label:"1.40-1.48 m",offset:.36}],
+  3: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.24 m"},{axis:"z",label:"1.76 m"}],
+  4: [{axis:"x",label:"1.96 m",level:"top"},{axis:"y",label:"1.00 m",level:"top",side:"minx"},{axis:"y",label:"0.96 m",level:"top",side:"maxx"},{axis:"x",label:"1.80 m",offset:.36},{axis:"y",label:"1.24-1.32 m",offset:.36}],
+  5: [{axis:"x",label:"0.90 m"},{axis:"y",label:"0.92 m"},{axis:"z",label:"1.60 m"}],
+  6: [{axis:"x",label:"1.96 m",level:"top"},{axis:"y",label:"1.08 m",level:"top"},{axis:"x",label:"1.70 m",offset:.36},{axis:"y",label:"1.34 m",offset:.36}],
+  7: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.24 m"},{axis:"z",label:"1.52 m"}],
+  8: [{axis:"x",label:"5.52 m",level:"top"},{axis:"y",label:"1.52 m",level:"top",side:"minx"},{axis:"y",label:"1.20 m",level:"top",side:"maxx"},{axis:"z",label:"3.32 m"}],
+  9: [{axis:"x",label:"0.60 m",level:"top"},{axis:"y",label:"0.40 m",level:"top"}],
+  10: [{axis:"y",label:"Ø 1.30 m",level:"top"}],
+  11: [{axis:"y",label:"1.80-1.90 m"},{axis:"x",label:"1.40 m"},{axis:"z",label:"1.40 m"}],
+  12: [{axis:"y",label:"2.36-2.40 m"},{axis:"y",label:"0.50 m",side:"minx",fraction:.21,offset:.38},{axis:"x",label:"1.92 m",side:"mouth"},{axis:"x",label:"2.08 m",side:"back",offset:.32},{axis:"z",label:"1.60 m"}]
 };
 const CAMERA_PRESETS = {
   8: { position: [-12.8, 5.2, 8.3], target: [0, 0, 0], fov: 48 },
@@ -590,6 +592,86 @@ function fitView() {
   controls.update();
 }
 
+function dimensionLabel(text) {
+  const canvas=document.createElement("canvas");
+  canvas.width=512; canvas.height=128;
+  const context=canvas.getContext("2d");
+  context.clearRect(0,0,512,128);
+  context.fillStyle="rgba(244,241,231,.92)";
+  context.fillRect(28,24,456,80);
+  context.strokeStyle="rgba(145,57,45,.7)";
+  context.lineWidth=2;
+  context.strokeRect(28,24,456,80);
+  context.fillStyle="#453f38";
+  context.font="44px Georgia, serif";
+  context.textAlign="center";
+  context.textBaseline="middle";
+  context.fillText(text,256,65);
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));
+  sprite.scale.set(1.15,.29,1);
+  sprite.renderOrder=20;
+  return sprite;
+}
+
+function clearMeasurements() {
+  measurementGroup.traverse(child=>{
+    child.geometry?.dispose?.();
+    if(child.material?.map) child.material.map.dispose();
+    child.material?.dispose?.();
+  });
+  measurementGroup.clear();
+}
+
+function addMeasurement(box,spec,index) {
+  const offset=spec.offset ?? (.2+index*.035);
+  const top=spec.level==="top";
+  const z=top?box.max.z+offset:box.min.z-offset;
+  let a,b,anchorA,anchorB,tickVector;
+  if(spec.axis==="x") {
+    const sideY=spec.side==="back"?box.max.y:box.min.y;
+    const y=sideY+(spec.side==="back"?offset:-offset);
+    a=new THREE.Vector3(box.min.x,y,z); b=new THREE.Vector3(box.max.x,y,z);
+    anchorA=new THREE.Vector3(box.min.x,sideY,top?box.max.z:box.min.z);
+    anchorB=new THREE.Vector3(box.max.x,sideY,top?box.max.z:box.min.z);
+    tickVector=new THREE.Vector3(0,0,.11);
+  } else if(spec.axis==="y") {
+    const minSide=spec.side==="minx";
+    const edgeX=minSide?box.min.x:box.max.x;
+    const x=edgeX+(minSide?-offset:offset);
+    const endY=spec.fraction?THREE.MathUtils.lerp(box.min.y,box.max.y,spec.fraction):box.max.y;
+    a=new THREE.Vector3(x,box.min.y,z); b=new THREE.Vector3(x,endY,z);
+    anchorA=new THREE.Vector3(edgeX,box.min.y,top?box.max.z:box.min.z);
+    anchorB=new THREE.Vector3(edgeX,endY,top?box.max.z:box.min.z);
+    tickVector=new THREE.Vector3(0,0,.11);
+  } else {
+    const x=box.max.x+offset, y=box.max.y+offset;
+    a=new THREE.Vector3(x,y,box.min.z); b=new THREE.Vector3(x,y,box.max.z);
+    anchorA=new THREE.Vector3(box.max.x,box.max.y,box.min.z);
+    anchorB=new THREE.Vector3(box.max.x,box.max.y,box.max.z);
+    tickVector=new THREE.Vector3(.11,0,0);
+  }
+  const segments=[a,b,anchorA,a,anchorB,b,a.clone().sub(tickVector),a.clone().add(tickVector),b.clone().sub(tickVector),b.clone().add(tickVector)];
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute("position",new THREE.Float32BufferAttribute(segments.flatMap(point=>point.toArray()),3));
+  const line=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0x9a493b,transparent:true,opacity:.9,depthTest:false,depthWrite:false}));
+  line.renderOrder=19;
+  measurementGroup.add(line);
+  const label=dimensionLabel(spec.label);
+  label.position.copy(a).lerp(b,.5);
+  label.position.add(spec.axis==="z"?new THREE.Vector3(.18,0,0):new THREE.Vector3(0,0,.06));
+  measurementGroup.add(label);
+}
+
+function showMeasurements(index,selected) {
+  clearMeasurements();
+  if(index<0||!selected) return;
+  const measures=STRUCTURE_MEASURES[index]||[];
+  const box=new THREE.Box3().setFromObject(selected);
+  measures.forEach((measure,measureIndex)=>addMeasurement(box,measure,measureIndex));
+}
+
 function selectStructure(index) {
   selectedIndex = index;
   objects.forEach(group => {
@@ -609,19 +691,7 @@ function selectStructure(index) {
   document.querySelector(".structure-list .overall")?.classList.toggle("active", index < 0);
   const selected = objects.find(group => group.userData.index === index);
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${selected?.userData.name || "结构"} · 结构已突出`;
-  const callout = document.querySelector("#dimension-callout");
-  if (index < 0 || !selected) {
-    dimensionAnchor = null;
-    callout.setAttribute("aria-hidden","true");
-    callout.classList.remove("visible");
-  } else {
-    const box = new THREE.Box3().setFromObject(selected);
-    dimensionAnchor = new THREE.Vector3(box.max.x, box.min.y, box.max.z);
-    callout.querySelector("strong").textContent = selected.userData.name;
-    callout.querySelector("p").textContent = (STRUCTURE_DIMENSIONS[index] || ["尺寸以考古简报为准"]).join(" ｜ ");
-    callout.setAttribute("aria-hidden","false");
-    callout.classList.add("visible");
-  }
+  showMeasurements(index,selected);
 }
 
 function buildControls(data) {
@@ -824,26 +894,7 @@ function resize() {
     camera.updateProjectionMatrix();
   }
 }
-function updateDimensionCallout() {
-  if (!dimensionAnchor) return;
-  const callout = document.querySelector("#dimension-callout");
-  if (!callout.classList.contains("visible")) return;
-  const projected = dimensionAnchor.clone().project(camera);
-  const x = (projected.x * .5 + .5) * canvas.clientWidth;
-  const y = (-projected.y * .5 + .5) * canvas.clientHeight;
-  const panel = callout.querySelector("div").getBoundingClientRect();
-  const endX = panel.left;
-  const endY = panel.top + panel.height * .5;
-  const dx = endX - x, dy = endY - y;
-  const length = Math.hypot(dx,dy);
-  const line = callout.querySelector("i");
-  const origin = callout.querySelector(".dimension-origin");
-  origin.style.transform = `translate(${x}px,${y}px)`;
-  line.style.width = `${length}px`;
-  line.style.transform = `translate(${x}px,${y}px) rotate(${Math.atan2(dy,dx)}rad)`;
-  callout.classList.toggle("offscreen", projected.z < -1 || projected.z > 1 || Math.abs(projected.x) > 1.2 || Math.abs(projected.y) > 1.2);
-}
-function animate() { resize(); controls.update(); updateDimensionCallout(); renderer.render(scene, camera); requestAnimationFrame(animate); }
+function animate() { resize(); controls.update(); renderer.render(scene, camera); requestAnimationFrame(animate); }
 
 init().catch(error => { document.querySelector("#status").textContent = error.message; console.error(error); });
 animate();
