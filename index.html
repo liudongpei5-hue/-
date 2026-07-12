@@ -7,6 +7,7 @@
     <link rel="preload" as="fetch" href="/geometry-export.json?v=20260711-new-13" crossorigin="anonymous" />
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
+    <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-location-plan.jpg" />
     <link rel="stylesheet" href="/src/style.css?v=20260712-report-axis-v3" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
@@ -68,29 +69,53 @@
       <section id="artifacts-page" class="page-layer artifacts-page" aria-hidden="true">
         <div class="artifact-no">02 <span>ARTIFACTS</span></div>
         <nav class="artifact-list" aria-label="文物类别">
-          <button class="active" data-artifact="镇墓武士俑">镇墓武士俑</button>
-          <button data-artifact="镇墓兽">镇墓兽</button>
-          <button data-artifact="骑马俑">骑马俑</button>
+          <button class="active" data-artifact="东镇墓兽">东镇墓兽</button>
+          <button data-artifact="西镇墓兽">西镇墓兽</button>
+          <button data-artifact="胡人骑马俑">胡人骑马俑</button>
+          <button data-artifact="高髻女骑俑">高髻女骑俑</button>
           <button data-artifact="铜钵">铜钵</button>
           <button data-artifact="银环">银环</button>
           <button data-artifact="贝壳">贝壳</button>
           <button data-artifact="玻璃串珠">玻璃串珠</button>
-          <button data-artifact="铜钱">铜钱</button>
+          <button data-artifact="开元通宝">开元通宝</button>
+          <button data-artifact="卢夫人墓志">卢夫人墓志</button>
         </nav>
         <div class="artifact-stage has-image" aria-hidden="true">
           <div class="artifact-halo"></div>
-          <img id="artifact-image" class="artifact-image" src="/assets/artifacts/guardian-warrior-m2338-1.png" alt="" />
+          <img id="artifact-image" class="artifact-image" src="/assets/artifacts/catalog/tomb-beast-east.png" alt="" />
           <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
           <span class="artifact-shadow"></span>
         </div>
+        <figure class="artifact-location-map visible" aria-hidden="true">
+          <img src="/assets/artifacts/tomb-beast-location-plan.jpg" alt="" />
+          <span class="artifact-location-pin"></span>
+        </figure>
         <article class="artifact-copy">
           <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
-          <h2>FIGURINE <span>镇墓武士俑</span></h2>
-          <p>泥质红陶，模制。出土于墓室入口处东侧，通高约65厘米。体表原施白、红彩，胸甲与护肩残存少量金箔痕迹。</p>
-          <button type="button">查看考古记录　↓</button>
+          <h2><b id="artifact-name-en">TOMB BEAST</b><span id="artifact-name-cn">东镇墓兽</span></h2>
+          <p id="artifact-description">泥质红陶模制，人面短柱冠，白地施红彩。出土于墓室入口东侧，通高36厘米，胸前残留金箔痕迹。</p>
+          <button id="artifact-details" type="button" hidden>阅读全文　→</button>
         </article>
         <footer class="page-footer"><span>CN　EN</span><span>02 / 04</span></footer>
       </section>
+
+      <aside id="epitaph-modal" class="epitaph-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="epitaph-title">
+        <button class="epitaph-close" type="button" aria-label="关闭墓志全文">关闭　×</button>
+        <article>
+          <p class="artifact-kicker">M2338:52 / FULL INSCRIPTION</p>
+          <h2 id="epitaph-title">大唐故李将军魏公故夫人卢氏墓志</h2>
+          <div class="epitaph-meta"><span>青石质</span><span>麟德元年 · 664</span><span>23行 · 满行23字</span><span>全文516字</span></div>
+          <p>夫人讳囗囗，范阳人也。昔九鼎数迁，有客之基方峻；两京交丧，甘棠之祚逾隆。降三仁之茂祉，贻二南之遐庆。故能鹊巢流化，河鲂媲美。祖囗囗，父囗囗。玉铉联辉，槐庭结荫。道高舟楫，绩被笙镛。</p>
+          <p>夫人擢秀情田，舒芳蕙渚。西山昆岳，振琼柯于瑶树；东溟碧海，映仙实于蟠桃。黼藻中和，含弘淑慎。柔色外湛，峻节内凝。爰自待年，言归李氏。魏公早随运往，积祀孀居。抚育孤幼，羽翮已成。愁肃闺庭，规模毕理。庶延遐寿，长范母仪。</p>
+          <p>中景遽倾，芳菠奄坠。粤以龙朔元年八月三日薨于泾阳庄第，春秋五十有九。呜呼哀哉！淑人云谢，慈训长沦。以麟德元年十一月廿八日迁葬于洪渎原。哀子玄瑾，忠孝自天。庶传芳于谣咏，与金石而无朽。乃为词曰：</p>
+          <h3>铭文</h3>
+          <p>仙峰产瑜，圆折怀珠。照车入魏，垂棘在虞。休哉代禄，仁风不渝。台光接汉，璧彩联蒲。庆流自远，祥发彼妹。其一。</p>
+          <p>猗欤淑人，山河其德。幽意窈窕，柔情绸直。茂质松华，芳仪兰植。麟萃其趾，鹗骞其翼。惠问风徂，嘉音川塞。其二。</p>
+          <p>亦既有行，作嫔君子。副笄成饰，褧衣增美。蔓葛劳稷，芳苹映沚。内勤浣濯，傍综缃史。饬性循规，修容监水。其三。</p>
+          <p>琴歌在御，钟鼓高悬。赵瑟纡轸，郑舞分筵。殷勤晚岁，怊怅芳年。月华委夕，素魄亏圆。沉哀厚夜，流恨穷泉。其四。</p>
+          <p>祖觞俄奠，龙轜遽发。凄怆山川，徘徊城阙。草衰原迥，烟深垄没。杨路多风，松扉罢月。贞石一纪，芳尘讵歇。其五。</p>
+        </article>
+      </aside>
 
       <section id="data-page" class="page-layer report-page" aria-hidden="true">
         <header class="report-hero">
@@ -115,47 +140,47 @@
             <h3>洪渎原上的<br>纪年墓</h3>
             <div class="report-prose"><p>2021年2月，考古工作者在西安咸阳国际机场三期扩建过程中发掘M2338。墓地原属咸阳市渭城区北杜镇瓦刘村耕地，东南距唐顺陵约1.8公里，属于洪渎原瓦刘墓地第二发掘分区。</p><p>墓口开于厚约0.32米的灰褐色耕土层下，并打破厚约0.30米的红褐色垆土层。墓道西南角海拔442米；两处早期盗洞分别破坏第三天井及甬道、墓室区域。</p></div>
           </section>
-          <figure class="report-figure report-wide"><img src="/assets/report/location-map.png" alt="瓦刘墓地地理位置图"><figcaption><b>FIG. 01</b> 瓦刘墓地地理位置图</figcaption></figure>
-          <figure class="report-figure report-offset"><img src="/assets/report/cemetery-plan.png" alt="M2338平面分布图"><figcaption><b>FIG. 02</b> M2338平面分布</figcaption></figure>
+          <figure class="report-figure report-linework report-wide"><img src="/assets/report/location-map-20260712.png" alt=""><figcaption><b>FIG. 01</b><span>瓦刘墓地地理位置图｜墓地位于咸阳洪渎原，东南距唐顺陵约 1.8 公里</span></figcaption></figure>
+          <figure class="report-figure report-linework report-offset"><img src="/assets/report/cemetery-plan-20260712.png" alt=""><figcaption><b>FIG. 02</b><span>瓦刘墓地第二发掘分区墓葬分布｜M2338 位于遗址公园西南侧</span></figcaption></figure>
 
           <section class="report-section report-form">
             <div><p class="report-chapter">02 / FORM</p><h3>一条向北深入<br>地下的空间序列</h3></div>
             <div class="report-prose"><p>墓葬整体平面略呈“刀”形，由墓道、三座过洞、三座天井、东、西壁龛、甬道、封门和墓室组成。墓道位于最南端，略呈南宽北窄的梯形；过洞均为斜向拱顶土洞，底面与墓道保持同一坡度。</p><p>三座天井上下贯通。第一天井南壁上口略有坍塌，第三天井东、西两壁略有损坏。甬道南接第三天井、北连墓室；墓室为拱顶直壁单室土洞，局部坍塌，底面以条砖对缝平铺。</p></div>
           </section>
-          <figure class="report-figure report-blueprint"><img src="/assets/report/tomb-plan-section.png" alt="M2338平面与剖面图"><figcaption><b>FIG. 03</b> M2338平、剖面图：天井、过洞与斜坡墓道的高差关系</figcaption></figure>
+          <figure class="report-figure report-linework report-blueprint"><img src="/assets/report/tomb-plan-section-20260712.png" alt=""><figcaption><b>FIG. 03</b><span>M2338 平、剖面图｜墓道、三座过洞、三座天井、甬道与墓室的空间关系</span></figcaption></figure>
           <div class="report-quote"><span>“</span><p>方向176°，水平全长19.88米，墓底距现地表深8.32米。</p></div>
-          <figure class="report-figure report-portrait"><img src="/assets/report/tomb-passage.png" alt="M2338墓道自南向北"><figcaption><b>FIG. 05</b> 墓道，自南向北</figcaption></figure>
+          <figure class="report-figure report-photo report-portrait"><img src="/assets/report/tomb-passage.png" alt="M2338墓道自南向北"><figcaption><b>FIG. 05</b><span>墓道，自南向北</span></figcaption></figure>
 
           <section class="report-section report-niches">
             <div><p class="report-chapter">03 / NICHES</p><h3>第三过洞内的<br>东西壁龛</h3></div>
-            <div class="report-prose"><p>东一号龛为拱顶平底土洞，进深1.8-1.9米、宽1.4米、高1.4米，顶部略有坍塌。西一号龛为平顶平底土洞，口部小、内部大：口宽1.92米，内宽2.08米，进深2.36-2.4米，高1.6米。</p><p>器物位置图显示，陶猪与陶狗主要位于东龛；西龛内分布风帽俑、笼冠俑、女侍俑、骑马俑、陶磨、陶羊和陶鸡，为三维复原提供了相对位置依据。</p></div>
+            <div class="report-prose"><p>东一号龛为拱顶平底土洞，进深1.8-1.9米、宽1.4米、高1.4米，顶部略有坍塌。西一号龛为平顶平底土洞，口部小、内部大：口宽1.92米，内宽2.08米，进深2.36-2.4米，高1.6米。</p><p>器物位置图显示，陶猪与陶狗主要位于东龛；西龛内分布风帽俑、笼冠俑、女侍俑、<button class="artifact-term" type="button" data-artifact="胡人骑马俑">骑马俑</button>、陶磨、陶羊和陶鸡，为三维复原提供了相对位置依据。</p></div>
           </section>
-          <figure class="report-figure report-blueprint"><img src="/assets/report/niche-plan-section.png" alt="东西壁龛平面和剖视图"><figcaption><b>FIG. 06</b> 东、西壁龛平面及剖视图</figcaption></figure>
+          <figure class="report-figure report-linework report-blueprint"><img src="/assets/report/niche-plan-section-20260712.png" alt=""><figcaption><b>FIG. 06</b><span>东、西壁龛平面及剖视图｜数字为出土器物编号，EK1、WK1 分别指东、西一号龛</span></figcaption></figure>
           <div class="report-triptych">
-            <figure class="report-figure"><img src="/assets/report/niche-context.png" alt="第三过洞内壁龛"><figcaption>第三过洞内壁龛</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/east-niche.png" alt="东一号龛"><figcaption>东一号龛 EK1</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/west-niche.png" alt="西一号龛"><figcaption>西一号龛 WK1</figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/niche-context.png" alt="第三过洞内壁龛"><figcaption><span>第三过洞内壁龛</span></figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/east-niche.png" alt="东一号龛"><figcaption><span>东一号龛｜EK1</span></figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/west-niche.png" alt="西一号龛"><figcaption><span>西一号龛｜WK1</span></figcaption></figure>
           </div>
 
           <section class="report-section report-burial">
             <div><p class="report-chapter">04 / BURIAL</p><h3>棺床、墓主与<br>随葬品位置</h3></div>
-            <div class="report-prose"><p>木棺南北向置于墓室西侧砖砌棺床上，棺长约2.64米、宽0.78-1米。墓主头向北，仰身直肢葬。随葬品共100件，以陶俑为大宗，多数集中于墓室东南隅和两座壁龛。</p><p>墓室东北隅发现长约1.05米、宽约0.8米的木箱残迹；墓志、镇墓武士俑和镇墓兽分布在墓室入口及其附近，形成具有明确秩序的随葬空间。</p></div>
+            <div class="report-prose"><p>木棺南北向置于墓室西侧砖砌棺床上，棺长约2.64米、宽0.78-1米。墓主头向北，仰身直肢葬。随葬品共100件，以陶俑为大宗，多数集中于墓室东南隅和两座壁龛。</p><p>墓室东北隅发现长约1.05米、宽约0.8米的木箱残迹；<button class="artifact-term" type="button" data-artifact="卢夫人墓志">墓志</button>、镇墓武士俑和<button class="artifact-term" type="button" data-artifact="东镇墓兽">镇墓兽</button>分布在墓室入口及其附近，形成具有明确秩序的随葬空间。</p></div>
           </section>
           <div class="report-duo">
-            <figure class="report-figure"><img src="/assets/report/coffin-bed.png" alt="M2338棺床"><figcaption><b>FIG. 10</b> 棺床，自北向南</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/artifact-plan.png" alt="墓室随葬品位置图"><figcaption><b>FIG. 11</b> 墓室随葬品位置</figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/coffin-bed.png" alt="M2338棺床"><figcaption><b>FIG. 10</b><span>棺床，自北向南</span></figcaption></figure>
+            <figure class="report-figure report-linework"><img src="/assets/report/artifact-plan-20260712.png" alt=""><figcaption><b>FIG. 11</b><span>墓室随葬品位置｜器物集中于墓室东北部及墓主东侧</span></figcaption></figure>
           </div>
-          <figure class="report-figure report-wide"><img src="/assets/report/chamber-orthophoto.png" alt="墓室正射影像"><figcaption><b>FIG. 12</b> 墓室正射影像</figcaption></figure>
+          <figure class="report-figure report-photo report-wide"><img src="/assets/report/chamber-orthophoto.png" alt="墓室正射影像"><figcaption><b>FIG. 12</b><span>墓室正射影像</span></figcaption></figure>
 
           <section class="report-section report-objects">
             <div><p class="report-chapter">05 / OBJECTS</p><h3>初唐墓葬中的<br>塑像与日常器物</h3></div>
-            <div class="report-prose"><p>出土陶质随葬品包括镇墓武士俑、镇墓兽、风帽俑、笼冠俑、女侍俑、骑马俑及陶塑动物；此外还有陶磨、釉陶罐、铜钵、银环、贝壳、玻璃串珠与开元通宝。</p><p>武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹。动物俑与人物俑的组合，为判断初唐关中地区墓葬制度与造型风格提供了清晰标尺。</p></div>
+            <div class="report-prose"><p>出土陶质随葬品包括镇墓武士俑、<button class="artifact-term" type="button" data-artifact="东镇墓兽">镇墓兽</button>、风帽俑、笼冠俑、女侍俑、<button class="artifact-term" type="button" data-artifact="胡人骑马俑">骑马俑</button>及陶塑动物；此外还有陶磨、釉陶罐、<button class="artifact-term" type="button" data-artifact="铜钵">铜钵</button>、<button class="artifact-term" type="button" data-artifact="银环">银环</button>、<button class="artifact-term" type="button" data-artifact="贝壳">贝壳</button>、<button class="artifact-term" type="button" data-artifact="玻璃串珠">玻璃串珠</button>与<button class="artifact-term" type="button" data-artifact="开元通宝">开元通宝</button>。</p><p>武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹。动物俑与人物俑的组合，为判断初唐关中地区墓葬制度与造型风格提供了清晰标尺。</p></div>
           </section>
           <div class="report-gallery">
-            <figure class="report-figure"><img src="/assets/report/artifact-plate-1.png" alt="镇墓武士俑线图"><figcaption>镇墓武士俑三视线图</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/guardian-warrior.png" alt="镇墓武士俑"><figcaption>镇墓武士俑 M2338:1</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/tomb-beast.png" alt="镇墓兽"><figcaption>镇墓兽 M2338:2</figcaption></figure>
-            <figure class="report-figure"><img src="/assets/report/animal-plate.png" alt="陶动物俑图版"><figcaption>陶牛、陶羊、陶猪、陶狗与陶鸡</figcaption></figure>
+            <figure class="report-figure report-linework"><img src="/assets/report/guardian-warrior-line-20260712.png" alt=""><figcaption><span>镇墓武士俑三视线图｜正面、侧面与背面</span></figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/guardian-warrior.png" alt="镇墓武士俑"><figcaption><span>镇墓武士俑｜M2338:1</span></figcaption></figure>
+            <figure class="report-figure report-photo"><img src="/assets/report/tomb-beast.png" alt="镇墓兽"><figcaption><span>镇墓兽｜M2338:2</span></figcaption></figure>
+            <figure class="report-figure report-linework"><img src="/assets/report/animal-line-20260712.png" alt=""><figcaption><span>陶动物俑三视线图｜陶牛、陶羊、陶猪、陶狗与陶鸡</span></figcaption></figure>
           </div>
 
           <section class="report-section report-history">
@@ -163,6 +188,16 @@
             <div class="report-prose"><p>墓志由志盖与志石组成，青石质，志文23行，满行23字，共516字。墓志记载卢夫人卒于龙朔元年（661）八月，享年59岁，麟德元年（664）十一月迁葬洪渎原。</p><p>简报将墓志与正史互证，认为志中“李将军魏公”极可能指隋末唐初的李密。这个判断使M2338不仅是一座纪年明确的墓葬，也成为连接考古材料、墓志文本与历史人物的重要节点。</p></div>
           </section>
           <blockquote class="epitaph-quote">“哀子玄瓒，忠孝自天……贞石一纪，芳尘讵歇。”<small>—《大唐故李将军魏公故卢夫人卢氏墓志》</small></blockquote>
+
+          <aside id="artifact-popover" class="artifact-popover" aria-hidden="true" aria-live="polite">
+            <div class="artifact-popover-particles" aria-hidden="true"></div>
+            <div class="artifact-popover-visual"><img id="artifact-popover-image" src="" alt=""></div>
+            <div class="artifact-popover-copy">
+              <p id="artifact-popover-index">M2338 / SELECTED OBJECT</p>
+              <h4 id="artifact-popover-name"></h4>
+              <dl id="artifact-popover-facts"></dl>
+            </div>
+          </aside>
 
           <footer class="report-source">
             <p>来源：陕西省考古研究院，《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》。</p>

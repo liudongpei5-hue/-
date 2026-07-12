@@ -810,32 +810,78 @@ function setupInterface() {
   });
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
-  const artifactAssets = {
-    "镇墓武士俑": "/assets/artifacts/guardian-warrior-m2338-1.png",
-    "镇墓兽": "/assets/artifacts/tomb-beast-m2338-2.png"
+  const artifactLocationMap = document.querySelector(".artifact-location-map");
+  const artifactCatalog = {
+    "东镇墓兽": { en:"EAST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]] },
+    "西镇墓兽": { en:"WEST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-west.png", description:"泥质红陶模制，兽面曲角，与东镇墓兽分置墓室入口两侧。", facts:[["编号","M2338:3"],["位置","墓室入口西侧"],["类别","镇墓兽"],["工艺","模制施彩"]] },
+    "胡人骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", description:"骑马俑主要出土于墓室东南隅，人物服饰与马具保留了明确的时代信息。", facts:[["编号","M2338:33"],["位置","墓室东南隅"],["类别","陶骑马俑"],["年代","唐初"]] },
+    "高髻女骑俑": { en:"FEMALE RIDER", asset:"/assets/artifacts/catalog/female-mounted-figurine.png", description:"女俑高髻、骑马，造型凝练，是墓室陶俑组合中的代表器物。", facts:[["编号","M2338:34"],["位置","墓室东南隅"],["类别","女骑俑"],["材质","陶"]] },
+    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", description:"敛口、深弧腹、圜底，器表饰数周暗弦纹。", facts:[["编号","M2338:10"],["位置","墓室东壁"],["器形","敛口圜底"],["材质","铜"]] },
+    "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", description:"银质环状饰件，形制简洁，出土于墓室随葬品集中区域。", facts:[["编号","M2338:11"],["类别","饰件"],["形制","圆环形"],["材质","银"]] },
+    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", description:"天然贝壳随葬品，反映初唐墓葬中多样的日常物质组合。", facts:[["编号","M2338:12"],["类别","随葬品"],["材质","贝壳"],["年代","唐初"]] },
+    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", description:"多枚玻璃珠串联成组，色泽与尺寸各异。", facts:[["编号","M2338:13"],["类别","饰件"],["形制","串珠"],["材质","玻璃"]] },
+    "开元通宝": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", description:"圆形方孔钱，钱文为“开元通宝”，是墓葬断代的重要参照。", facts:[["编号","M2338:14"],["类别","钱币"],["形制","圆形方孔"],["材质","铜"]] },
+    "卢夫人墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", description:"墓志由志盖与志石组成，青石质，志文二十三行，共五百一十六字。", facts:[["编号","M2338:52"],["年代","麟德元年"],["字数","516 字"],["材质","青石"]] }
   };
-  Object.values(artifactAssets).forEach(src => {
+  Object.values(artifactCatalog).forEach(({ asset: src }) => {
     const image = new Image();
     image.src = src;
     image.decode?.().catch(() => {});
   });
-  const artifactText = {
-    "镇墓武士俑":"泥质红陶，模制。出土于墓室入口处东侧，通高约65厘米。体表原施白、红彩，胸甲与护肩残存少量金箔痕迹。",
-    "镇墓兽":"泥质红陶，模制。两件分置墓室入口东西两侧，具有镇护墓门的象征意义。",
-    "骑马俑":"共11件，主要出土于墓室东南隅。人物服饰与马具保留了明确的时代信息。",
-    "铜钵":"出土于墓室东壁下偏中，敛口、深弧腹、圜底，器表饰数周暗弦纹。"
-  };
   const artifactButtons = [...document.querySelectorAll(".artifact-list button")];
   const activateArtifact = button => {
+    const artifact = artifactCatalog[button.dataset.artifact];
     artifactButtons.forEach(item => item.classList.toggle("active", item === button));
     document.querySelector(".artifact-copy h2 span").textContent = button.dataset.artifact;
-    document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifactText[button.dataset.artifact] || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
-    const asset = artifactAssets[button.dataset.artifact];
+    document.querySelector("#artifact-name-en").textContent = artifact?.en || "SELECTED OBJECT";
+    document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifact?.description || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
+    const asset = artifact?.asset;
     stage.classList.toggle("has-image", Boolean(asset));
+    artifactLocationMap?.classList.toggle("visible", button === artifactButtons[0]);
     if (asset) artifactImage.src = asset;
     stage.classList.remove("swap"); void stage.offsetWidth; stage.classList.add("swap");
   };
   artifactButtons.forEach(button => { button.addEventListener("mouseenter", () => activateArtifact(button)); button.addEventListener("click", () => activateArtifact(button)); });
+
+  const popover = document.querySelector("#artifact-popover");
+  document.body.append(popover);
+  const particleField = popover.querySelector(".artifact-popover-particles");
+  for (let index = 0; index < 36; index++) {
+    const particle = document.createElement("i");
+    const angle = index / 36 * Math.PI * 2;
+    const distance = 70 + index % 9 * 13;
+    particle.style.setProperty("--px", `${Math.cos(angle) * distance}px`);
+    particle.style.setProperty("--py", `${Math.sin(angle) * distance}px`);
+    particle.style.setProperty("--pd", `${index % 8 * 16}ms`);
+    particleField.append(particle);
+  }
+  const closeArtifactPopover = () => {
+    if (!popover.classList.contains("visible")) return false;
+    popover.classList.remove("visible");
+    popover.classList.add("dispersing");
+    popover.setAttribute("aria-hidden", "true");
+    setTimeout(() => popover.classList.remove("dispersing"), 760);
+    return true;
+  };
+  document.querySelectorAll(".artifact-term").forEach(term => term.addEventListener("click", event => {
+    event.stopPropagation();
+    const artifact = artifactCatalog[term.dataset.artifact];
+    if (!artifact) return;
+    const rect = term.getBoundingClientRect();
+    popover.style.setProperty("--origin-x", `${rect.left + rect.width / 2}px`);
+    popover.style.setProperty("--origin-y", `${rect.top + rect.height / 2}px`);
+    document.querySelector("#artifact-popover-image").src = artifact.asset;
+    document.querySelector("#artifact-popover-image").alt = term.dataset.artifact;
+    document.querySelector("#artifact-popover-name").textContent = term.dataset.artifact;
+    document.querySelector("#artifact-popover-index").textContent = `${artifact.en} / SELECTED OBJECT`;
+    document.querySelector("#artifact-popover-facts").innerHTML = artifact.facts.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
+    popover.classList.remove("dispersing", "visible");
+    void popover.offsetWidth;
+    popover.classList.add("visible");
+    popover.setAttribute("aria-hidden", "false");
+  }));
+  popover.addEventListener("click", event => event.stopPropagation());
+  document.addEventListener("click", closeArtifactPopover);
   const canParallax = matchMedia("(pointer:fine) and (prefers-reduced-motion:no-preference)").matches;
   document.addEventListener("pointermove", event => {
     if (!canParallax) return;
@@ -844,7 +890,7 @@ function setupInterface() {
     stage.style.transform = `rotateY(${pointer.x * 5}deg) rotateX(${-pointer.y * 3}deg)`;
   });
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape") { setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
+    if (event.key === "Escape") { if (closeArtifactPopover()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
     if (app.dataset.view !== "model") return;
     const order = [8, 7, 6, 5, 4, 3, 2, 1, 0];
     if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }
