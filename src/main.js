@@ -195,9 +195,33 @@ function seededNoise(value) {
   return Math.sin(value * 12.9898 + 78.233) * 43758.5453 % 1;
 }
 
+function renderedEdges(item) {
+  if (item.name === "墓道") {
+    // The survey export closes the inner end of the ramp with a vertical rectangle.
+    // It is a construction artifact rather than part of the visible sloping passage.
+    const hiddenPairs = new Set(["0:1", "0:2", "1:3"]);
+    return item.edges.filter(({ from_vertex_index: from, to_vertex_index: to }) => {
+      const pair = `${Math.min(from, to)}:${Math.max(from, to)}`;
+      return !hiddenPairs.has(pair);
+    });
+  }
+  if (!/^(第一|第二|第三)(天井|过洞)$/.test(item.name)) return item.edges;
+
+  // Courtyards and passages are consecutive sections of one excavation.  Their
+  // exported end rectangles overlap at every junction, so render longitudinal
+  // edges only and leave both internal ends open.
+  const xValues = item.vertices.map(vertex => vertex.xyz_m[0]);
+  const xMid = (Math.min(...xValues) + Math.max(...xValues)) / 2;
+  return item.edges.filter(({ from_vertex_index: from, to_vertex_index: to }) => {
+    const fromSide = item.vertices[from].xyz_m[0] < xMid;
+    const toSide = item.vertices[to].xyz_m[0] < xMid;
+    return fromSide !== toSide;
+  });
+}
+
 function geometryFrom(item, layer = 0) {
   const positions = [];
-  item.edges.forEach((edge, edgeIndex) => {
+  renderedEdges(item).forEach((edge, edgeIndex) => {
     if (layer === 1 && edgeIndex % 5 === 2) return;
     if (layer === 2 && edgeIndex % 3 !== 0) return;
     const start = new THREE.Vector3(...item.vertices[edge.from_vertex_index].xyz_m);
@@ -632,15 +656,105 @@ function addArchedEndTone(group, box, x, seed, opacity = .12) {
   }
 }
 
+function addTombPassageSketch(group, item, seed) {
+  const point = index => item.vertices[index].xyz_m;
+  const innerNear = point(0), innerFar = point(1);
+  const innerTopNear = point(2), innerTopFar = point(3);
+  const mouthTopNear = point(4), mouthTopFar = point(5);
+
+  // Keep only the real ramp and its two sloping side planes.  In particular, do
+  // not reconstruct the exported inner-end rectangle behind the ramp.
+  addSketchQuad(group, [innerNear, innerFar, mouthTopFar, mouthTopNear], {
+    normal: [.48, 0, .88], color: 0xb19773, opacity: .16,
+    divisionsU: 7, divisionsV: 3, seed
+  });
+  addSketchQuad(group, [innerNear, innerTopNear, mouthTopNear, innerNear], {
+    normal: [0, -1, 0], color: 0x876f55, opacity: .16,
+    divisionsU: 6, divisionsV: 3, seed: seed + 31
+  });
+  addSketchQuad(group, [innerFar, mouthTopFar, innerTopFar, innerFar], {
+    normal: [0, 1, 0], color: 0x7f664d, opacity: .19,
+    divisionsU: 6, divisionsV: 3, seed: seed + 59
+  });
+}
+
+function endProfile(vertices) {
+  const byHeight = [...vertices].sort((a, b) => a[2] - b[2]);
+  const lower = byHeight.slice(0, 2).sort((a, b) => a[1] - b[1]);
+  const upper = byHeight.slice(2).sort((a, b) => a[1] - b[1]);
+  return {
+    lowerNear: lower[0], lowerFar: lower[1],
+    upperNear: upper[0], upperFar: upper[1]
+  };
+}
+
+function addOpenEndedStructureSketch(group, item, seed, vaulted) {
+  const points = item.vertices.map(vertex => vertex.xyz_m);
+  const xValues = points.map(point => point[0]);
+  const xMid = (Math.min(...xValues) + Math.max(...xValues)) / 2;
+  const left = endProfile(points.filter(point => point[0] < xMid));
+  const right = endProfile(points.filter(point => point[0] >= xMid));
+  const vaultRise = .46;
+  const leftWallNear = vaulted ? [left.upperNear[0], left.upperNear[1], left.upperNear[2] - vaultRise] : left.upperNear;
+  const leftWallFar = vaulted ? [left.upperFar[0], left.upperFar[1], left.upperFar[2] - vaultRise] : left.upperFar;
+  const rightWallNear = vaulted ? [right.upperNear[0], right.upperNear[1], right.upperNear[2] - vaultRise] : right.upperNear;
+  const rightWallFar = vaulted ? [right.upperFar[0], right.upperFar[1], right.upperFar[2] - vaultRise] : right.upperFar;
+
+  // Actual surveyed floor elevations are used at both ends.  No end-cap faces
+  // are added, so adjoining courtyard/passage sections remain visually continuous.
+  addSketchQuad(group, [left.lowerNear, right.lowerNear, right.lowerFar, left.lowerFar], {
+    normal: [0, 0, 1], color: 0xb19773, opacity: vaulted ? .18 : .12,
+    divisionsU: 6, divisionsV: 3, seed
+  });
+  addSketchQuad(group, [left.lowerNear, right.lowerNear, rightWallNear, leftWallNear], {
+    normal: [0, -1, 0], color: 0x876f55, opacity: .18,
+    divisionsU: 6, divisionsV: 4, seed: seed + 31
+  });
+  addSketchQuad(group, [right.lowerFar, left.lowerFar, leftWallFar, rightWallFar], {
+    normal: [0, 1, 0], color: 0x7f664d, opacity: .22,
+    divisionsU: 6, divisionsV: 4, seed: seed + 59
+  });
+  if (vaulted) {
+    const archSegments = 8;
+    for (let index = 0; index < archSegments; index++) {
+      const a = index / archSegments;
+      const b = (index + 1) / archSegments;
+      const archPoint = (profile, t) => {
+        const near = profile.upperNear, far = profile.upperFar;
+        const springZ = (near[2] + far[2]) / 2 - vaultRise;
+        const crownZ = (near[2] + far[2]) / 2;
+        return [
+          THREE.MathUtils.lerp(near[0], far[0], t),
+          THREE.MathUtils.lerp(near[1], far[1], t),
+          springZ + Math.sin(t * Math.PI) * (crownZ - springZ)
+        ];
+      };
+      addSketchQuad(group, [archPoint(left, a), archPoint(right, a), archPoint(right, b), archPoint(left, b)], {
+        normal: [0, a < .5 ? -.45 : .45, .6], color: 0x80684f, opacity: .11,
+        divisionsU: 6, divisionsV: 2, seed: seed + 101 + index * 17, hatching: false
+      });
+    }
+  }
+}
+
 function buildSketchVolumeLayer(data) {
   const group = new THREE.Group();
   group.name = "sketched-earth-volume";
   group.userData.opacityMaterials = [];
   const mainIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   mainIndexes.forEach((index, order) => {
+    const item = data.geometries[index];
     const box = boundsOf(data.geometries[index]);
     const seed = 500 + index * 113;
-    const isCourtyard = [2, 4, 6, 8].includes(index);
+    if (index === 8) {
+      addTombPassageSketch(group, item, seed);
+      return;
+    }
+    if (index >= 2 && index <= 7) {
+      addOpenEndedStructureSketch(group, item, seed, [3, 5, 7].includes(index));
+      return;
+    }
+    const isCourtyard = [2, 4, 6].includes(index);
     const isCave = [0, 1, 3, 5, 7].includes(index);
     const inset = isCourtyard ? .03 : .015;
     addSketchQuad(group, [
