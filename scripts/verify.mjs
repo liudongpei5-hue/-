@@ -6,7 +6,7 @@ const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 
-const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "structure-list", "transition-veil", "dimension-callout"];
+const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "transition-veil"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -50,6 +50,12 @@ if (!html.includes("176°") || !html.includes("北 N") || !html.includes("南 S"
 }
 for (let index = 0; index < geometry.geometries.length; index++) {
   if (!main.includes(`${index}: [`)) throw new Error(`Missing report dimension entry for geometry ${index}`);
+}
+if (!main.includes("addMeasurement") || !main.includes("dimensionLabel") || html.includes('id="dimension-callout"')) {
+  throw new Error("Edge-aligned 3D dimension lines are missing or obsolete page callout remains");
+}
+if (!html.includes("report-page") || !html.includes("lady-lu-excavation-report.docx")) {
+  throw new Error("Long-form report page or source-document download is missing");
 }
 for (const asset of artifactAssets) {
   if (!fs.existsSync(asset) || fs.statSync(asset).size < 20_000) throw new Error(`Missing or invalid archaeological artifact asset: ${asset}`);
