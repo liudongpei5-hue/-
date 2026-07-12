@@ -144,6 +144,22 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 
 @media(max-width:800px){.artifacts-page{grid-template-columns:minmax(0,1fr);overflow-x:hidden}.artifact-no,.artifact-list,.artifact-copy{min-width:0;width:auto;max-width:100%;left:auto!important;right:auto!important}.artifact-location-map{width:100%!important;max-width:100%;left:auto!important;right:auto!important}.artifacts-page .page-footer{display:none!important}}
 
+/* Final artifact spatial balance: keep the plan legible and let the object sit inside it. */
+.artifacts-page{--artifact-page-pad-x:clamp(46px,6.4vw,112px);--artifact-page-pad-y:clamp(64px,8.8vh,104px);grid-template-columns:minmax(128px,13vw) minmax(420px,1fr) minmax(320px,28vw);column-gap:clamp(34px,5.2vw,86px);row-gap:22px;padding:var(--artifact-page-pad-y) var(--artifact-page-pad-x) clamp(44px,5.5vh,70px)}
+.artifact-stage{width:min(30vw,470px);height:min(64dvh,650px);min-height:330px}
+.artifact-location-map{width:min(66vw,1040px);height:min(86dvh,920px)}
+.artifact-location-map:before{inset:-14%;background:radial-gradient(circle,transparent 0 48%,rgba(246,244,236,.26) 64%,rgba(246,244,236,.68) 80%,#f6f4ec 92%)}
+.artifact-location-map img{left:-7%;top:-7%;width:114%;height:114%;opacity:.68;filter:grayscale(.1) sepia(.08) saturate(1.12) contrast(1.04)}
+.artifact-copy{max-width:460px}
+.artifact-copy>p:not(.artifact-kicker){font-size:clamp(11px,.9vw,13px);line-height:1.95;max-width:38em}
+.artifact-image{width:70%;height:80%;filter:drop-shadow(0 22px 14px rgba(32,25,18,.22)) drop-shadow(0 46px 30px rgba(50,39,28,.13))}
+.artifact-stage:after{left:20%;right:20%;bottom:12%;height:15%;background:radial-gradient(ellipse,rgba(34,27,20,.28) 0,rgba(42,33,24,.16) 42%,transparent 74%);filter:blur(16px);transform:scaleX(1.05)}
+.artifact-halo{inset:12%;background:radial-gradient(circle,rgba(122,78,54,.15),rgba(74,55,38,.08) 42%,transparent 70%);filter:blur(18px)}
+.artifact-shadow{left:22%;right:22%;bottom:12%;height:16px;background:rgba(34,27,20,.26);filter:blur(16px)}
+@media(max-height:760px) and (min-width:801px){.artifacts-page{--artifact-page-pad-x:clamp(42px,5.4vw,92px);--artifact-page-pad-y:42px;grid-template-columns:minmax(112px,12vw) minmax(360px,1fr) minmax(300px,30vw);column-gap:clamp(28px,4.2vw,64px)}.artifact-stage{height:calc(100dvh - 126px);min-height:300px;width:min(28vw,430px)}.artifact-location-map{height:calc(100dvh - 78px);width:min(64vw,900px)}.artifact-list{max-height:calc(100dvh - 150px)}.artifact-copy h2 span{font-size:clamp(36px,4.2vw,64px)}.artifact-copy>p:not(.artifact-kicker){font-size:clamp(10px,.82vw,12px);line-height:1.78}}
+@media(max-width:1050px){.artifacts-page{grid-template-columns:minmax(110px,17vw) minmax(300px,1fr);column-gap:clamp(28px,4vw,54px)}.artifact-stage{width:min(44vw,460px);height:min(54dvh,560px)}.artifact-location-map{width:min(72vw,760px);height:min(60dvh,620px)}}
+@media(max-width:800px){.artifacts-page{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(330px,44dvh) auto;gap:14px;padding:11vh 18px 76px;overflow-x:hidden}.artifact-stage{width:min(82vw,400px);height:100%;min-height:300px}.artifact-location-map{width:100%!important;height:46dvh;max-width:100%}.artifact-location-map img{opacity:.6}.artifact-image{width:76%;height:84%}.artifact-copy{max-width:100%;padding-bottom:0}.artifacts-page .page-footer{display:none!important}}
+
 /* Model page axis and demo state. */
 #app[data-view="model"] .north-axis{display:none}
 #app[data-view="model"] .model-interface .controls{left:50%!important;right:auto!important;bottom:6.2vh!important;width:min(1180px,86vw)!important;transform:translateX(-50%)}
