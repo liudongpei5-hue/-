@@ -811,19 +811,25 @@ function setupInterface() {
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
   const artifactLocationMap = document.querySelector(".artifact-location-map");
+  const artifactLocationImage = document.querySelector("#artifact-location-image");
   const artifactCatalog = {
-    "东镇墓兽": { en:"EAST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]] },
-    "西镇墓兽": { en:"WEST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-west.png", description:"泥质红陶模制，兽面曲角，与东镇墓兽分置墓室入口两侧。", facts:[["编号","M2338:3"],["位置","墓室入口西侧"],["类别","镇墓兽"],["工艺","模制施彩"]] },
-    "胡人骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", description:"骑马俑主要出土于墓室东南隅，人物服饰与马具保留了明确的时代信息。", facts:[["编号","M2338:33"],["位置","墓室东南隅"],["类别","陶骑马俑"],["年代","唐初"]] },
-    "高髻女骑俑": { en:"FEMALE RIDER", asset:"/assets/artifacts/catalog/female-mounted-figurine.png", description:"女俑高髻、骑马，造型凝练，是墓室陶俑组合中的代表器物。", facts:[["编号","M2338:34"],["位置","墓室东南隅"],["类别","女骑俑"],["材质","陶"]] },
-    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", description:"敛口、深弧腹、圜底，器表饰数周暗弦纹。", facts:[["编号","M2338:10"],["位置","墓室东壁"],["器形","敛口圜底"],["材质","铜"]] },
-    "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", description:"银质环状饰件，形制简洁，出土于墓室随葬品集中区域。", facts:[["编号","M2338:11"],["类别","饰件"],["形制","圆环形"],["材质","银"]] },
-    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", description:"天然贝壳随葬品，反映初唐墓葬中多样的日常物质组合。", facts:[["编号","M2338:12"],["类别","随葬品"],["材质","贝壳"],["年代","唐初"]] },
-    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", description:"多枚玻璃珠串联成组，色泽与尺寸各异。", facts:[["编号","M2338:13"],["类别","饰件"],["形制","串珠"],["材质","玻璃"]] },
-    "开元通宝": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", description:"圆形方孔钱，钱文为“开元通宝”，是墓葬断代的重要参照。", facts:[["编号","M2338:14"],["类别","钱币"],["形制","圆形方孔"],["材质","铜"]] },
-    "卢夫人墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", description:"墓志由志盖与志石组成，青石质，志文二十三行，共五百一十六字。", facts:[["编号","M2338:52"],["年代","麟德元年"],["字数","516 字"],["材质","青石"]] }
+    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]] },
+    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["材质","陶"]] },
+    "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质，志文二十三行，共五百一十六字。", facts:[["编号","M2338:52"],["年代","麟德元年"],["字数","516 字"],["材质","青石"]] },
+    "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”，是墓葬断代的重要参照。", facts:[["编号","M2338:14"],["类别","钱币"],["形制","圆形方孔"],["材质","铜"]] },
+    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"多枚玻璃珠串联成组，色泽与尺寸各异。", facts:[["编号","M2338:13"],["类别","饰件"],["形制","串珠"],["材质","玻璃"]] },
+    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", location:"/assets/artifacts/location-shell.jpg", description:"天然贝壳随葬品，反映初唐墓葬中多样的日常物质组合。", facts:[["编号","M2338:12"],["类别","随葬品"],["材质","贝壳"],["年代","唐初"]] },
+    "银杯": { en:"SILVER CUP", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银质随葬器物，出土于墓室随葬品集中区域。", facts:[["类别","银器"],["位置","墓室随葬品集中区"],["材质","银"],["年代","唐初"]] },
+    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"敛口、深弧腹、圜底，器表饰数周暗弦纹。", facts:[["编号","M2338:10"],["位置","墓室东壁"],["器形","敛口圜底"],["材质","铜"]] },
+    "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"骑马俑主要出土于墓室东南隅，人物服饰与马具保留了明确的时代信息。", facts:[["编号","M2338:33"],["位置","墓室东南隅"],["类别","陶骑马俑"],["年代","唐初"]] }
   };
-  Object.values(artifactCatalog).forEach(({ asset: src }) => {
+  artifactCatalog["东镇墓兽"] = artifactCatalog["镇墓兽"];
+  artifactCatalog["西镇墓兽"] = { ...artifactCatalog["镇墓兽"], en:"WEST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-west.png" };
+  artifactCatalog["卢夫人墓志"] = artifactCatalog["墓志"];
+  artifactCatalog["开元通宝"] = artifactCatalog["铜钱"];
+  artifactCatalog["胡人骑马俑"] = artifactCatalog["骑马俑"];
+  artifactCatalog["银环"] = artifactCatalog["银杯"];
+  [...new Set(Object.values(artifactCatalog).flatMap(({ asset, location }) => [asset, location].filter(Boolean)))].forEach(src => {
     const image = new Image();
     image.src = src;
     image.decode?.().catch(() => {});
@@ -837,8 +843,13 @@ function setupInterface() {
     document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifact?.description || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
     const asset = artifact?.asset;
     stage.classList.toggle("has-image", Boolean(asset));
-    artifactLocationMap?.classList.toggle("visible", button === artifactButtons[0]);
     if (asset) artifactImage.src = asset;
+    if (artifact?.location) {
+      artifactLocationImage.src = artifact.location;
+      artifactLocationMap?.classList.add("visible");
+    } else {
+      artifactLocationMap?.classList.remove("visible");
+    }
     stage.classList.remove("swap"); void stage.offsetWidth; stage.classList.add("swap");
   };
   artifactButtons.forEach(button => { button.addEventListener("mouseenter", () => activateArtifact(button)); button.addEventListener("click", () => activateArtifact(button)); });
