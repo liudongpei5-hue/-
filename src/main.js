@@ -1531,6 +1531,14 @@ function setupInterface() {
       veil.append(particle);
     }
   }
+  const homePage = document.querySelector("#home-page");
+  const enterModel = event => {
+    if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    setView("model", event);
+  };
+  homePage.addEventListener("click", enterModel);
+  homePage.addEventListener("keydown", enterModel);
   document.querySelector("#menu-trigger").addEventListener("click", event => setView(app.dataset.view === "menu" ? "model" : "menu", event));
   const navButtons = [...document.querySelectorAll(".chapter-nav button")];
   navButtons.forEach((button, index) => {

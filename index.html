@@ -4,17 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>唐代卢夫人墓｜数字考古档案</title>
+    <link rel="preload" as="image" href="/assets/home/landing.jpg" />
     <link rel="preload" as="fetch" href="/geometry-export.json?v=20260711-new-13" crossorigin="anonymous" />
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260713-memories-artifact-spatial" />
+    <link rel="stylesheet" href="/src/style.css?v=20260713-home" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
   </head>
   <body>
-    <main id="app" data-view="model">
+    <main id="app" data-view="home">
+      <section id="home-page" class="page-layer home-page active" aria-hidden="false" aria-label="点击进入三维模型" role="button" tabindex="0">
+        <img src="/assets/home/landing.jpg" alt="陕西咸阳卢夫人墓空间重建项目首页" />
+      </section>
       <canvas id="scene" aria-label="卢夫人墓三维铅笔骨架"></canvas>
       <div class="paper-grain" aria-hidden="true"></div>
       <div class="layout-grid" aria-hidden="true"></div>
@@ -213,6 +217,6 @@
 
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260713-memories-no-group-label"></script>
+    <script type="module" src="/src/main.js?v=20260713-home"></script>
   </body>
 </html>
