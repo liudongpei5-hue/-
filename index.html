@@ -8,7 +8,7 @@
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260712-report-axis-v3" />
+    <link rel="stylesheet" href="/src/style.css?v=20260713-memories-120-percent" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
@@ -60,7 +60,7 @@
           <button data-target="model"><em>01</em><strong>MODEL</strong><span>三维示意图</span></button>
           <button data-target="artifacts"><em>02</em><strong>ARTIFACTS</strong><span>文物详情</span></button>
           <button data-target="data"><em>03</em><strong>DATA BASIS</strong><span>数据来源</span></button>
-          <button data-target="workflow"><em>04</em><strong>WORKFLOW</strong><span>工作展望</span></button>
+          <button data-target="workflow"><em>04</em><strong>MEMORIES</strong><span>回忆录</span></button>
         </nav>
         <div class="menu-progress"><i></i><span>01 / 04</span></div>
         <footer class="page-footer"><span>CN　EN</span><span>REPORT SOURCE FILE</span></footer>
@@ -203,10 +203,18 @@
           </footer>
         </article>
       </section>
-      <section id="workflow-page" class="page-layer text-page" aria-hidden="true"><span>04</span><h2>WORKFLOW</h2><p>制作流程、实现方式与应用场景。</p></section>
+      <section id="workflow-page" class="page-layer memories-page" aria-hidden="true" aria-label="Memories 照片回忆录">
+        <header class="memories-hero">
+          <p class="memories-kicker">04 / MEMORIES</p>
+          <h2>工作回忆</h2>
+          <span class="memories-scroll-cue" aria-hidden="true">SCROLL ↓</span>
+        </header>
+        <div id="memories-gallery" class="memories-gallery"></div>
+        <footer class="memories-footer"><span>唐代卢夫人墓 · 数字考古档案</span><span>END / 19</span></footer>
+      </section>
 
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260712-camera-ui"></script>
+    <script type="module" src="/src/main.js?v=20260713-memories-no-group-label"></script>
   </body>
 </html>
