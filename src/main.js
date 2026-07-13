@@ -389,7 +389,7 @@ async function loadBurialGoods() {
   const loader = new GLTFLoader();
   const library = new Map();
   await Promise.all(modelIds.map(async modelId => {
-    const gltf = await loader.loadAsync(`/models/burial-goods/${modelId}.glb`);
+    const gltf = await loader.loadAsync(`/models/burial-goods-texture/${modelId}.glb`);
     library.set(modelId, gltf.scene);
   }));
 
