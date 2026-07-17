@@ -12,14 +12,29 @@ for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
 
-if (cameras.presets.length !== 9) throw new Error(`Expected 9 screenshot camera presets, got ${cameras.presets.length}`);
+if (cameras.presets.length !== 13) throw new Error(`Expected 13 competition camera presets, got ${cameras.presets.length}`);
 const presetIndices = new Set(cameras.presets.map(item => item.geometryIndex));
-for (let index = 0; index <= 8; index++) {
+for (let index = 0; index <= 12; index++) {
   if (!presetIndices.has(index)) throw new Error(`Missing camera preset for geometry ${index}`);
   if (!main.includes(`${index}: { position:`)) throw new Error(`Runtime camera preset missing for geometry ${index}`);
 }
 for (const preset of cameras.presets) {
-  if (preset.position.length !== 3 || preset.target.length !== 3 || preset.fov !== 48) throw new Error(`Invalid camera preset: ${preset.name}`);
+  if (preset.position.length !== 3 || preset.target.length !== 3 || preset.fov !== 40 || !preset.focus?.length) throw new Error(`Invalid camera preset: ${preset.name}`);
+}
+const viewVectors = cameras.presets.map(preset => {
+  const vector = preset.position.map((value, index) => value - preset.target[index]);
+  const length = Math.hypot(...vector);
+  return vector.map(value => value / length);
+});
+if (viewVectors[0][0] >= 0 || viewVectors[0][1] <= 0) {
+  throw new Error("Camera route must look from the opposite side with the chamber projecting screen-left");
+}
+for (const vector of viewVectors.slice(1)) {
+  const dot = vector.reduce((sum, value, index) => sum + value * viewVectors[0][index], 0);
+  if (dot < .998) throw new Error("Camera presets must retain one stable viewing direction");
+}
+if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0]) || !main.includes("const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0]")) {
+  throw new Error("Competition camera route is missing or out of sync");
 }
 
 const vertexCount = geometry.geometries.reduce((sum, item) => sum + item.vertices.length, 0);
@@ -33,6 +48,12 @@ if (!main.includes("cultivationThickness: .32") || !main.includes("loessThicknes
 if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
   throw new Error("Camera path or breathing easing is missing");
 }
+if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor")) {
+  throw new Error("Responsive close-up safe-area compensation is missing");
+}
+if (!main.includes("new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7)")) {
+  throw new Error("Overall camera must keep the chamber end on screen-left");
+}
 for (const niche of ["东壁龛", "西壁龛"]) {
   if (!geometry.geometries.some(item => item.name === niche)) throw new Error(`Missing niche geometry: ${niche}`);
   if (!main.includes(`"${niche}"`)) throw new Error(`Missing niche dimension or navigation data: ${niche}`);
@@ -42,6 +63,9 @@ if (!main.includes("STRUCTURE_ORDER") || !main.includes("controls.touches.TWO = 
 }
 if (!html.includes("/assets/report/tomb-plan.png") || !main.includes("PLAN_HOTSPOTS")) {
   throw new Error("Report-plan structure navigation is missing");
+}
+if (!main.includes('placement.secondary ? `盗洞${label.slice(1)}` : label')) {
+  throw new Error("Theft-shaft plan labels must use 盗洞1 / 盗洞2");
 }
 if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
   throw new Error("Burial-goods models must load without blocking the spatial interface");

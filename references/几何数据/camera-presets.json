@@ -1,15 +1,20 @@
 {
   "coordinateSystem": "world-space, right-handed XYZ, Z-up, meters",
-  "method": "camera positions read from the '特写' reference screenshots; projection testing shows the original editor retained the global origin as OrbitControls target; FOV follows the supplied editor setting of 48 degrees",
+  "method": "competition camera route: every endpoint looks from the south-east side with a stable 40 degree FOV; the chamber end projects to screen-left and every focus keeps breathing room above the plan navigator, with a runtime narrow-screen compensation; repeated courtyard/passage and niche structures share chapter shots",
+  "route": [8, 6, 4, 3, 11, 1, 0],
   "presets": [
-    {"id":"tomb-passage","geometryIndex":8,"name":"墓道","position":[-12.8,5.2,8.3],"target":[0,0,0],"fov":48,"source":"墓道特写.png"},
-    {"id":"passage-1","geometryIndex":7,"name":"第一过洞","position":[-9.9,6.0,6.4],"target":[0,0,0],"fov":48,"source":"第一过洞特写.png"},
-    {"id":"courtyard-1","geometryIndex":6,"name":"第一天井","position":[-7.6,5.2,9.0],"target":[0,0,0],"fov":48,"source":"第一天井特写.png"},
-    {"id":"passage-2","geometryIndex":5,"name":"第二过洞","position":[-5.3,6.4,4.3],"target":[0,0,0],"fov":48,"source":"第二过洞特写.png"},
-    {"id":"courtyard-2","geometryIndex":4,"name":"第二天井","position":[-5.6,5.4,8.9],"target":[0,0,0],"fov":48,"source":"第二天井特写.png"},
-    {"id":"passage-3","geometryIndex":3,"name":"第三过洞","position":[-4.8,7.7,4.1],"target":[0,0,0],"fov":48,"source":"第三过洞特写.png"},
-    {"id":"courtyard-3","geometryIndex":2,"name":"第三天井","position":[-1.7,8.7,10.6],"target":[0,0,0],"fov":48,"source":"第三天井特写.png"},
-    {"id":"corridor","geometryIndex":1,"name":"甬道","position":[-1.2,10.8,-0.2],"target":[0,0,0],"fov":48,"source":"甬道特写.png"},
-    {"id":"chamber","geometryIndex":0,"name":"墓室","position":[15.4,10.8,-2.1],"target":[0,0,0],"fov":48,"source":"墓室.png"}
+    {"id":"chamber","geometryIndex":0,"name":"墓室","position":[-0.01,8.23,1.39],"target":[5.83,0.13,-3.63],"fov":40,"focus":[0]},
+    {"id":"corridor","geometryIndex":1,"name":"甬道","position":[0.84,4.19,-0.82],"target":[4.07,-0.30,-3.60],"fov":40,"focus":[1]},
+    {"id":"courtyard-passage-3a","geometryIndex":2,"name":"第三天井＋第三过洞","position":[-8.11,10.48,5.97],"target":[0.26,-1.15,-1.24],"fov":40,"focus":[2,3]},
+    {"id":"courtyard-passage-3b","geometryIndex":3,"name":"第三天井＋第三过洞","position":[-8.11,10.48,5.97],"target":[0.26,-1.15,-1.24],"fov":40,"focus":[2,3]},
+    {"id":"courtyard-passage-2a","geometryIndex":4,"name":"第二天井＋第二过洞","position":[-9.10,8.57,5.71],"target":[-2.28,-0.91,-0.17],"fov":40,"focus":[4,5]},
+    {"id":"courtyard-passage-2b","geometryIndex":5,"name":"第二天井＋第二过洞","position":[-9.10,8.57,5.71],"target":[-2.28,-0.91,-0.17],"fov":40,"focus":[4,5]},
+    {"id":"courtyard-passage-1a","geometryIndex":6,"name":"第一天井＋第一过洞","position":[-10.26,6.93,5.63],"target":[-4.71,-0.78,0.84],"fov":40,"focus":[6,7]},
+    {"id":"courtyard-passage-1b","geometryIndex":7,"name":"第一天井＋第一过洞","position":[-10.26,6.93,5.63],"target":[-4.71,-0.78,0.84],"fov":40,"focus":[6,7]},
+    {"id":"tomb-passage","geometryIndex":8,"name":"墓道","position":[-15.34,7.67,6.88],"target":[-9.16,-0.92,1.55],"fov":40,"focus":[8]},
+    {"id":"theft-shaft-d2","geometryIndex":9,"name":"D2","position":[-2.68,7.57,5.16],"target":[3.50,-1.02,-0.17],"fov":40,"focus":[9]},
+    {"id":"theft-shaft-d1","geometryIndex":10,"name":"D1","position":[-4.59,7.67,5.27],"target":[1.51,-0.81,0.01],"fov":40,"focus":[10]},
+    {"id":"niches-a","geometryIndex":11,"name":"东、西壁龛","position":[-5.74,7.70,2.83],"target":[0.18,-0.52,-2.26],"fov":40,"focus":[11,12]},
+    {"id":"niches-b","geometryIndex":12,"name":"东、西壁龛","position":[-5.74,7.70,2.83],"target":[0.18,-0.52,-2.26],"fov":40,"focus":[11,12]}
   ]
 }

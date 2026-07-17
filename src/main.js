@@ -121,6 +121,7 @@ let cameraMoveToken = 0;
 let autoDemoTimer = 0;
 let autoDemoActive = false;
 let autoDemoStep = 0;
+let selectedFocusIndices = [];
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
@@ -139,7 +140,7 @@ const PLAN_HOTSPOTS = new Map([
   [9, { x: 24.29, y: 42.12, secondary: true }],
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
-const DEMO_ROUTE = [8, 7, 6, 5, 4, 3, 2, 1, 0];
+const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0];
 const STRUCTURE_MEASURES = {
   0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
   1: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.28 m"},{axis:"z",label:"1.92 m"}],
@@ -156,16 +157,19 @@ const STRUCTURE_MEASURES = {
   12: [{axis:"y",label:"2.36-2.40 m"},{axis:"y",label:"0.50 m",side:"minx",fraction:.21,offset:.38},{axis:"x",label:"1.92 m",side:"mouth"},{axis:"x",label:"2.08 m",side:"back",offset:.32},{axis:"z",label:"1.60 m"}]
 };
 const CAMERA_PRESETS = {
-  8: { position: [-12.8, 5.2, 8.3], target: [0, 0, 0], fov: 48 },
-  7: { position: [-9.9, 6.0, 6.4], target: [0, 0, 0], fov: 48 },
-  6: { position: [-7.6, 5.2, 9.0], target: [0, 0, 0], fov: 48 },
-  5: { position: [-5.3, 6.4, 4.3], target: [0, 0, 0], fov: 48 },
-  4: { position: [-5.6, 5.4, 8.9], target: [0, 0, 0], fov: 48 },
-  3: { position: [-4.8, 7.7, 4.1], target: [0, 0, 0], fov: 48 },
-  2: { position: [-1.7, 8.7, 10.6], target: [0, 0, 0], fov: 48 },
-  1: { position: [-1.2, 10.8, -0.2], target: [0, 0, 0], fov: 48 },
-  0: { position: [15.4, 10.8, -2.1], target: [0, 0, 0], fov: 48 },
-  12: { position: [2.08, -3.7, -1.15], target: [2.08, 1.95, -1.55], fov: 45 }
+  0: { position: [-.01, 8.23, 1.39], target: [5.83, .13, -3.63], fov: 40, focus: [0] },
+  1: { position: [.84, 4.19, -.82], target: [4.07, -.30, -3.60], fov: 40, focus: [1] },
+  2: { position: [-8.11, 10.48, 5.97], target: [.26, -1.15, -1.24], fov: 40, focus: [2, 3] },
+  3: { position: [-8.11, 10.48, 5.97], target: [.26, -1.15, -1.24], fov: 40, focus: [2, 3] },
+  4: { position: [-9.10, 8.57, 5.71], target: [-2.28, -.91, -.17], fov: 40, focus: [4, 5] },
+  5: { position: [-9.10, 8.57, 5.71], target: [-2.28, -.91, -.17], fov: 40, focus: [4, 5] },
+  6: { position: [-10.26, 6.93, 5.63], target: [-4.71, -.78, .84], fov: 40, focus: [6, 7] },
+  7: { position: [-10.26, 6.93, 5.63], target: [-4.71, -.78, .84], fov: 40, focus: [6, 7] },
+  8: { position: [-15.34, 7.67, 6.88], target: [-9.16, -.92, 1.55], fov: 40, focus: [8] },
+  9: { position: [-2.68, 7.57, 5.16], target: [3.50, -1.02, -.17], fov: 40, focus: [9] },
+  10: { position: [-4.59, 7.67, 5.27], target: [1.51, -.81, .01], fov: 40, focus: [10] },
+  11: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] },
+  12: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] }
 };
 
 const vertexShader = `
@@ -1201,7 +1205,7 @@ function fitView() {
   const size = box.getSize(new THREE.Vector3());
   const radius = size.length() * .55;
   controls.target.copy(center);
-  camera.position.copy(center).add(new THREE.Vector3(radius * .85, -radius * 1.25, radius * .7));
+  camera.position.copy(center).add(new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7));
   camera.fov = 38;
   camera.updateProjectionMatrix();
   controls.update();
@@ -1287,10 +1291,11 @@ function showMeasurements(index,selected) {
   measures.forEach((measure,measureIndex)=>addMeasurement(box,measure,measureIndex));
 }
 
-function selectStructure(index) {
+function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
   selectedIndex = index;
+  selectedFocusIndices = index < 0 ? [] : [...new Set(focusIndices)];
   objects.forEach(group => {
-    const active = index < 0 || group.userData.index === index;
+    const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB } = group.userData.lines;
     understroke.material.opacity = index < 0 ? (isTheftShaft ? .26 : .12) : active ? .48 : .035;
@@ -1309,11 +1314,14 @@ function selectStructure(index) {
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
-  setBurialGoodsOpacity(index < 0 || index === 0 ? 1 : .14);
+  setBurialGoodsOpacity(index < 0 || selectedFocusIndices.includes(0) ? 1 : .14);
   document.querySelectorAll("#structure-list button").forEach(button => {
-    const active = button.classList.contains("overall") ? index < 0 : Number(button.dataset.index) === index;
+    const buttonIndex = Number(button.dataset.index);
+    const active = button.classList.contains("overall") ? index < 0 : buttonIndex === index;
+    const contextActive = !button.classList.contains("overall") && !active && selectedFocusIndices.includes(buttonIndex);
     button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
+    button.classList.toggle("context-active", contextActive);
+    button.setAttribute("aria-pressed", String(active || contextActive));
     if (active) {
       button.classList.remove("axis-hit");
       void button.offsetWidth;
@@ -1326,9 +1334,10 @@ function selectStructure(index) {
     }
   });
   const selected = objects.find(group => group.userData.index === index);
-  const currentLabel = index < 0 ? "整体结构" : selected?.userData.name || "结构";
+  const focusNames = selectedFocusIndices.map(focusIndex => objects.find(group => group.userData.index === focusIndex)?.userData.name).filter(Boolean);
+  const currentLabel = index < 0 ? "整体结构" : focusNames.join(" ＋ ") || selected?.userData.name || "结构";
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${currentLabel} · 结构已突出`;
-  showMeasurements(index,selected);
+  showMeasurements(selectedFocusIndices.length === 1 ? index : -1, selectedFocusIndices.length === 1 ? selected : null);
 }
 
 function buildControls(data) {
@@ -1345,8 +1354,9 @@ function buildControls(data) {
     button.className = "structure-hotspot";
     button.dataset.index = index;
     const label = item.name || FALLBACK_NAMES[index] || `结构 ${index + 1}`;
-    const displayLabel = placement.secondary ? `${label} 盗洞` : label;
-    button.setAttribute("aria-label", `查看${displayLabel}三维特写`);
+    const displayLabel = placement.secondary ? `盗洞${label.slice(1)}` : label;
+    const accessibleLabel = displayLabel;
+    button.setAttribute("aria-label", `查看${accessibleLabel}三维特写`);
     button.setAttribute("aria-pressed", "false");
     button.style.setProperty("--x", `${placement.x}%`);
     if (placement.secondary) {
@@ -1385,11 +1395,13 @@ function animateCamera(endPosition, endTarget, endFov, onComplete) {
   const startTarget = controls.target.clone();
   const startFov = camera.fov;
   const distance = startPosition.distanceTo(endPosition);
-  const lift = THREE.MathUtils.clamp(distance * .11, .7, 4.8);
+  const lift = THREE.MathUtils.clamp(distance * .04, .2, .7);
   const controlA = startPosition.clone().lerp(endPosition, .3).add(new THREE.Vector3(0, 0, lift));
   const controlB = startPosition.clone().lerp(endPosition, .7).add(new THREE.Vector3(0, 0, lift * .72));
   const curve = new THREE.CubicBezierCurve3(startPosition, controlA, controlB, endPosition);
-  const duration = THREE.MathUtils.clamp(1250 + distance * 62, 1450, 2850);
+  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? 220
+    : THREE.MathUtils.clamp(760 + distance * 48, 1000, 1900);
   const started = performance.now();
   controls.enabled = false;
   document.querySelector("#status").textContent = "镜头移动中 · CAMERA IN MOTION";
@@ -1411,6 +1423,20 @@ function animateCamera(endPosition, endTarget, endFov, onComplete) {
   requestAnimationFrame(step);
 }
 
+function applyResponsiveShotOffset(position, target) {
+  const aspect = canvas.clientWidth / Math.max(canvas.clientHeight, 1);
+  const narrowFactor = THREE.MathUtils.clamp((1.1 - aspect) / .65, 0, 1);
+  if (!narrowFactor) return;
+  const distance = position.distanceTo(target);
+  const forward = target.clone().sub(position).normalize();
+  const screenRight = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const screenUp = new THREE.Vector3().crossVectors(screenRight, forward).normalize();
+  const offset = screenRight.multiplyScalar(-distance * .14 * narrowFactor)
+    .add(screenUp.multiplyScalar(-distance * .04 * narrowFactor));
+  position.add(offset);
+  target.add(offset);
+}
+
 function navigateToStructure(index, options = {}) {
   const group = objects.find(item => item.userData.index === index);
   if (!group) return;
@@ -1418,11 +1444,14 @@ function navigateToStructure(index, options = {}) {
   const bbox = new THREE.Box3().setFromObject(group);
   const size = bbox.getSize(new THREE.Vector3()).length();
   const preset = CAMERA_PRESETS[index];
+  const focusIndices = preset?.focus || [index];
   const target = preset ? new THREE.Vector3(...preset.target) : geometricTarget;
   const endPosition = preset ? new THREE.Vector3(...preset.position) : target.clone().add(new THREE.Vector3(size * .8, -size * 1.15, size * .65));
-  selectStructure(index);
+  applyResponsiveShotOffset(endPosition, target);
+  selectStructure(index, focusIndices);
   animateCamera(endPosition, target, preset?.fov || 42, () => {
-    document.querySelector("#status").textContent = `${group.userData.name} · 特写视角`;
+    const focusNames = focusIndices.map(focusIndex => objects.find(item => item.userData.index === focusIndex)?.userData.name).filter(Boolean);
+    document.querySelector("#status").textContent = `${focusNames.join(" ＋ ")} · ${focusNames.length > 1 ? "组合特写" : "特写视角"}`;
   });
 }
 
@@ -1636,7 +1665,7 @@ function bindSlider(id, callback) {
   const output = document.querySelector(`#${id}-value`);
   input.addEventListener("input", () => { output.value = input.value; callback(Number(input.value)); });
 }
-bindSlider("density", value => objects.forEach(group => { const active = selectedIndex < 0 || group.userData.index === selectedIndex; const { understroke, main } = group.userData.lines; main.material.uniforms.uOpacity.value = active ? value / 100 : value / 600; understroke.material.opacity = active ? value / 245 : value / 900; }));
+bindSlider("density", value => objects.forEach(group => { const active = selectedIndex < 0 || selectedFocusIndices.includes(group.userData.index); const { understroke, main } = group.userData.lines; main.material.uniforms.uOpacity.value = active ? value / 100 : value / 600; understroke.material.opacity = active ? value / 245 : value / 900; }));
 bindSlider("jitter", value => objects.forEach(group => [group.userData.lines.main, group.userData.lines.echoA, group.userData.lines.echoB].forEach((line, i) => line.material.uniforms.uJitter.value = value / 9000 * (i + 1))));
 bindSlider("grain", value => document.querySelector(".paper-grain").style.opacity = value / 100);
 
