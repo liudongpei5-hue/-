@@ -192,13 +192,15 @@ function createSketchPipeline() {
         float fiberA=sin((vUv.x*920.0+vUv.y*210.0)+grain*2.5);
         float fiberB=sin((vUv.y*760.0-vUv.x*120.0)+grain*1.7);
         float paperTooth=(grain-.5)*0.09+fiberA*0.018+fiberB*0.012;
-        float edge=max(depthEdge(vUv,px)*1.25,normalEdge(vUv,px)*.72);
-        float broken=edge*(0.72+grain*.46)*(1.0-mist*.38);
+        float edge=max(depthEdge(vUv,px)*1.65,normalEdge(vUv,px)*.98);
+        float diagonal=max(depthEdge(vUv,px*vec2(1.45,1.45))*.62,normalEdge(vUv,px*vec2(1.25,1.25))*.42);
+        edge=max(edge,diagonal);
+        float broken=edge*(0.62+grain*.58)*(1.0-mist*.34);
         vec3 paper=uPaper+vec3(paperTooth);
         float tone=dot(source.rgb,vec3(.299,.587,.114));
         float pencilShade=smoothstep(.94,.34,tone)*(1.0-mist*.34);
-        vec3 washed=mix(paper,source.rgb,.18*(1.0-mist*.25));
-        float graphite=max(broken*(0.88+uMoving*.18),pencilShade*.18);
+        vec3 washed=mix(paper,source.rgb,.095*(1.0-mist*.18));
+        float graphite=max(broken*(1.02+uMoving*.16),pencilShade*.11);
         vec3 color=mix(washed,uInk,graphite);
         color=mix(color,paper,.18+mist*.2);
         float vignette=smoothstep(.92,.22,length(vUv-.5));
@@ -251,6 +253,7 @@ const wideMaterials = [];
 let selectedIndex = -1;
 let perspectiveGuides;
 let naturalShell;
+let continuousVolumeLayer;
 let groundLayer;
 let sketchVolumeLayer;
 let burialGoodsLayer;
@@ -767,6 +770,101 @@ function polylineItem(points) {
 function naturalLine(points, opacity = .72, color = 0x403d38) {
   const group = roughObject(polylineItem(points), opacity, color);
   group.userData.baseOpacity = opacity;
+  return group;
+}
+
+function makeProfile(box, vaulted) {
+  const yMin = box.min.y;
+  const yMax = box.max.y;
+  const zFloor = box.min.z;
+  const zTop = box.max.z;
+  const spring = vaulted ? zTop - Math.min(.78, Math.max(.42, (zTop - zFloor) * .34)) : zTop;
+  const points = [
+    { y: yMin, z: zFloor },
+    { y: yMax, z: zFloor },
+    { y: yMax, z: spring }
+  ];
+  const archSamples = 8;
+  for (let i = 1; i < archSamples; i++) {
+    const t = i / archSamples;
+    const y = THREE.MathUtils.lerp(yMax, yMin, t);
+    const z = vaulted ? spring + Math.sin(t * Math.PI) * (zTop - spring) : zTop;
+    points.push({ y, z });
+  }
+  points.push({ y: yMin, z: spring }, { y: yMin, z: zFloor });
+  return points;
+}
+
+function buildContinuousVolumeLayer(data) {
+  const group = new THREE.Group();
+  group.name = "continuous-surveyed-npr-body";
+  group.userData.opacityMaterials = [];
+  const mainIndexes = [8, 7, 6, 5, 4, 3, 2, 1, 0];
+  const vaultedIndexes = new Set([0, 1, 3, 5, 7]);
+  const sections = [];
+  mainIndexes.forEach(index => {
+    const box = boundsOf(data.geometries[index]);
+    const profile = makeProfile(box, vaultedIndexes.has(index));
+    sections.push({ x: box.min.x, profile, index });
+    sections.push({ x: box.max.x, profile, index });
+  });
+  sections.sort((a, b) => a.x - b.x);
+
+  const positions = [];
+  const shades = [];
+  const grains = [];
+  const pushVertex = (x, point, shade, grain) => {
+    positions.push(x, point.y, point.z);
+    shades.push(shade);
+    grains.push(grain);
+  };
+  const pushQuad = (a, b, c, d, shade, seed) => {
+    [a, b, c, a, c, d].forEach((vertex, order) => pushVertex(vertex.x, vertex, shade + (seededNoise(seed + order * 19) - .5) * .08, seededNoise(seed + order * 37)));
+  };
+
+  for (let s = 0; s < sections.length - 1; s++) {
+    const left = sections[s];
+    const right = sections[s + 1];
+    if (Math.abs(right.x - left.x) < .001) continue;
+    for (let p = 0; p < left.profile.length - 1; p++) {
+      const a = { x: left.x, ...left.profile[p] };
+      const b = { x: right.x, ...right.profile[p] };
+      const c = { x: right.x, ...right.profile[p + 1] };
+      const d = { x: left.x, ...left.profile[p + 1] };
+      const vertical = Math.abs(left.profile[p].z - left.profile[p + 1].z);
+      const floorBand = p === 0;
+      const roofBand = p > 1 && p < left.profile.length - 2;
+      const shade = floorBand ? .74 : roofBand ? .38 : .52 + Math.min(.24, vertical * .08);
+      pushQuad(a, b, c, d, shade, 2100 + s * 71 + p * 13);
+    }
+  }
+
+  [sections[0], sections[sections.length - 1]].forEach((section, sectionIndex) => {
+    const center = section.profile.reduce((sum, point) => {
+      sum.y += point.y;
+      sum.z += point.z;
+      return sum;
+    }, { x: section.x, y: 0, z: 0 });
+    center.y /= section.profile.length;
+    center.z /= section.profile.length;
+    for (let p = 0; p < section.profile.length - 1; p++) {
+      const a = { x: section.x, ...section.profile[p] };
+      const b = { x: section.x, ...section.profile[p + 1] };
+      pushQuad(center, a, b, center, sectionIndex ? .48 : .42, 3500 + sectionIndex * 97 + p);
+    }
+  });
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("aShade", new THREE.Float32BufferAttribute(shades, 1));
+  geometry.setAttribute("aGrain", new THREE.Float32BufferAttribute(grains, 1));
+  geometry.computeVertexNormals();
+  const material = trackOpacity(group, sketchWashMaterial(0x8a765c, .026), .026);
+  material.depthWrite = true;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "single-continuous-npr-depth-body";
+  mesh.renderOrder = -4;
+  group.add(mesh);
   return group;
 }
 
@@ -1702,19 +1800,25 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB } = group.userData.lines;
-    understroke.material.opacity = index < 0 ? (isTheftShaft ? .26 : .12) : active ? .48 : .035;
-    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .62 : .3) : active ? .99 : .065;
-    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .18 : .09) : active ? .34 : .025;
-    echoB.material.uniforms.uOpacity.value = index < 0 ? .075 : active ? .22 : .012;
+    understroke.material.opacity = index < 0 ? (isTheftShaft ? .14 : .028) : active ? .28 : .018;
+    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .42 : .1) : active ? .72 : .035;
+    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .1 : .03) : active ? .18 : .012;
+    echoB.material.uniforms.uOpacity.value = index < 0 ? .024 : active ? .1 : .006;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
-  // Keep the post-JSON replacement skeleton appearance: only the 13 exported geometries render.
   if (naturalShell) naturalShell.visible = index < 0;
+  if (continuousVolumeLayer) {
+    continuousVolumeLayer.visible = true;
+    continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? 1 : .72);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? 1 : .72);
+    });
+  }
   if (sketchVolumeLayer) {
     sketchVolumeLayer.visible = true;
     sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? 1 : .32);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? 1 : .3);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .2 : .12);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .2 : .12);
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
@@ -2252,10 +2356,12 @@ async function init() {
     if (item.vertices.length) structureTargets.set(index, boundsOf(item).getCenter(new THREE.Vector3()));
   });
   naturalShell = buildNaturalShell(data);
+  continuousVolumeLayer = buildContinuousVolumeLayer(data);
   sketchVolumeLayer = buildSketchVolumeLayer(data);
   groundLayer = buildGroundLayer(data);
+  continuousVolumeLayer.renderOrder = -4;
   sketchVolumeLayer.renderOrder = -1;
-  scene.add(sketchVolumeLayer, naturalShell, groundLayer);
+  scene.add(continuousVolumeLayer, sketchVolumeLayer, naturalShell, groundLayer);
   addConstructionGuides();
   addGroundCompass();
   buildControls(data);
@@ -2264,6 +2370,7 @@ async function init() {
   selectStructure(-1);
   setupInterface();
   createVisualProcessPanel();
+  logVisualProcess("连续实体底模完成：NPR 边缘来自测绘体量的深度/法线，不再依赖分块拼接线框");
   logVisualProcess("体量生成完成：测绘几何已作为 NPR 深度/法线底模");
   const summary = document.querySelector("#geometry-summary");
   summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / loading artifacts`;
