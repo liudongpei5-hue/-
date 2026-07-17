@@ -39,6 +39,9 @@ for (const niche of ["东壁龛", "西壁龛"]) {
 if (!main.includes("STRUCTURE_ORDER") || !main.includes("controls.touches.TWO = THREE.TOUCH.DOLLY_PAN")) {
   throw new Error("Spatial axis order or two-finger pan is missing");
 }
+if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
+  throw new Error("Burial-goods models must load without blocking the spatial interface");
+}
 if (!main.includes("createWestNicheInterior") || !main.includes("PDF fig.6") || !main.includes("12: { position:")) {
   throw new Error("West niche reconstruction, evidence note or frontal camera is missing");
 }

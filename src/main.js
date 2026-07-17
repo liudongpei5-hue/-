@@ -1604,8 +1604,6 @@ async function init() {
   data.geometries.forEach((item, index) => {
     if (item.vertices.length) structureTargets.set(index, boundsOf(item).getCenter(new THREE.Vector3()));
   });
-  document.querySelector("#geometry-summary").textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges`;
-  const burialGoodsCount = await loadBurialGoods();
   naturalShell = buildNaturalShell(data);
   sketchVolumeLayer = buildSketchVolumeLayer(data);
   groundLayer = buildGroundLayer(data);
@@ -1617,8 +1615,16 @@ async function init() {
   fitView();
   overallView = { position: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
   selectStructure(-1);
-  document.querySelector("#geometry-summary").textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
   setupInterface();
+  const summary = document.querySelector("#geometry-summary");
+  summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / loading artifacts`;
+  loadBurialGoods().then(burialGoodsCount => {
+    setBurialGoodsOpacity(selectedIndex < 0 || selectedIndex === 0 ? 1 : .14);
+    summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
+  }).catch(error => {
+    summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / artifacts unavailable`;
+    console.error("Burial goods could not be loaded", error);
+  });
 }
 
 function resize() {
