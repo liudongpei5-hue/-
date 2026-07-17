@@ -1549,8 +1549,6 @@ function setupInterface() {
   try { setupMemories(); } catch (error) { console.error("Memories gallery could not be initialized", error); }
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
-  const artifactLocationMap = document.querySelector(".artifact-location-map");
-  const artifactLocationImage = document.querySelector("#artifact-location-image");
   const artifactCatalog = {
     "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。PDF 简报记载通高 36 cm，尺寸标注保留在此处，展示图按版面统一放大。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
     "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。PDF 图版列为 M2338:1，当前简报页未列单件尺寸。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["尺寸","简报未列单件尺寸"]], display:{ scale:1.02, x:"0%", y:"0%" } },
@@ -1567,7 +1565,7 @@ function setupInterface() {
   artifactCatalog["卢夫人墓志"] = artifactCatalog["墓志"];
   artifactCatalog["开元通宝"] = artifactCatalog["铜钱"];
   artifactCatalog["胡人骑马俑"] = artifactCatalog["骑马俑"];
-  [...new Set(Object.values(artifactCatalog).flatMap(({ asset, location }) => [asset, location].filter(Boolean)))].forEach(src => {
+  [...new Set(Object.values(artifactCatalog).map(({ asset }) => asset).filter(Boolean))].forEach(src => {
     const image = new Image();
     image.src = src;
     image.decode?.().catch(() => {});
@@ -1589,12 +1587,6 @@ function setupInterface() {
     stage.style.setProperty("--artifact-x", display.x || "0%");
     stage.style.setProperty("--artifact-y", display.y || "0%");
     if (asset) artifactImage.src = asset;
-    if (artifact?.location) {
-      artifactLocationImage.src = artifact.location;
-      artifactLocationMap?.classList.add("visible");
-    } else {
-      artifactLocationMap?.classList.remove("visible");
-    }
     stage.classList.remove("swap");
     requestAnimationFrame(() => stage.classList.add("swap"));
   };
