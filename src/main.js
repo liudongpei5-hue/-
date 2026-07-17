@@ -148,7 +148,7 @@ const PLAN_HOTSPOTS = new Map([
   [9, { x: 24.29, y: 42.12, secondary: true }],
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
-const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0];
+const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0, 9, 10];
 const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
 const NARRATIVE_ARTIFACTS = new Map([
   [11, ["骑马俑"]],
@@ -1495,6 +1495,10 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
       }
     }
   });
+  document.querySelectorAll(".structure-hotspot-leader").forEach(leader => {
+    const leaderIndex = Number(leader.dataset.index);
+    leader.classList.toggle("active", index >= 0 && selectedFocusIndices.includes(leaderIndex));
+  });
   const selected = objects.find(group => group.userData.index === index);
   const focusNames = selectedFocusIndices.map(focusIndex => objects.find(group => group.userData.index === focusIndex)?.userData.name).filter(Boolean);
   const currentLabel = index < 0 ? "整体结构" : focusNames.join(" ＋ ") || selected?.userData.name || "结构";
@@ -1529,6 +1533,7 @@ function buildControls(data) {
       button.style.setProperty("--h", "13%");
       const leader = document.createElement("i");
       leader.className = "structure-hotspot-leader";
+      leader.dataset.index = index;
       leader.setAttribute("aria-hidden", "true");
       leader.style.setProperty("--x", `${placement.x}%`);
       leader.style.setProperty("--target-y", `${placement.y}%`);

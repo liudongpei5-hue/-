@@ -1,7 +1,7 @@
 {
   "coordinateSystem": "world-space, right-handed XYZ, Z-up, meters",
   "method": "competition camera route: every endpoint looks from the south-east side with a stable 40 degree FOV; the chamber end projects to screen-left and every focus keeps breathing room above the plan navigator, with a runtime narrow-screen compensation; repeated courtyard/passage and niche structures share chapter shots",
-  "route": [8, 6, 4, 3, 11, 1, 0],
+  "route": [8, 6, 4, 3, 11, 1, 0, 9, 10],
   "presets": [
     {"id":"chamber","geometryIndex":0,"name":"墓室","position":[-0.01,8.23,1.39],"target":[5.83,0.13,-3.63],"fov":40,"focus":[0]},
     {"id":"corridor","geometryIndex":1,"name":"甬道","position":[0.84,4.19,-0.82],"target":[4.07,-0.30,-3.60],"fov":40,"focus":[1]},

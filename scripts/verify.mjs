@@ -59,7 +59,7 @@ for (const vector of viewVectors.slice(1)) {
   const dot = vector.reduce((sum, value, index) => sum + value * viewVectors[0][index], 0);
   if (dot < .998) throw new Error("Camera presets must retain one stable viewing direction");
 }
-if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0]) || !main.includes("const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0]")) {
+if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0, 9, 10]) || !main.includes("const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0, 9, 10]")) {
   throw new Error("Competition camera route is missing or out of sync");
 }
 if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeAxis") || !main.includes("syncNarrativeAxis")) {

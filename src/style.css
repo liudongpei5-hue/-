@@ -216,7 +216,8 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .structure-hotspot.secondary:after{inset:0;border-radius:14px;opacity:.28;transform:none;background:rgba(154,63,48,.035)}
 .structure-hotspot.secondary span,.structure-hotspot.secondary:hover span,.structure-hotspot.secondary:focus-visible span,.structure-hotspot.secondary.active span{left:19px;top:50%;padding:0;border:0;background:transparent;box-shadow:none;font-size:7px;opacity:1;transform:translateY(-50%)}
 .structure-hotspot-leader{position:absolute;z-index:1;left:var(--x);top:12%;width:1px;height:calc(var(--target-y) - 12%);background:linear-gradient(rgba(154,63,48,.5),rgba(154,63,48,.18));pointer-events:none}
-.structure-hotspot-leader:after{content:"";position:absolute;left:50%;bottom:0;width:5px;height:5px;border:1px solid rgba(154,63,48,.58);border-radius:50%;background:rgba(246,242,232,.9);transform:translate(-50%,50%)}
+.structure-hotspot-leader:after{content:"";position:absolute;left:50%;bottom:0;width:5px;height:5px;border:1px solid rgba(154,63,48,.58);border-radius:50%;background:rgba(246,242,232,.9);transform:translate(-50%,50%);transition:background .3s,box-shadow .3s,border-color .3s}
+.structure-hotspot-leader.active:after{border-color:#9a3f30;background:#9a3f30;box-shadow:0 0 0 4px rgba(154,63,48,.12),0 0 12px rgba(154,63,48,.2)}
 @keyframes planHotspotPulse{0%{transform:translate(-50%,-50%) scale(.7)}58%{transform:translate(-50%,-50%) scale(1.35)}100%{transform:translate(-50%,-50%) scale(1)}}
 .structure-plan figcaption{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px;margin-top:2px;color:#766d63;font:7px Arial,sans-serif;letter-spacing:.14em}
 .structure-overall{display:inline-flex;align-items:center;gap:6px;border:0;border-bottom:1px solid rgba(154,63,48,.34);background:none;padding:3px 7px;color:#6f665c;font:8px Arial,sans-serif;letter-spacing:.12em;cursor:pointer}
