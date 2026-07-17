@@ -5,6 +5,7 @@ const main = fs.readFileSync("src/main.js", "utf8");
 const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8"));
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
+const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 
 const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "structure-hotspots", "transition-veil"];
 for (const id of requiredIds) {
@@ -44,6 +45,15 @@ if (!html.includes("/assets/report/tomb-plan.png") || !main.includes("PLAN_HOTSP
 }
 if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
   throw new Error("Burial-goods models must load without blocking the spatial interface");
+}
+if (!main.includes("/models/burial-goods-overview")) {
+  throw new Error("The spatial overview must use lightweight burial-goods models");
+}
+for (const modelId of overviewModels) {
+  const modelPath = `public/models/burial-goods-overview/${modelId}.glb`;
+  if (!fs.existsSync(modelPath)) throw new Error(`Missing overview model: ${modelId}`);
+  const size = fs.statSync(modelPath).size;
+  if (size < 50_000 || size > 500_000) throw new Error(`Unexpected overview model size: ${modelId} (${size})`);
 }
 if (!main.includes("createWestNicheInterior") || !main.includes("PDF fig.6") || !main.includes("12: { position:")) {
   throw new Error("West niche reconstruction, evidence note or frontal camera is missing");

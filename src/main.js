@@ -6,6 +6,7 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
+const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -404,7 +405,7 @@ async function loadBurialGoods() {
   const loader = new GLTFLoader();
   const library = new Map();
   await Promise.all(modelIds.map(async modelId => {
-    const gltf = await loader.loadAsync(`/models/burial-goods-texture/${modelId}.glb`);
+    const gltf = await loader.loadAsync(`${BURIAL_GOODS_OVERVIEW_PATH}/${modelId}.glb?v=20260717-overview`);
     library.set(modelId, gltf.scene);
   }));
 
