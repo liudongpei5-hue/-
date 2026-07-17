@@ -121,6 +121,12 @@ let cameraMoveToken = 0;
 let autoDemoTimer = 0;
 let autoDemoActive = false;
 let autoDemoStep = 0;
+let autoDemoPhase = "model";
+let artifactAutoStep = 0;
+let artifactTourButtons = [];
+let activateArtifactByName = () => false;
+let activeArtifactName = "";
+let spatialReturnState = null;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeIndex = -1;
@@ -143,6 +149,18 @@ const PLAN_HOTSPOTS = new Map([
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
 const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0];
+const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
+const NARRATIVE_ARTIFACTS = new Map([
+  [11, ["骑马俑"]],
+  [0, ARTIFACT_SEQUENCE]
+]);
+const AUTO_TIMING = {
+  model: 6600,
+  artifact: 4800,
+  transition: 1050,
+  restart: 2200,
+  idle: 9000
+};
 const NARRATIVE_ENTRIES = [
   {
     index: 8, no: "01", name: "墓道", title: "向北入地",
@@ -1342,6 +1360,31 @@ function renderNarrativeCard(entry) {
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
   document.querySelector("#narrative-card-quote").textContent = `“${entry.quote}”`;
+  const related = document.querySelector("#narrative-artifacts");
+  const artifactNames = NARRATIVE_ARTIFACTS.get(entry.index) || [];
+  related.replaceChildren();
+  related.hidden = artifactNames.length === 0;
+  if (artifactNames.length) {
+    const label = document.createElement("span");
+    label.textContent = "相关文物 · OBJECTS";
+    related.append(label);
+  }
+  artifactNames.forEach(name => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.artifact = name;
+    button.textContent = name;
+    button.setAttribute("aria-label", `前往文物详情：${name}`);
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      stopAutoDemo();
+      spatialReturnState = captureSpatialContext();
+      setView("artifacts", event, { source: "narrative" });
+      activateArtifactByName(name, { force: true });
+      scheduleAutoDemo();
+    });
+    related.append(button);
+  });
 }
 
 function syncNarrativeAxis(index) {
@@ -1586,25 +1629,103 @@ function navigateToOverall(options = {}) {
   });
 }
 
+function captureSpatialContext() {
+  let snapshotPosition = camera.position.clone();
+  let snapshotTarget = controls.target.clone();
+  let snapshotFov = camera.fov;
+  const pendingPreset = controls.enabled === false ? CAMERA_PRESETS[selectedIndex] : null;
+  if (pendingPreset) {
+    snapshotPosition = new THREE.Vector3(...pendingPreset.position);
+    snapshotTarget = new THREE.Vector3(...pendingPreset.target);
+    snapshotFov = pendingPreset.fov;
+    applyResponsiveShotOffset(snapshotPosition, snapshotTarget);
+  }
+  return {
+    selectedIndex,
+    focusIndices: [...selectedFocusIndices],
+    narrativeCardOpen,
+    activeNarrativeIndex,
+    cameraPosition: snapshotPosition.toArray(),
+    cameraTarget: snapshotTarget.toArray(),
+    cameraFov: snapshotFov
+  };
+}
+
+function restoreSpatialContext(snapshot = spatialReturnState) {
+  if (!snapshot) {
+    navigateToOverall();
+    return;
+  }
+  cameraMoveToken++;
+  controls.enabled = true;
+  camera.position.fromArray(snapshot.cameraPosition);
+  controls.target.fromArray(snapshot.cameraTarget);
+  camera.fov = snapshot.cameraFov;
+  camera.updateProjectionMatrix();
+  controls.update();
+  selectStructure(snapshot.selectedIndex, snapshot.focusIndices);
+  if (snapshot.narrativeCardOpen) {
+    const entry = NARRATIVE_ENTRIES.find(item => item.index === snapshot.activeNarrativeIndex)
+      || narrativeEntryForStructure(snapshot.selectedIndex);
+    if (entry) openNarrativeCard(entry);
+  } else {
+    closeNarrativeCard();
+  }
+  spatialReturnState = null;
+}
+
+function isEpitaphModalOpen() {
+  return document.querySelector("#epitaph-modal")?.getAttribute("aria-hidden") === "false";
+}
+
+function openEpitaphModal() {
+  const modal = document.querySelector("#epitaph-modal");
+  if (!modal) return;
+  stopAutoDemo();
+  modal.setAttribute("aria-hidden", "false");
+  modal.querySelector(".epitaph-close")?.focus({ preventScroll: true });
+}
+
+function closeEpitaphModal(restoreFocus = false) {
+  const modal = document.querySelector("#epitaph-modal");
+  if (!modal || modal.getAttribute("aria-hidden") !== "false") return false;
+  modal.setAttribute("aria-hidden", "true");
+  if (restoreFocus && document.querySelector("#app")?.dataset.view === "artifacts") {
+    document.querySelector("#artifact-details")?.focus({ preventScroll: true });
+  }
+  return true;
+}
+
 function clearAutoDemoTimer() {
   if (!autoDemoTimer) return;
   clearTimeout(autoDemoTimer);
   autoDemoTimer = 0;
 }
 
-function stopAutoDemo() {
-  clearAutoDemoTimer();
-  if (!autoDemoActive) return;
-  cameraMoveToken++;
-  controls.enabled = true;
-  autoDemoActive = false;
-  document.querySelector("#app")?.classList.remove("auto-demo");
+function syncAutoDemoUi() {
+  const app = document.querySelector("#app");
+  const artifactPhase = autoDemoActive && autoDemoPhase === "artifacts";
+  app?.classList.toggle("auto-demo", autoDemoActive);
+  app?.classList.toggle("artifact-auto-demo", artifactPhase);
+  document.querySelector(".artifact-playback-status")?.classList.toggle("active", artifactPhase);
 }
 
-function scheduleAutoDemo(delay = 9000) {
+function stopAutoDemo() {
+  clearAutoDemoTimer();
+  if (autoDemoActive && controls.enabled === false) {
+    cameraMoveToken++;
+    controls.enabled = true;
+  }
+  autoDemoActive = false;
+  syncAutoDemoUi();
+}
+
+function scheduleAutoDemo(delay = AUTO_TIMING.idle) {
   clearAutoDemoTimer();
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  autoDemoTimer = setTimeout(startAutoDemo, delay);
+  const view = document.querySelector("#app")?.dataset.view;
+  if (!view || view === "home" || isEpitaphModalOpen()) return;
+  autoDemoTimer = setTimeout(() => startAutoDemo(view === "artifacts" ? "artifacts" : "model"), delay);
 }
 
 function noteUserActivity() {
@@ -1612,42 +1733,106 @@ function noteUserActivity() {
   scheduleAutoDemo();
 }
 
-function startAutoDemo() {
-  if (document.querySelector("#app")?.dataset.view !== "model" || controls.enabled === false) {
+function startAutoDemo(phase, event) {
+  const app = document.querySelector("#app");
+  const view = app?.dataset.view;
+  if (!app || view === "home" || isEpitaphModalOpen()) {
     scheduleAutoDemo(5000);
     return;
   }
+  if ((phase || view) === "model" && controls.enabled === false) {
+    scheduleAutoDemo(2500);
+    return;
+  }
+  clearAutoDemoTimer();
   autoDemoActive = true;
-  document.querySelector("#app")?.classList.add("auto-demo");
-  const current = DEMO_ROUTE.indexOf(selectedIndex);
-  autoDemoStep = current >= 0 ? (current + 1) % DEMO_ROUTE.length : 0;
-  runAutoDemoStep();
+  autoDemoPhase = phase || (view === "artifacts" ? "artifacts" : "model");
+  autoDemoStep = 0;
+  artifactAutoStep = 0;
+  syncAutoDemoUi();
+  const targetView = autoDemoPhase === "artifacts" ? "artifacts" : "model";
+  const changedView = view !== targetView;
+  if (changedView) setView(targetView, event, { source: "auto" });
+  autoDemoTimer = setTimeout(runAutoDemoStep, changedView ? AUTO_TIMING.transition : 0);
 }
 
 function runAutoDemoStep() {
   if (!autoDemoActive) return;
-  const index = DEMO_ROUTE[autoDemoStep % DEMO_ROUTE.length];
-  autoDemoStep++;
-  navigateToStructure(index, { auto: true });
-  autoDemoTimer = setTimeout(runAutoDemoStep, 6600);
+  autoDemoTimer = 0;
+  if (autoDemoPhase === "model") {
+    if (autoDemoStep >= DEMO_ROUTE.length) {
+      closeNarrativeCard();
+      autoDemoPhase = "artifacts";
+      artifactAutoStep = 0;
+      syncAutoDemoUi();
+      setView("artifacts", null, { source: "auto" });
+      autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.transition);
+      return;
+    }
+    const index = DEMO_ROUTE[autoDemoStep];
+    autoDemoStep++;
+    navigateToStructure(index, { auto: true });
+    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.model);
+    return;
+  }
+
+  if (artifactAutoStep >= ARTIFACT_SEQUENCE.length || artifactTourButtons.length === 0) {
+    autoDemoPhase = "model";
+    autoDemoStep = 0;
+    artifactAutoStep = 0;
+    spatialReturnState = null;
+    syncAutoDemoUi();
+    setView("model", null, { source: "auto" });
+    navigateToOverall({ auto: true });
+    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.restart);
+    return;
+  }
+  const artifactName = ARTIFACT_SEQUENCE[artifactAutoStep];
+  artifactAutoStep++;
+  activateArtifactByName(artifactName, { force: true, auto: true });
+  autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.artifact);
 }
 
 function playTransition(origin) {
   const veil = document.querySelector("#transition-veil");
-  if (origin) { veil.style.setProperty("--x", `${origin.clientX / innerWidth * 100}%`); veil.style.setProperty("--y", `${origin.clientY / innerHeight * 100}%`); }
+  if (Number.isFinite(origin?.clientX) && Number.isFinite(origin?.clientY)) {
+    veil.style.setProperty("--x", `${origin.clientX / innerWidth * 100}%`);
+    veil.style.setProperty("--y", `${origin.clientY / innerHeight * 100}%`);
+  } else {
+    veil.style.setProperty("--x", "50%");
+    veil.style.setProperty("--y", "50%");
+  }
   veil.classList.remove("play"); void veil.offsetWidth; veil.classList.add("play");
 }
 
-function setView(view, event) {
-  if (view !== "model") closeNarrativeCard();
+function setView(view, event, options = {}) {
+  if (!["home", "model", "artifacts"].includes(view)) return false;
+  if (view !== "model") {
+    if (controls.enabled === false) {
+      cameraMoveToken++;
+      controls.enabled = true;
+    }
+    closeNarrativeCard();
+  }
+  if (view !== "artifacts") closeEpitaphModal();
   playTransition(event);
   document.querySelectorAll(".page-layer").forEach(layer => { const active = layer.id === `${view}-page`; layer.classList.toggle("active", active); layer.setAttribute("aria-hidden", String(!active)); });
+  const modelInterface = document.querySelector(".model-interface");
+  const modelActive = view === "model";
+  modelInterface?.setAttribute("aria-hidden", String(!modelActive));
+  if (modelInterface) modelInterface.inert = !modelActive;
   document.querySelector("#app").dataset.view = view;
+  if (view === "artifacts") document.querySelector("#artifacts-page")?.scrollTo({ top: 0, behavior: "auto" });
+  return true;
 }
 
 function setupInterface() {
   const app = document.querySelector("#app");
   const veil = document.querySelector("#transition-veil");
+  const modelInterface = document.querySelector(".model-interface");
+  const modelInitiallyActive = app.dataset.view === "model";
+  modelInterface.setAttribute("aria-hidden", String(!modelInitiallyActive));
+  modelInterface.inert = !modelInitiallyActive;
   if (!veil.children.length) {
     for (let i = 0; i < 30; i++) {
       const particle = document.createElement("b");
@@ -1664,17 +1849,13 @@ function setupInterface() {
   const enterModel = event => {
     if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
+    stopAutoDemo();
     setView("model", event);
+    scheduleAutoDemo();
   };
   homePage.addEventListener("click", enterModel);
   homePage.addEventListener("keydown", enterModel);
   setupNarrativeAxis();
-  document.querySelector("#menu-trigger").addEventListener("click", event => setView(app.dataset.view === "menu" ? "model" : "menu", event));
-  const navButtons = [...document.querySelectorAll(".chapter-nav button")];
-  navButtons.forEach((button, index) => {
-    button.addEventListener("mouseenter", () => { document.querySelector(".menu-progress i").style.transform = `translateY(${index * 100}%)`; document.querySelector(".menu-progress span").textContent = `0${index + 1} / 03`; });
-    button.addEventListener("click", event => setView(button.dataset.target, event));
-  });
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
   const artifactCatalog = {
@@ -1688,78 +1869,86 @@ function setupInterface() {
     "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"铜钵敛口、深弧腹、圜底，器表饰数周暗弦纹。PDF 简报记载口径 13 cm、腹径 13.2 cm、底径 8.5 cm、通高 6 cm。", facts:[["编号","M2338:53"],["口径","13 cm"],["腹径","13.2 cm"],["通高","6 cm"]], display:{ scale:1.26, x:"0%", y:"2%" } },
     "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"骑马俑主要出土于墓室东南隅。PDF 简报中 I 型标本 M2338:32 马体长 23.5 cm、通高 32 cm；II 型标本 M2338:44 马体长 24 cm、通高 32.5 cm。", facts:[["编号","M2338:29-32 等"],["I 型","长 23.5 cm / 通高 32 cm"],["II 型","长 24 cm / 通高 32.5 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } }
   };
-  artifactCatalog["东镇墓兽"] = artifactCatalog["镇墓兽"];
-  artifactCatalog["西镇墓兽"] = { ...artifactCatalog["镇墓兽"], en:"WEST TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-west.png" };
-  artifactCatalog["卢夫人墓志"] = artifactCatalog["墓志"];
-  artifactCatalog["开元通宝"] = artifactCatalog["铜钱"];
-  artifactCatalog["胡人骑马俑"] = artifactCatalog["骑马俑"];
   [...new Set(Object.values(artifactCatalog).map(({ asset }) => asset).filter(Boolean))].forEach(src => {
     const image = new Image();
     image.src = src;
     image.decode?.().catch(() => {});
   });
   const artifactButtons = [...document.querySelectorAll(".artifact-list button")];
-  let activeArtifactName = "";
-  const activateArtifact = button => {
-    if (activeArtifactName === button.dataset.artifact) return;
+  const artifactProgress = document.querySelector("#artifact-progress");
+  const artifactPlaybackStatus = document.querySelector(".artifact-playback-status");
+  const artifactDetails = document.querySelector("#artifact-details");
+  artifactTourButtons = artifactButtons;
+  const activateArtifact = (button, options = {}) => {
+    if (!button) return false;
+    if (activeArtifactName === button.dataset.artifact && !options.force) return false;
     activeArtifactName = button.dataset.artifact;
     const artifact = artifactCatalog[button.dataset.artifact];
-    artifactButtons.forEach(item => item.classList.toggle("active", item === button));
+    const artifactIndex = Math.max(0, artifactButtons.indexOf(button));
+    artifactButtons.forEach(item => {
+      const active = item === button;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-current", active ? "true" : "false");
+    });
     document.querySelector(".artifact-copy h2 span").textContent = button.dataset.artifact;
     document.querySelector("#artifact-name-en").textContent = artifact?.en || "SELECTED OBJECT";
     document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifact?.description || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
+    artifactProgress.textContent = `${String(artifactIndex + 1).padStart(2, "0")} / ${String(artifactButtons.length).padStart(2, "0")}`;
+    artifactPlaybackStatus.style.setProperty("--progress", `${(artifactIndex + 1) / artifactButtons.length * 100}%`);
+    artifactDetails.hidden = button.dataset.artifact !== "墓志";
     const asset = artifact?.asset;
     stage.classList.toggle("has-image", Boolean(asset));
     const display = artifact?.display || {};
     stage.style.setProperty("--artifact-scale", display.scale ?? 1);
     stage.style.setProperty("--artifact-x", display.x || "0%");
     stage.style.setProperty("--artifact-y", display.y || "0%");
-    if (asset) artifactImage.src = asset;
+    if (asset) {
+      artifactImage.src = asset;
+      artifactImage.alt = `${button.dataset.artifact}考古文物图像`;
+    }
     stage.classList.remove("swap");
     requestAnimationFrame(() => stage.classList.add("swap"));
-  };
-  artifactButtons.forEach(button => { button.addEventListener("pointerenter", () => activateArtifact(button)); button.addEventListener("click", () => activateArtifact(button)); });
-  activateArtifact(document.querySelector(".artifact-list button.active") || artifactButtons[0]);
-
-  const popover = document.querySelector("#artifact-popover");
-  document.body.append(popover);
-  const particleField = popover.querySelector(".artifact-popover-particles");
-  for (let index = 0; index < 36; index++) {
-    const particle = document.createElement("i");
-    const angle = index / 36 * Math.PI * 2;
-    const distance = 70 + index % 9 * 13;
-    particle.style.setProperty("--px", `${Math.cos(angle) * distance}px`);
-    particle.style.setProperty("--py", `${Math.sin(angle) * distance}px`);
-    particle.style.setProperty("--pd", `${index % 8 * 16}ms`);
-    particleField.append(particle);
-  }
-  const closeArtifactPopover = () => {
-    if (!popover.classList.contains("visible")) return false;
-    popover.classList.remove("visible");
-    popover.classList.add("dispersing");
-    popover.setAttribute("aria-hidden", "true");
-    setTimeout(() => popover.classList.remove("dispersing"), 760);
+    if (options.auto || options.source === "narrative") {
+      button.scrollIntoView({ block: "nearest", inline: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
     return true;
   };
-  document.querySelectorAll(".artifact-term").forEach(term => term.addEventListener("click", event => {
+  activateArtifactByName = (name, options = {}) => {
+    const button = artifactButtons.find(item => item.dataset.artifact === name);
+    return activateArtifact(button, { ...options, source: options.source || "linked" });
+  };
+  artifactButtons.forEach(button => {
+    button.addEventListener("pointerenter", () => {
+      if (!autoDemoActive) activateArtifact(button);
+    });
+    button.addEventListener("click", () => {
+      noteUserActivity();
+      activateArtifact(button, { force: true });
+    });
+  });
+  activateArtifact(document.querySelector(".artifact-list button.active") || artifactButtons[0], { force: true });
+
+  document.querySelector("#start-artifacts-playback").addEventListener("click", event => {
     event.stopPropagation();
-    const artifact = artifactCatalog[term.dataset.artifact];
-    if (!artifact) return;
-    const rect = term.getBoundingClientRect();
-    popover.style.setProperty("--origin-x", `${rect.left + rect.width / 2}px`);
-    popover.style.setProperty("--origin-y", `${rect.top + rect.height / 2}px`);
-    document.querySelector("#artifact-popover-image").src = artifact.asset;
-    document.querySelector("#artifact-popover-image").alt = term.dataset.artifact;
-    document.querySelector("#artifact-popover-name").textContent = term.dataset.artifact;
-    document.querySelector("#artifact-popover-index").textContent = `${artifact.en} / SELECTED OBJECT`;
-    document.querySelector("#artifact-popover-facts").innerHTML = artifact.facts.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
-    popover.classList.remove("dispersing", "visible");
-    void popover.offsetWidth;
-    popover.classList.add("visible");
-    popover.setAttribute("aria-hidden", "false");
-  }));
-  popover.addEventListener("click", event => event.stopPropagation());
-  document.addEventListener("click", closeArtifactPopover);
+    stopAutoDemo();
+    spatialReturnState = captureSpatialContext();
+    startAutoDemo("artifacts", event);
+  });
+  document.querySelector("#return-space").addEventListener("click", event => {
+    event.stopPropagation();
+    stopAutoDemo();
+    setView("model", event, { source: "manual" });
+    restoreSpatialContext();
+    scheduleAutoDemo();
+  });
+  artifactDetails.addEventListener("click", event => {
+    event.stopPropagation();
+    openEpitaphModal();
+  });
+  document.querySelector(".epitaph-close").addEventListener("click", event => {
+    event.stopPropagation();
+    if (closeEpitaphModal(true)) scheduleAutoDemo();
+  });
   const canParallax = matchMedia("(pointer:fine) and (prefers-reduced-motion:no-preference)").matches;
   document.addEventListener("pointermove", event => {
     noteUserActivity();
@@ -1772,7 +1961,18 @@ function setupInterface() {
   controls.addEventListener("start", noteUserActivity);
   document.addEventListener("keydown", event => {
     noteUserActivity();
-    if (event.key === "Escape") { if (closeArtifactPopover() || closeNarrativeCard()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
+    if (event.key === "Escape") {
+      if (closeEpitaphModal(true)) { scheduleAutoDemo(); return; }
+      if (closeNarrativeCard()) return;
+      if (app.dataset.view === "artifacts") {
+        setView("model", event, { source: "keyboard" });
+        restoreSpatialContext();
+        scheduleAutoDemo();
+        return;
+      }
+      if (app.dataset.view === "model") navigateToOverall();
+      return;
+    }
     if (app.dataset.view !== "model") return;
     const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }

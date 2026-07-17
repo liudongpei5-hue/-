@@ -6,10 +6,36 @@ const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
+const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
 
-const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card"];
+const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
+}
+const removedIds = ["menu-trigger", "menu-page", "data-page", "artifact-popover"];
+for (const id of removedIds) {
+  if (html.includes(`id="${id}"`)) throw new Error(`Obsolete interface layer must be removed: #${id}`);
+}
+
+const artifactNav = html.match(/<nav\b[^>]*class="[^"]*\bartifact-list\b[^"]*"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
+if (!artifactNav) throw new Error("Artifact navigation is missing");
+const artifactButtonOrder = [...artifactNav.matchAll(/<button\b[^>]*data-artifact="([^"]+)"[^>]*>/g)].map(match => match[1]);
+if (JSON.stringify(artifactButtonOrder) !== JSON.stringify(artifactSequence)) {
+  throw new Error(`Artifact navigation order mismatch: ${artifactButtonOrder.join(" -> ")}`);
+}
+
+const artifactSequenceSource = main.match(/const\s+ARTIFACT_SEQUENCE\s*=\s*\[([\s\S]*?)\]\s*;/)?.[1];
+if (!artifactSequenceSource) throw new Error("Explicit ARTIFACT_SEQUENCE is missing");
+const runtimeArtifactSequence = [...artifactSequenceSource.matchAll(/["'`]([^"'`]+)["'`]/g)].map(match => match[1]);
+if (JSON.stringify(runtimeArtifactSequence) !== JSON.stringify(artifactSequence)) {
+  throw new Error(`Runtime artifact sequence mismatch: ${runtimeArtifactSequence.join(" -> ")}`);
+}
+
+if (!/<main\b[^>]*id="app"[^>]*data-view="home"/.test(html)) {
+  throw new Error("The application must open on the home page");
+}
+if (!main.includes("const enterModel") || !main.includes('setView("model", event)') || !main.includes('homePage.addEventListener("click", enterModel)')) {
+  throw new Error("Home-page activation must enter the spatial model directly");
 }
 
 if (cameras.presets.length !== 13) throw new Error(`Expected 13 competition camera presets, got ${cameras.presets.length}`);
@@ -41,6 +67,45 @@ if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeA
 }
 for (const index of [8, 6, 4, 3, 11, 1, 0]) {
   if (!main.includes(`index: ${index}, no:`)) throw new Error(`Missing narrative node for camera ${index}`);
+}
+
+for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState", "activateArtifactByName", '#narrative-artifacts', '#start-artifacts-playback', '#return-space', '#artifact-progress']) {
+  if (!main.includes(marker)) throw new Error(`Missing model/artifact linkage marker: ${marker}`);
+}
+if (!main.includes('autoDemoPhase = "artifacts"') || !main.includes('autoDemoPhase = "model"')) {
+  throw new Error("Automatic playback must expose explicit model and artifacts phases");
+}
+if (main.includes("DEMO_ROUTE[autoDemoStep % DEMO_ROUTE.length]")) {
+  throw new Error("Spatial playback must cross into artifacts instead of looping with modulo");
+}
+
+const spatialBoundary = main.match(/autoDemoStep\s*>=\s*DEMO_ROUTE\.length/);
+if (!spatialBoundary) throw new Error("Spatial playback has no explicit end-of-route boundary");
+const spatialBoundaryWindow = main.slice(spatialBoundary.index, spatialBoundary.index + 1100);
+if (!/autoDemoPhase\s*=\s*["']artifacts["']/.test(spatialBoundaryWindow) || !/setView\(["']artifacts["']/.test(spatialBoundaryWindow)) {
+  throw new Error("End of spatial playback must switch the phase and view to artifacts");
+}
+
+const artifactBoundary = main.match(/artifactAutoStep\s*>=\s*ARTIFACT_SEQUENCE\.length/);
+if (!artifactBoundary) throw new Error("Artifact playback has no explicit end-of-sequence boundary");
+const artifactBoundaryWindow = main.slice(artifactBoundary.index, artifactBoundary.index + 1100);
+if (!/autoDemoPhase\s*=\s*["']model["']/.test(artifactBoundaryWindow) || !/setView\(["']model["']/.test(artifactBoundaryWindow)) {
+  throw new Error("End of artifact playback must return to the spatial phase and model view");
+}
+
+const directArtifactControl = main.match(/querySelector\(["']#start-artifacts-playback["']\)([\s\S]{0,700})/);
+if (!directArtifactControl || !/addEventListener\(["']click["']/.test(directArtifactControl[1]) || !/artifact/i.test(directArtifactControl[1])) {
+  throw new Error("The direct artifact-playback control is not wired to the artifact phase");
+}
+const returnSpaceControl = main.match(/querySelector\(["']#return-space["']\)([\s\S]{0,900})/);
+if (!returnSpaceControl || !/addEventListener\(["']click["']/.test(returnSpaceControl[1]) || !/(spatialReturnState|setView\(["']model["'])/.test(returnSpaceControl[1])) {
+  throw new Error("The artifact view has no wired return-to-space control");
+}
+if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeIndex") || !main.includes("spatialReturnState = captureSpatialContext()")) {
+  throw new Error("Narrative-to-artifact navigation must preserve the spatial and narrative return context");
+}
+if (!main.includes("const NARRATIVE_ARTIFACTS") || !main.includes('[0, ARTIFACT_SEQUENCE]') || !main.includes('document.querySelector("#narrative-artifacts")')) {
+  throw new Error("Narrative entries must expose linked artifact terms in the narrative card");
 }
 
 const vertexCount = geometry.geometries.reduce((sum, item) => sum + item.vertices.length, 0);
@@ -94,20 +159,14 @@ if (!main.includes("createWestNicheInterior") || !main.includes("PDF fig.6") || 
 if (!main.includes("Only the two true ends are closed") || !main.includes("Internal geometry partitions stay hidden")) {
   throw new Error("Continuous overall shell invariant is missing");
 }
-if (!html.includes("176°") || !html.includes("北 N") || !html.includes("南 S")) {
-  throw new Error("Report-based north/south orientation is missing");
-}
 for (let index = 0; index < geometry.geometries.length; index++) {
   if (!main.includes(`${index}: [`)) throw new Error(`Missing report dimension entry for geometry ${index}`);
 }
 if (!main.includes("addMeasurement") || !main.includes("dimensionLabel") || html.includes('id="dimension-callout"')) {
   throw new Error("Edge-aligned 3D dimension lines are missing or obsolete page callout remains");
 }
-if (!html.includes("report-page") || !html.includes("lady-lu-excavation-report.docx")) {
-  throw new Error("Long-form report page or source-document download is missing");
-}
 for (const asset of artifactAssets) {
   if (!fs.existsSync(asset) || fs.statSync(asset).size < 20_000) throw new Error(`Missing or invalid archaeological artifact asset: ${asset}`);
 }
 
-console.log(`VERIFY_OK: ${geometry.geometries.length} geometries, ${vertexCount} vertices, ${edgeCount} edges, ${cameras.presets.length} camera nodes, ${artifactAssets.length} verified artifact assets.`);
+console.log(`VERIFY_OK: ${geometry.geometries.length} geometries, ${vertexCount} vertices, ${edgeCount} edges, ${cameras.presets.length} camera nodes, ${artifactSequence.length} linked artifacts, two-phase playback.`);
