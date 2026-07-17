@@ -7,7 +7,7 @@ const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-prese
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 
-const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "structure-hotspots", "transition-veil"];
+const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -36,6 +36,12 @@ for (const vector of viewVectors.slice(1)) {
 if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0]) || !main.includes("const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0]")) {
   throw new Error("Competition camera route is missing or out of sync");
 }
+if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeAxis") || !main.includes("syncNarrativeAxis")) {
+  throw new Error("Excavation-brief narrative axis is missing");
+}
+for (const index of [8, 6, 4, 3, 11, 1, 0]) {
+  if (!main.includes(`index: ${index}, no:`)) throw new Error(`Missing narrative node for camera ${index}`);
+}
 
 const vertexCount = geometry.geometries.reduce((sum, item) => sum + item.vertices.length, 0);
 const edgeCount = geometry.geometries.reduce((sum, item) => sum + item.edges.length, 0);
@@ -48,8 +54,11 @@ if (!main.includes("cultivationThickness: .32") || !main.includes("loessThicknes
 if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
   throw new Error("Camera path or breathing easing is missing");
 }
-if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor")) {
+if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor") || !main.includes("narrativeFactor")) {
   throw new Error("Responsive close-up safe-area compensation is missing");
+}
+if (!main.includes("if (options.auto) openNarrativeCard(narrativeEntryForStructure(index))")) {
+  throw new Error("Automatic camera demo must reveal the narrative card");
 }
 if (!main.includes("new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7)")) {
   throw new Error("Overall camera must keep the chamber end on screen-left");

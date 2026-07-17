@@ -122,6 +122,8 @@ let autoDemoTimer = 0;
 let autoDemoActive = false;
 let autoDemoStep = 0;
 let selectedFocusIndices = [];
+let narrativeCardOpen = false;
+let activeNarrativeIndex = -1;
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
@@ -141,6 +143,43 @@ const PLAN_HOTSPOTS = new Map([
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
 const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0];
+const NARRATIVE_ENTRIES = [
+  {
+    index: 8, no: "01", name: "墓道", title: "向北入地",
+    summary: "墓道从最南端以 27° 斜坡向地下延伸，白灰残痕标记进入葬域的第一段。",
+    quote: "墓道，位于该墓葬最南端，略呈南宽北窄梯形状……最深处距现地表 3.32 米，斜坡 27°，壁面光滑，可见白灰刷饰残留。"
+  },
+  {
+    index: 6, no: "02", name: "第一井洞", title: "第一重 · 见天",
+    summary: "第一过洞接入上下贯通的第一天井，完成从封闭斜洞到竖向开口的第一次明暗转换。",
+    quote: "第一过洞进深 1.08、宽 1.24、高 1.52 米；第一天井南壁上口略有坍塌，长 1.96、宽 1.08，底部长 1.7、宽 1.34 米。"
+  },
+  {
+    index: 4, no: "03", name: "第二井洞", title: "第二重 · 收束",
+    summary: "尺度更窄的第二过洞与第二天井继续向北收束，在相似节奏中把行进引向墓室深处。",
+    quote: "第二过洞进深 0.9、宽 0.92、高 1.6 米；第二天井长 1.96、南宽 1、北宽 0.96、底部长 1.8、宽 1.24～1.32 米。"
+  },
+  {
+    index: 3, no: "04", name: "第三井洞", title: "第三重 · 转折",
+    summary: "第三过洞与受损的第三天井构成最后一组井洞，早期盗洞 1 也在这里切入墓葬空间。",
+    quote: "第三过洞进深 1.08、宽 1.24、高 1.76 米；第三天井东、西两壁略有损坏，长 2.04、南宽 1.16、北宽 1.28 米。"
+  },
+  {
+    index: 11, no: "05", name: "东西壁龛", title: "双龛 · 列仪",
+    summary: "第三过洞两侧展开形制不同的东、西壁龛，人物、动物与生活器物形成两组空间叙事。",
+    quote: "壁龛 2 个，均位于第三过洞内，编号分别为东一号龛（EK1）和西一号龛（WK1）。东龛为拱顶平底，西龛口部小、内部大。"
+  },
+  {
+    index: 1, no: "06", name: "甬道", title: "封门之前",
+    summary: "保存完整的拱顶甬道连接第三天井与墓室，中部坍塌的土坯封门提示内外葬域的最后边界。",
+    quote: "甬道，南接第三天井，北侧与墓室相连，拱顶土洞，保存完整，平底，进深 1.08、宽 1.28、高 1.92 米。"
+  },
+  {
+    index: 0, no: "07", name: "墓室", title: "北端 · 安寝",
+    summary: "最北端墓室以拱顶直壁、砖铺地面和西侧棺床容纳墓主，随葬品主要集中于东南隅及入口附近。",
+    quote: "墓室，位于该墓葬最北端，单室土洞，拱顶，残存直壁平而规整，尚可观察到白灰面；墓室进深 3.68、宽 3.04、高 2.52 米。"
+  }
+];
 const STRUCTURE_MEASURES = {
   0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
   1: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.28 m"},{axis:"z",label:"1.92 m"}],
@@ -1291,6 +1330,86 @@ function showMeasurements(index,selected) {
   measures.forEach((measure,measureIndex)=>addMeasurement(box,measure,measureIndex));
 }
 
+function narrativeEntryForStructure(index) {
+  if (index < 0 || index === 9 || index === 10) return null;
+  return NARRATIVE_ENTRIES.find(entry => CAMERA_PRESETS[entry.index]?.focus?.includes(index) || entry.index === index) || null;
+}
+
+function renderNarrativeCard(entry) {
+  if (!entry) return;
+  document.querySelector("#narrative-card-index").textContent = `${entry.no} / 07 · EXCAVATION BRIEF`;
+  document.querySelector("#narrative-card-title").textContent = entry.name;
+  document.querySelector("#narrative-card-subtitle").textContent = entry.title;
+  document.querySelector("#narrative-card-summary").textContent = entry.summary;
+  document.querySelector("#narrative-card-quote").textContent = `“${entry.quote}”`;
+}
+
+function syncNarrativeAxis(index) {
+  const entry = narrativeEntryForStructure(index);
+  activeNarrativeIndex = entry?.index ?? -1;
+  document.querySelectorAll(".narrative-node").forEach(button => {
+    const active = Number(button.dataset.camera) === activeNarrativeIndex;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "step" : "false");
+    button.setAttribute("aria-expanded", String(active && narrativeCardOpen));
+  });
+  if (!entry) {
+    closeNarrativeCard();
+    return;
+  }
+  if (narrativeCardOpen) renderNarrativeCard(entry);
+}
+
+function openNarrativeCard(entry) {
+  if (!entry) return;
+  narrativeCardOpen = true;
+  activeNarrativeIndex = entry.index;
+  renderNarrativeCard(entry);
+  const card = document.querySelector("#narrative-card");
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
+  syncNarrativeAxis(entry.index);
+}
+
+function closeNarrativeCard() {
+  if (!narrativeCardOpen) return false;
+  narrativeCardOpen = false;
+  const card = document.querySelector("#narrative-card");
+  card?.classList.remove("open");
+  card?.setAttribute("aria-hidden", "true");
+  document.querySelectorAll(".narrative-node").forEach(button => button.setAttribute("aria-expanded", "false"));
+  return true;
+}
+
+function setupNarrativeAxis() {
+  const list = document.querySelector("#narrative-list");
+  NARRATIVE_ENTRIES.forEach(entry => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "narrative-node";
+    button.dataset.camera = entry.index;
+    button.setAttribute("aria-controls", "narrative-card");
+    button.setAttribute("aria-label", `${entry.no} ${entry.name} ${entry.title}`);
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-current", "false");
+    button.innerHTML = `<em>${entry.no}</em><span><b>${entry.name}</b><small>${entry.title}</small></span>`;
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      noteUserActivity();
+      openNarrativeCard(entry);
+      navigateToStructure(entry.index, { source: "narrative" });
+    });
+    item.append(button);
+    list.append(item);
+  });
+  document.querySelector("#narrative-close").addEventListener("click", event => {
+    event.stopPropagation();
+    closeNarrativeCard();
+  });
+  syncNarrativeAxis(selectedIndex);
+}
+
 function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
   selectedIndex = index;
   selectedFocusIndices = index < 0 ? [] : [...new Set(focusIndices)];
@@ -1338,6 +1457,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
   const currentLabel = index < 0 ? "整体结构" : focusNames.join(" ＋ ") || selected?.userData.name || "结构";
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${currentLabel} · 结构已突出`;
   showMeasurements(selectedFocusIndices.length === 1 ? index : -1, selectedFocusIndices.length === 1 ? selected : null);
+  syncNarrativeAxis(index);
 }
 
 function buildControls(data) {
@@ -1426,12 +1546,13 @@ function animateCamera(endPosition, endTarget, endFov, onComplete) {
 function applyResponsiveShotOffset(position, target) {
   const aspect = canvas.clientWidth / Math.max(canvas.clientHeight, 1);
   const narrowFactor = THREE.MathUtils.clamp((1.1 - aspect) / .65, 0, 1);
-  if (!narrowFactor) return;
+  const narrativeFactor = narrativeCardOpen && aspect > .9 ? THREE.MathUtils.clamp((aspect - .9) / .55, 0, 1) : 0;
+  if (!narrowFactor && !narrativeFactor) return;
   const distance = position.distanceTo(target);
   const forward = target.clone().sub(position).normalize();
   const screenRight = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
   const screenUp = new THREE.Vector3().crossVectors(screenRight, forward).normalize();
-  const offset = screenRight.multiplyScalar(-distance * .14 * narrowFactor)
+  const offset = screenRight.multiplyScalar(-distance * (.14 * narrowFactor + .12 * narrativeFactor))
     .add(screenUp.multiplyScalar(-distance * .04 * narrowFactor));
   position.add(offset);
   target.add(offset);
@@ -1440,6 +1561,7 @@ function applyResponsiveShotOffset(position, target) {
 function navigateToStructure(index, options = {}) {
   const group = objects.find(item => item.userData.index === index);
   if (!group) return;
+  if (options.auto) openNarrativeCard(narrativeEntryForStructure(index));
   const geometricTarget = structureTargets.get(index) || new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
   const bbox = new THREE.Box3().setFromObject(group);
   const size = bbox.getSize(new THREE.Vector3()).length();
@@ -1457,6 +1579,7 @@ function navigateToStructure(index, options = {}) {
 
 function navigateToOverall(options = {}) {
   if (!overallView) return;
+  closeNarrativeCard();
   selectStructure(-1);
   animateCamera(overallView.position.clone(), overallView.target.clone(), overallView.fov, () => {
     document.querySelector("#status").textContent = "整体结构 · OVERVIEW";
@@ -1516,6 +1639,7 @@ function playTransition(origin) {
 }
 
 function setView(view, event) {
+  if (view !== "model") closeNarrativeCard();
   playTransition(event);
   document.querySelectorAll(".page-layer").forEach(layer => { const active = layer.id === `${view}-page`; layer.classList.toggle("active", active); layer.setAttribute("aria-hidden", String(!active)); });
   document.querySelector("#app").dataset.view = view;
@@ -1544,6 +1668,7 @@ function setupInterface() {
   };
   homePage.addEventListener("click", enterModel);
   homePage.addEventListener("keydown", enterModel);
+  setupNarrativeAxis();
   document.querySelector("#menu-trigger").addEventListener("click", event => setView(app.dataset.view === "menu" ? "model" : "menu", event));
   const navButtons = [...document.querySelectorAll(".chapter-nav button")];
   navButtons.forEach((button, index) => {
@@ -1647,7 +1772,7 @@ function setupInterface() {
   controls.addEventListener("start", noteUserActivity);
   document.addEventListener("keydown", event => {
     noteUserActivity();
-    if (event.key === "Escape") { if (closeArtifactPopover()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
+    if (event.key === "Escape") { if (closeArtifactPopover() || closeNarrativeCard()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
     if (app.dataset.view !== "model") return;
     const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }
