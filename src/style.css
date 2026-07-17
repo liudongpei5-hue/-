@@ -184,3 +184,35 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 @keyframes axisHit{0%{transform:translate(-50%,50%) scale(.65);box-shadow:0 0 0 0 rgba(154,63,48,.28)}55%{transform:translate(-50%,50%) scale(1.2);box-shadow:0 0 0 12px rgba(154,63,48,.08)}100%{transform:translate(-50%,50%) scale(1);box-shadow:0 0 0 7px rgba(154,63,48,.11),0 0 24px rgba(154,63,48,.25)}}
 @keyframes axisAutoPulse{0%,100%{box-shadow:0 0 0 7px rgba(154,63,48,.09),0 0 18px rgba(154,63,48,.18)}50%{box-shadow:0 0 0 12px rgba(154,63,48,.14),0 0 32px rgba(154,63,48,.32)}}
 @media(max-width:800px){#app[data-view="model"] .model-interface .controls{bottom:5.2vh!important;width:calc(100vw - 28px)!important}#app[data-view="model"] .model-interface .structure-list{justify-content:flex-start;padding-left:22px!important;padding-right:22px!important;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}#app[data-view="model"] .model-interface .structure-list button{font-size:9px;padding-left:14px!important;padding-right:18px!important}}
+
+/* Report plan as the spatial camera navigator. */
+#app[data-view="model"] .model-interface .controls{bottom:2.2vh!important;width:min(870px,88vw)!important}
+.structure-plan{position:relative;margin:0;padding:8px 12px 7px;border-top:1px solid rgba(74,66,56,.2);border-bottom:1px solid rgba(74,66,56,.16);background:linear-gradient(180deg,rgba(247,244,235,.56),rgba(239,233,220,.72));box-shadow:0 14px 42px rgba(68,56,37,.06);backdrop-filter:blur(7px)}
+.structure-plan-viewport{width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}
+.structure-plan-viewport::-webkit-scrollbar{display:none}
+.structure-plan-canvas{position:relative;width:min(760px,100%);min-width:720px;aspect-ratio:984/222;margin:0 auto;isolation:isolate}
+.structure-plan-image{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;user-select:none;opacity:.5;filter:invert(1) grayscale(1) contrast(1.12);mix-blend-mode:multiply}
+.structure-hotspots{position:absolute;inset:0;z-index:2}
+.structure-hotspot{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);min-width:30px;min-height:30px;transform:translate(-50%,-50%);margin:0;padding:0;border:0;border-radius:3px;background:transparent;color:#3c352e;cursor:pointer;isolation:isolate}
+.structure-hotspot:before{content:"";position:absolute;z-index:2;left:50%;top:50%;width:7px;height:7px;border:1px solid rgba(145,58,44,.72);border-radius:50%;background:rgba(246,242,232,.92);box-shadow:0 0 0 4px rgba(246,242,232,.38);transform:translate(-50%,-50%);transition:width .35s,height .35s,background .35s,box-shadow .35s}
+.structure-hotspot:after{content:"";position:absolute;z-index:0;inset:1px;border:1px solid rgba(154,63,48,.58);border-radius:3px;background:rgba(154,63,48,.07);opacity:0;transform:scale(.94);transition:opacity .35s,transform .45s cubic-bezier(.16,1,.3,1)}
+.structure-hotspot span{position:absolute;z-index:3;left:50%;top:50%;padding:4px 7px;border:1px solid rgba(98,83,69,.18);background:rgba(246,242,232,.94);box-shadow:0 7px 20px rgba(58,47,35,.09);font:8px/1 Arial,sans-serif;letter-spacing:.08em;white-space:nowrap;opacity:0;pointer-events:none;transform:translate(-50%,calc(-100% - 10px));transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+.structure-hotspot:hover:after,.structure-hotspot:focus-visible:after,.structure-hotspot.active:after{opacity:1;transform:scale(1)}
+.structure-hotspot:hover span,.structure-hotspot:focus-visible span,.structure-hotspot.active span{opacity:1;transform:translate(-50%,calc(-100% - 14px))}
+.structure-hotspot.active:before{width:12px;height:12px;background:#9a3f30;box-shadow:0 0 0 6px rgba(154,63,48,.12),0 0 22px rgba(154,63,48,.22)}
+.structure-hotspot.axis-hit:before{animation:planHotspotPulse .72s cubic-bezier(.16,1,.3,1)}
+.structure-hotspot.secondary{z-index:5;min-width:50px;min-height:28px;transform:translate(-50%,0);border:1px solid rgba(98,83,69,.16);border-radius:14px;background:rgba(246,242,232,.88);box-shadow:0 5px 15px rgba(58,47,35,.06)}
+.structure-hotspot.secondary:before{left:9px;top:50%;width:7px;height:7px;box-shadow:none}
+.structure-hotspot.secondary:after{inset:0;border-radius:14px;opacity:.28;transform:none;background:rgba(154,63,48,.035)}
+.structure-hotspot.secondary span,.structure-hotspot.secondary:hover span,.structure-hotspot.secondary:focus-visible span,.structure-hotspot.secondary.active span{left:19px;top:50%;padding:0;border:0;background:transparent;box-shadow:none;font-size:7px;opacity:1;transform:translateY(-50%)}
+.structure-hotspot-leader{position:absolute;z-index:1;left:var(--x);top:12%;width:1px;height:calc(var(--target-y) - 12%);background:linear-gradient(rgba(154,63,48,.5),rgba(154,63,48,.18));pointer-events:none}
+.structure-hotspot-leader:after{content:"";position:absolute;left:50%;bottom:0;width:5px;height:5px;border:1px solid rgba(154,63,48,.58);border-radius:50%;background:rgba(246,242,232,.9);transform:translate(-50%,50%)}
+@keyframes planHotspotPulse{0%{transform:translate(-50%,-50%) scale(.7)}58%{transform:translate(-50%,-50%) scale(1.35)}100%{transform:translate(-50%,-50%) scale(1)}}
+.structure-plan figcaption{display:grid;grid-template-columns:auto auto auto 1fr;align-items:center;gap:10px;margin-top:3px;color:#766d63;font:7px Arial,sans-serif;letter-spacing:.14em}
+.structure-overall{display:inline-flex;align-items:center;gap:6px;border:0;border-bottom:1px solid rgba(154,63,48,.34);background:none;padding:3px 7px;color:#6f665c;font:8px Arial,sans-serif;letter-spacing:.12em;cursor:pointer}
+.structure-overall:before{content:"";width:7px;height:7px;border:1px solid rgba(145,58,44,.72);border-radius:50%;background:rgba(246,242,232,.92);transition:background .3s,box-shadow .3s}
+.structure-overall.active{color:#9a3f30;border-bottom-color:#9a3f30}
+.structure-overall.active:before{background:#9a3f30;box-shadow:0 0 0 4px rgba(154,63,48,.11)}
+.structure-plan figcaption small{justify-self:end;color:#8b8176;font-weight:400}
+@media(pointer:coarse){.structure-hotspot{min-width:44px;min-height:44px}}
+@media(max-width:800px){#app[data-view="model"] .model-interface .controls{bottom:12px!important;width:calc(100vw - 24px)!important}.structure-plan{padding:7px 8px 6px}.structure-plan-canvas{width:720px;min-width:720px;margin:0}.structure-plan figcaption{grid-template-columns:auto auto 1fr}.structure-plan figcaption small{display:none}}

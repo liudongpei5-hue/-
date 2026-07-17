@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>唐代卢夫人墓｜数字考古档案</title>
     <link rel="preload" as="image" href="/assets/home/landing.jpg" />
+    <link rel="preload" as="image" href="/assets/report/tomb-plan.png" />
     <link rel="preload" as="fetch" href="/geometry-export.json?v=20260711-new-13" crossorigin="anonymous" />
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260713-home" />
+    <link rel="stylesheet" href="/src/style.css?v=20260717-plan-navigation-v4" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
@@ -40,7 +41,20 @@
             <div><small>STRUCTURE INDEX</small><span>结构索引</span></div>
             <button id="reset-view" type="button">返回整体 ↗</button>
           </div>
-          <div id="structure-list" class="structure-list"></div>
+          <figure id="structure-list" class="structure-plan" aria-label="M2338墓葬俯视图结构导航，北在左、南在右">
+            <div class="structure-plan-viewport">
+              <div class="structure-plan-canvas">
+                <img class="structure-plan-image" src="/assets/report/tomb-plan.png" width="984" height="222" alt="M2338墓葬俯视图，墓室位于左侧，墓道入口位于右侧" draggable="false" />
+                <div id="structure-hotspots" class="structure-hotspots"></div>
+              </div>
+            </div>
+            <figcaption>
+              <button class="structure-overall overall active" type="button" aria-pressed="true">整体</button>
+              <span>北 N</span>
+              <span>南 S</span>
+              <small>点击图中节点切换三维特写</small>
+            </figcaption>
+          </figure>
           <details class="sliders">
             <summary>线稿参数 <small>STYLE</small></summary>
             <label>线稿浓度 <output id="density-value">84</output><input id="density" type="range" min="25" max="100" value="84"></label>
@@ -203,6 +217,6 @@
       </section>
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260713-home"></script>
+    <script type="module" src="/src/main.js?v=20260717-plan-navigation-v4"></script>
   </body>
 </html>

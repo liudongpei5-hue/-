@@ -6,7 +6,7 @@ const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 
-const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "transition-veil"];
+const requiredIds = ["scene", "menu-trigger", "menu-page", "artifacts-page", "data-page", "structure-list", "structure-hotspots", "transition-veil"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -38,6 +38,9 @@ for (const niche of ["东壁龛", "西壁龛"]) {
 }
 if (!main.includes("STRUCTURE_ORDER") || !main.includes("controls.touches.TWO = THREE.TOUCH.DOLLY_PAN")) {
   throw new Error("Spatial axis order or two-finger pan is missing");
+}
+if (!html.includes("/assets/report/tomb-plan.png") || !main.includes("PLAN_HOTSPOTS")) {
+  throw new Error("Report-plan structure navigation is missing");
 }
 if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
   throw new Error("Burial-goods models must load without blocking the spatial interface");

@@ -123,6 +123,21 @@ let autoDemoStep = 0;
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
+const PLAN_HOTSPOTS = new Map([
+  [0, { x: 14.23, y: 62.16, w: 20.73, h: 70.27 }],
+  [1, { x: 26.68, y: 44.59, w: 4.17, h: 33.33 }],
+  [2, { x: 33.54, y: 44.37, w: 9.55, h: 33.78 }],
+  [3, { x: 40.85, y: 44.82, w: 5.08, h: 31.98 }],
+  [11, { x: 39.99, y: 19.59, w: 5.39, h: 21.17 }],
+  [12, { x: 40.75, y: 68.47, w: 5.49, h: 23.42 }],
+  [4, { x: 47.92, y: 45.05, w: 9.04, h: 32.43 }],
+  [5, { x: 54.57, y: 44.82, w: 4.27, h: 31.98 }],
+  [6, { x: 61.38, y: 43.92, w: 9.35, h: 35.59 }],
+  [7, { x: 68.45, y: 43.92, w: 4.78, h: 33.78 }],
+  [8, { x: 83.64, y: 42.34, w: 25.61, h: 37.84 }],
+  [9, { x: 24.29, y: 42.12, secondary: true }],
+  [10, { x: 33.54, y: 44.82, secondary: true }]
+]);
 const DEMO_ROUTE = [8, 7, 6, 5, 4, 3, 2, 1, 0];
 const STRUCTURE_MEASURES = {
   0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
@@ -1294,38 +1309,66 @@ function selectStructure(index) {
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
   setBurialGoodsOpacity(index < 0 || index === 0 ? 1 : .14);
-  document.querySelectorAll(".structure-list button").forEach(button => {
+  document.querySelectorAll("#structure-list button").forEach(button => {
     const active = button.classList.contains("overall") ? index < 0 : Number(button.dataset.index) === index;
     button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
     if (active) {
       button.classList.remove("axis-hit");
       void button.offsetWidth;
       button.classList.add("axis-hit");
-      button.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      const viewport = document.querySelector(".structure-plan-viewport");
+      if (button.dataset.index && viewport?.scrollWidth > viewport.clientWidth) {
+        const left = button.offsetLeft + button.offsetWidth / 2 - viewport.clientWidth / 2;
+        viewport.scrollTo({ left, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }
     }
   });
   const selected = objects.find(group => group.userData.index === index);
-  document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${selected?.userData.name || "结构"} · 结构已突出`;
+  const currentLabel = index < 0 ? "整体结构" : selected?.userData.name || "结构";
+  document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${currentLabel} · 结构已突出`;
   showMeasurements(index,selected);
 }
 
 function buildControls(data) {
-  const list = document.querySelector("#structure-list");
-  const overallButton = document.createElement("button");
-  overallButton.type = "button";
-  overallButton.className = "overall active";
-  overallButton.textContent = "整体";
+  const hotspots = document.querySelector("#structure-hotspots");
+  const overallButton = document.querySelector(".structure-overall");
   overallButton.addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
-  list.append(overallButton);
   STRUCTURE_ORDER.forEach(index => {
+    const placement = PLAN_HOTSPOTS.get(index);
+    if (!placement) return;
     const item = data.geometries[index];
     if (!item.vertices.length) return;
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "structure-hotspot";
     button.dataset.index = index;
-    button.textContent = item.name || FALLBACK_NAMES[index] || `结构 ${index + 1}`;
+    const label = item.name || FALLBACK_NAMES[index] || `结构 ${index + 1}`;
+    const displayLabel = placement.secondary ? `${label} 盗洞` : label;
+    button.setAttribute("aria-label", `查看${displayLabel}三维特写`);
+    button.setAttribute("aria-pressed", "false");
+    button.style.setProperty("--x", `${placement.x}%`);
+    if (placement.secondary) {
+      button.classList.add("secondary");
+      button.style.setProperty("--y", "3%");
+      button.style.setProperty("--w", "7%");
+      button.style.setProperty("--h", "13%");
+      const leader = document.createElement("i");
+      leader.className = "structure-hotspot-leader";
+      leader.setAttribute("aria-hidden", "true");
+      leader.style.setProperty("--x", `${placement.x}%`);
+      leader.style.setProperty("--target-y", `${placement.y}%`);
+      hotspots.append(leader);
+    } else {
+      button.style.setProperty("--y", `${placement.y}%`);
+      button.style.setProperty("--w", `${placement.w}%`);
+      button.style.setProperty("--h", `${placement.h}%`);
+    }
+    const text = document.createElement("span");
+    text.textContent = displayLabel;
+    button.append(text);
     button.addEventListener("click", () => { noteUserActivity(); navigateToStructure(index); });
-    list.append(button);
+    hotspots.append(button);
   });
   document.querySelector("#reset-view").addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
 }
@@ -1576,7 +1619,7 @@ function setupInterface() {
     noteUserActivity();
     if (event.key === "Escape") { if (closeArtifactPopover()) return; setView(app.dataset.view === "model" ? "menu" : "model", event); return; }
     if (app.dataset.view !== "model") return;
-    const order = [8, 7, 6, 5, 4, 3, 2, 1, 0];
+    const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }
     if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
     const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
