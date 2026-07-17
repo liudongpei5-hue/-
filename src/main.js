@@ -1445,75 +1445,7 @@ function playTransition(origin) {
 function setView(view, event) {
   playTransition(event);
   document.querySelectorAll(".page-layer").forEach(layer => { const active = layer.id === `${view}-page`; layer.classList.toggle("active", active); layer.setAttribute("aria-hidden", String(!active)); });
-  if (view === "workflow") document.querySelector("#workflow-page").scrollTop = 0;
   document.querySelector("#app").dataset.view = view;
-}
-
-const MEMORY_IMAGES = [
-  "1-1.png", "1-2.png", "2-1.png", "2-2.png", "3-1.png", "3-2.png", "3-3.png", "3-4.png", "3-5.png",
-  "4-1.png", "4-2.png", "5-1.png", "5-2.png", "6-1.png", "6-2.png", "7.png", "8.png", "9.png",
-  "10-1.png", "10-2.png", "11-1.png", "11-2.png", "12-1.png", "12-2.png", "12-3.png", "13-1.png",
-  "13-2.png", "14.png", "15.png", "16-1.JPG", "16-2.JPG", "17-1.JPG", "17-2.JPG", "18-1.JPG", "18-2.JPG",
-  "19-1.png", "19-2.jpg"
-];
-
-let memoriesPauseUntil = 0;
-let memoriesRestartAt = 0;
-let memoriesAutoplayTimer;
-
-function startMemoriesAutoplay() {
-  if (memoriesAutoplayTimer) return;
-  const page = document.querySelector("#workflow-page");
-  memoriesAutoplayTimer = setInterval(() => {
-    const active = document.querySelector("#app").dataset.view === "workflow";
-    const canMove = !matchMedia("(prefers-reduced-motion: reduce)").matches && Date.now() >= memoriesPauseUntil;
-    if (active && canMove) {
-      const atEnd = page.scrollTop + page.clientHeight >= page.scrollHeight - 2;
-      if (atEnd) {
-        if (!memoriesRestartAt) memoriesRestartAt = Date.now() + 3000;
-        if (Date.now() >= memoriesRestartAt) { page.scrollTop = 0; memoriesRestartAt = 0; }
-      } else {
-        page.scrollTop += 2;
-        memoriesRestartAt = 0;
-      }
-    }
-  }, 10);
-}
-
-function pauseMemoriesAutoplay() {
-  memoriesPauseUntil = Date.now() + 3500;
-  memoriesRestartAt = 0;
-}
-
-function setupMemories() {
-  const gallery = document.querySelector("#memories-gallery");
-  if (!gallery || gallery.childElementCount) return;
-  const groups = new Map();
-  MEMORY_IMAGES.forEach(filename => {
-    const match = filename.match(/^(\d+)(?:-(\d+))?\./);
-    if (!match) return;
-    const group = Number(match[1]);
-    const item = Number(match[2] || 1);
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push({ filename, item });
-  });
-  [...groups.entries()].sort(([a], [b]) => a - b).forEach(([group, images]) => {
-    const section = document.createElement("section");
-    section.className = "memory-group";
-    section.dataset.group = group;
-    section.innerHTML = `<div class="memory-group-images"></div>`;
-    const imageGrid = section.querySelector(".memory-group-images");
-    images.sort((a, b) => a.item - b.item).forEach(({ filename, item }) => {
-      const figure = document.createElement("figure");
-      figure.className = "memory-photo";
-      figure.innerHTML = `<img src="/images/${filename}" alt="回忆录第 ${group} 组，第 ${item} 张照片" loading="lazy"><figcaption>${String(group).padStart(2, "0")} — ${String(item).padStart(2, "0")}</figcaption>`;
-      imageGrid.append(figure);
-    });
-    gallery.append(section);
-  });
-  const page = document.querySelector("#workflow-page");
-  ["wheel", "touchstart", "pointerdown", "keydown"].forEach(type => page.addEventListener(type, pauseMemoriesAutoplay, { passive: true }));
-  startMemoriesAutoplay();
 }
 
 function setupInterface() {
@@ -1542,11 +1474,9 @@ function setupInterface() {
   document.querySelector("#menu-trigger").addEventListener("click", event => setView(app.dataset.view === "menu" ? "model" : "menu", event));
   const navButtons = [...document.querySelectorAll(".chapter-nav button")];
   navButtons.forEach((button, index) => {
-    button.addEventListener("mouseenter", () => { document.querySelector(".menu-progress i").style.transform = `translateY(${index * 100}%)`; document.querySelector(".menu-progress span").textContent = `0${index + 1} / 04`; });
+    button.addEventListener("mouseenter", () => { document.querySelector(".menu-progress i").style.transform = `translateY(${index * 100}%)`; document.querySelector(".menu-progress span").textContent = `0${index + 1} / 03`; });
     button.addEventListener("click", event => setView(button.dataset.target, event));
   });
-  // Keep navigation responsive even if optional gallery content cannot be built.
-  try { setupMemories(); } catch (error) { console.error("Memories gallery could not be initialized", error); }
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
   const artifactCatalog = {
