@@ -7,6 +7,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
+const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7"]);
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -17,6 +18,7 @@ renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
 scene.up.set(0, 0, 1);
+scene.fog = new THREE.Fog(0xf2efe5, 12, 48);
 scene.add(new THREE.HemisphereLight(0xf8efe0, 0x6f6255, 2.2));
 const artifactKeyLight = new THREE.DirectionalLight(0xfff4df, 2.8);
 artifactKeyLight.position.set(3.5, -5.5, 7.5);
@@ -102,6 +104,143 @@ canvas.addEventListener("touchmove", updateTwoFingerGesture, { passive: true, ca
 canvas.addEventListener("touchend", endTwoFingerGesture, { passive: true, capture: true });
 canvas.addEventListener("touchcancel", endTwoFingerGesture, { passive: true, capture: true });
 
+function createSketchPipeline() {
+  const colorTarget = new THREE.WebGLRenderTarget(1, 1, {
+    samples: innerWidth < 900 ? 0 : 2,
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat,
+    colorSpace: THREE.SRGBColorSpace
+  });
+  colorTarget.depthTexture = new THREE.DepthTexture(1, 1);
+  colorTarget.depthTexture.format = THREE.DepthFormat;
+  colorTarget.depthTexture.type = THREE.UnsignedShortType;
+  const normalTarget = new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat
+  });
+  const normalMaterial = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  const postScene = new THREE.Scene();
+  const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const compositeMaterial = new THREE.ShaderMaterial({
+    depthWrite: false,
+    depthTest: false,
+    uniforms: {
+      tDiffuse: { value: colorTarget.texture },
+      tDepth: { value: colorTarget.depthTexture },
+      tNormal: { value: normalTarget.texture },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uNear: { value: camera.near },
+      uFar: { value: camera.far },
+      uTime: { value: 0 },
+      uMoving: { value: 0 },
+      uPaper: { value: new THREE.Color(0xf2efe5) },
+      uInk: { value: new THREE.Color(0x24231f) }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main(){
+        vUv=uv;
+        gl_Position=vec4(position.xy,0.0,1.0);
+      }`,
+    fragmentShader: `
+      #include <packing>
+      uniform sampler2D tDiffuse;
+      uniform sampler2D tDepth;
+      uniform sampler2D tNormal;
+      uniform vec2 uResolution;
+      uniform float uNear;
+      uniform float uFar;
+      uniform float uTime;
+      uniform float uMoving;
+      uniform vec3 uPaper;
+      uniform vec3 uInk;
+      varying vec2 vUv;
+      float hash(vec2 p){
+        p=fract(p*vec2(123.34,456.21));
+        p+=dot(p,p+45.32);
+        return fract(p.x*p.y);
+      }
+      float linearDepth(vec2 uv){
+        float fragCoordZ=texture2D(tDepth,uv).x;
+        float viewZ=perspectiveDepthToViewZ(fragCoordZ,uNear,uFar);
+        return viewZToOrthographicDepth(viewZ,uNear,uFar);
+      }
+      float depthEdge(vec2 uv, vec2 px){
+        float c=linearDepth(uv);
+        float e=0.0;
+        e=max(e,abs(c-linearDepth(uv+vec2(px.x,0.0))));
+        e=max(e,abs(c-linearDepth(uv-vec2(px.x,0.0))));
+        e=max(e,abs(c-linearDepth(uv+vec2(0.0,px.y))));
+        e=max(e,abs(c-linearDepth(uv-vec2(0.0,px.y))));
+        return smoothstep(0.0015,0.012,e);
+      }
+      float normalEdge(vec2 uv, vec2 px){
+        vec3 n=texture2D(tNormal,uv).xyz;
+        float e=0.0;
+        e=max(e,distance(n,texture2D(tNormal,uv+vec2(px.x,0.0)).xyz));
+        e=max(e,distance(n,texture2D(tNormal,uv-vec2(px.x,0.0)).xyz));
+        e=max(e,distance(n,texture2D(tNormal,uv+vec2(0.0,px.y)).xyz));
+        e=max(e,distance(n,texture2D(tNormal,uv-vec2(0.0,px.y)).xyz));
+        return smoothstep(0.11,0.42,e);
+      }
+      void main(){
+        vec2 px=1.0/uResolution;
+        vec4 source=texture2D(tDiffuse,vUv);
+        float d=linearDepth(vUv);
+        float mist=smoothstep(0.08,0.72,d);
+        float grain=hash(floor((vUv*uResolution+uTime*vec2(.7,.27))*1.15));
+        float fiberA=sin((vUv.x*920.0+vUv.y*210.0)+grain*2.5);
+        float fiberB=sin((vUv.y*760.0-vUv.x*120.0)+grain*1.7);
+        float paperTooth=(grain-.5)*0.09+fiberA*0.018+fiberB*0.012;
+        float edge=max(depthEdge(vUv,px)*1.25,normalEdge(vUv,px)*.72);
+        float broken=edge*(0.72+grain*.46)*(1.0-mist*.38);
+        vec3 paper=uPaper+vec3(paperTooth);
+        float tone=dot(source.rgb,vec3(.299,.587,.114));
+        float pencilShade=smoothstep(.94,.34,tone)*(1.0-mist*.34);
+        vec3 washed=mix(paper,source.rgb,.18*(1.0-mist*.25));
+        float graphite=max(broken*(0.88+uMoving*.18),pencilShade*.18);
+        vec3 color=mix(washed,uInk,graphite);
+        color=mix(color,paper,.18+mist*.2);
+        float vignette=smoothstep(.92,.22,length(vUv-.5));
+        color=mix(paper*0.94,color,.88+vignette*.12);
+        gl_FragColor=vec4(color,1.0);
+      }`
+  });
+  postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), compositeMaterial));
+  let lastCameraPosition = new THREE.Vector3();
+  let moving = 0;
+  return {
+    setSize(width, height) {
+      const ratio = Math.min(renderer.getPixelRatio(), innerWidth < 900 ? 1.15 : 1.5);
+      const w = Math.max(1, Math.floor(width * ratio));
+      const h = Math.max(1, Math.floor(height * ratio));
+      colorTarget.setSize(w, h);
+      normalTarget.setSize(w, h);
+      compositeMaterial.uniforms.uResolution.value.set(w, h);
+    },
+    render(now) {
+      const cameraDelta = camera.position.distanceTo(lastCameraPosition);
+      moving = THREE.MathUtils.lerp(moving, Math.min(1, cameraDelta * 2.4), .08);
+      lastCameraPosition.copy(camera.position);
+      compositeMaterial.uniforms.uTime.value = now * .001;
+      compositeMaterial.uniforms.uMoving.value = moving;
+      renderer.setRenderTarget(colorTarget);
+      renderer.clear();
+      renderer.render(scene, camera);
+      const previousOverride = scene.overrideMaterial;
+      scene.overrideMaterial = normalMaterial;
+      renderer.setRenderTarget(normalTarget);
+      renderer.clear();
+      renderer.render(scene, camera);
+      scene.overrideMaterial = previousOverride;
+      renderer.setRenderTarget(null);
+      renderer.render(postScene, postCamera);
+    }
+  };
+}
+
+const sketchPipeline = createSketchPipeline();
+
 const root = new THREE.Group();
 scene.add(root);
 const measurementGroup = new THREE.Group();
@@ -127,6 +266,7 @@ let artifactTourButtons = [];
 let activateArtifactByName = () => false;
 let activeArtifactName = "";
 let spatialReturnState = null;
+let visualProcessPanel;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeIndex = -1;
@@ -198,6 +338,13 @@ const NARRATIVE_ENTRIES = [
     quote: "墓室，位于该墓葬最北端，单室土洞，拱顶，残存直壁平而规整，尚可观察到白灰面；墓室进深 3.68、宽 3.04、高 2.52 米。"
   }
 ];
+const VISUAL_PROCESS_STEPS = [
+  ["体量", "测绘几何生成连续墓葬面片，作为 NPR 的深度和法线来源"],
+  ["NPR", "颜色、深度、法线三次采样合成铅笔线和纸面明暗"],
+  ["纸感", "屏幕空间纸纹参与线条断裂、深度雾化和石墨颗粒"],
+  ["镜头", "总览和特写统一固定在墓葬同一侧，避免东西两侧跳切"],
+  ["性能", "第一屏只加载代表性随葬品模型，其余点位用铅笔代理"]
+];
 const STRUCTURE_MEASURES = {
   0: [{axis:"x",label:"3.68 m"},{axis:"y",label:"3.04 m"},{axis:"z",label:"2.52 m"}],
   1: [{axis:"x",label:"1.08 m"},{axis:"y",label:"1.28 m"},{axis:"z",label:"1.92 m"}],
@@ -233,6 +380,7 @@ const vertexShader = `
 uniform float uJitter;
 uniform float uLayer;
 varying float vGrain;
+varying float vViewDepth;
 float hash(vec3 p) { p=fract(p*.1031); p+=dot(p,p.yzx+33.33); return fract((p.x+p.y)*p.z); }
 void main(){
   float n=hash(position*7.31+vec3(uLayer*13.7));
@@ -240,16 +388,23 @@ void main(){
   displaced.x += (n-.5)*uJitter*uLayer;
   displaced.z += (hash(position.zyx*9.17)-.5)*uJitter*uLayer;
   vGrain=hash(position*17.9+vec3(uLayer));
-  gl_Position=projectionMatrix*modelViewMatrix*vec4(displaced,1.0);
+  vec4 mvPosition=modelViewMatrix*vec4(displaced,1.0);
+  vViewDepth=abs(mvPosition.z);
+  gl_Position=projectionMatrix*mvPosition;
 }`;
 const fragmentShader = `
 uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uLayer;
 varying float vGrain;
+varying float vViewDepth;
 void main(){
   float graphite=.72+.28*sin(vGrain*37.0+uLayer*2.0);
-  gl_FragColor=vec4(uColor,uOpacity*graphite);
+  float distanceMist=smoothstep(11.0,42.0,vViewDepth);
+  vec3 paper=vec3(.72,.69,.62);
+  vec3 ink=mix(uColor,paper,distanceMist*.42);
+  float alpha=uOpacity*graphite*(1.0-distanceMist*.45);
+  gl_FragColor=vec4(ink,alpha);
 }`;
 
 
@@ -462,7 +617,8 @@ async function loadBurialGoods() {
   const annotations = pointData.points
     .filter(point => point.properties?.["三维模型"] && point.worldXYZ)
     .sort((a, b) => Number(a.properties?.["平面图编号"] || 0) - Number(b.properties?.["平面图编号"] || 0));
-  const modelIds = [...new Set(annotations.map(point => point.properties["三维模型"]))];
+  const modelIds = [...new Set(annotations.map(point => point.properties["三维模型"]))]
+    .filter(modelId => PRIORITY_VISUAL_MODEL_IDS.has(modelId));
   const loader = new GLTFLoader();
   const library = new Map();
   await Promise.all(modelIds.map(async modelId => {
@@ -476,17 +632,22 @@ async function loadBurialGoods() {
   const chamberCenter = structureTargets.get(0) || new THREE.Vector3(7.6, .8, -4.12);
   annotations.forEach((annotation, index) => {
     const source = library.get(annotation.properties["三维模型"]);
-    if (!source) return;
     const anchor = annotation.worldXYZ;
     const targetHeight = Number(annotation.properties?.["高度"]) || .22;
     const instance = new THREE.Group();
     instance.name = `${annotation.properties?.["器号"] || annotation.properties?.["平面图编号"]} ${annotation.properties?.["具体名称"] || ""}`;
     instance.position.set(anchor.x, anchor.y, anchor.z + .018);
     instance.rotation.z = Math.atan2(chamberCenter.y - anchor.y, chamberCenter.x - anchor.x) - Math.PI / 2 + (index % 5 - 2) * .045;
-    const model = source.clone(true);
-    normalizeArtifactModel(model, targetHeight);
-    tuneArtifactMaterials(model, layer.userData.opacityMaterials);
-    instance.add(model);
+    if (source) {
+      const model = source.clone(true);
+      normalizeArtifactModel(model, targetHeight);
+      tuneArtifactMaterials(model, layer.userData.opacityMaterials);
+      instance.add(model);
+    } else {
+      const proxy = createArtifactProxy(targetHeight);
+      layer.userData.opacityMaterials.push(...proxy.userData.opacityMaterials);
+      instance.add(proxy);
+    }
     const marker = createPointMarker(annotation);
     layer.userData.opacityMaterials.push(...marker.userData.opacityMaterials);
     instance.add(marker);
@@ -495,6 +656,86 @@ async function loadBurialGoods() {
   scene.add(layer);
   burialGoodsLayer = layer;
   return annotations.length;
+}
+
+function createArtifactProxy(targetHeight) {
+  const group = new THREE.Group();
+  const radius = THREE.MathUtils.clamp(targetHeight * .22, .035, .08);
+  const geometry = new THREE.CircleGeometry(radius, 18);
+  const fillMaterial = new THREE.MeshBasicMaterial({
+    color: 0x8f6d52,
+    transparent: true,
+    opacity: .24,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide
+  });
+  fillMaterial.userData.baseOpacity = fillMaterial.opacity;
+  const disc = new THREE.Mesh(geometry, fillMaterial);
+  disc.rotation.x = Math.PI / 2;
+  const ringMaterial = new THREE.LineBasicMaterial({
+    color: 0x514940,
+    transparent: true,
+    opacity: .32,
+    depthWrite: false,
+    depthTest: true
+  });
+  ringMaterial.userData.baseOpacity = ringMaterial.opacity;
+  const ring = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), ringMaterial);
+  ring.rotation.x = Math.PI / 2;
+  group.add(disc, ring);
+  group.userData.opacityMaterials = [fillMaterial, ringMaterial];
+  return group;
+}
+
+function createVisualProcessPanel() {
+  if (visualProcessPanel) return visualProcessPanel;
+  const style = document.createElement("style");
+  style.textContent = `
+    .visual-process-panel{position:absolute;right:24px;top:112px;z-index:34;width:min(330px,calc(100vw - 48px));max-height:calc(100dvh - 180px);overflow:hidden;border:1px solid rgba(58,50,42,.2);background:rgba(244,240,229,.72);backdrop-filter:blur(12px);box-shadow:0 18px 55px rgba(52,42,31,.12);color:#2d2924;font:12px/1.55 "DengXian","Microsoft YaHei",sans-serif;transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .35s}
+    .visual-process-panel.collapsed{transform:translateX(calc(100% - 42px))}
+    .visual-process-panel header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px 10px;border-bottom:1px solid rgba(70,62,52,.16)}
+    .visual-process-panel h3{margin:0;font:13px/1.2 "Noto Serif SC","Songti SC",serif;font-weight:600;letter-spacing:.04em}
+    .visual-process-panel small{display:block;margin-top:3px;color:#8f4537;font:8px/1.2 Arial,sans-serif;letter-spacing:.16em}
+    .visual-process-panel button{width:24px;height:24px;border:1px solid rgba(143,69,55,.32);background:rgba(246,242,232,.5);color:#8f4537;cursor:pointer}
+    .visual-process-panel ol{display:grid;gap:7px;margin:0;padding:12px 13px 8px;list-style:none}
+    .visual-process-panel li{display:grid;grid-template-columns:44px 1fr;gap:9px;align-items:start;padding-bottom:7px;border-bottom:1px solid rgba(70,62,52,.1)}
+    .visual-process-panel b{color:#8f4537;font:10px/1.5 Arial,sans-serif;letter-spacing:.12em}
+    .visual-process-panel span{color:#575047}
+    .visual-process-panel .visual-log{margin:0;padding:9px 13px 13px;max-height:112px;overflow:auto;color:#71685f;font:10px/1.7 "DengXian","Microsoft YaHei",sans-serif}
+    .visual-process-panel .visual-log p{margin:0 0 4px}
+    @media(max-width:800px){.visual-process-panel{right:12px;top:84px;width:min(300px,calc(100vw - 24px));max-height:44dvh}.visual-process-panel ol{display:none}}
+  `;
+  document.head.append(style);
+  const panel = document.createElement("aside");
+  panel.className = "visual-process-panel";
+  panel.setAttribute("aria-label", "主视觉迭代过程");
+  panel.innerHTML = `
+    <header>
+      <div><h3>主视觉迭代面板</h3><small>NPR PROCESS / LIVE NOTES</small></div>
+      <button type="button" aria-label="折叠主视觉迭代面板">‹</button>
+    </header>
+    <ol>${VISUAL_PROCESS_STEPS.map(([label, text]) => `<li><b>${label}</b><span>${text}</span></li>`).join("")}</ol>
+    <div class="visual-log" aria-live="polite"></div>
+  `;
+  panel.querySelector("button").addEventListener("click", () => {
+    panel.classList.toggle("collapsed");
+    panel.querySelector("button").textContent = panel.classList.contains("collapsed") ? "›" : "‹";
+  });
+  document.querySelector("#app").append(panel);
+  visualProcessPanel = panel;
+  logVisualProcess("面板已接入：当前显示主视觉管线、镜头和加载状态");
+  return panel;
+}
+
+function logVisualProcess(message) {
+  const panel = visualProcessPanel;
+  if (!panel) return;
+  const log = panel.querySelector(".visual-log");
+  const row = document.createElement("p");
+  row.textContent = `${new Date().toLocaleTimeString("zh-CN", { hour12: false })}  ${message}`;
+  log.prepend(row);
+  while (log.children.length > 8) log.lastElementChild.remove();
 }
 
 function setBurialGoodsOpacity(multiplier) {
@@ -607,7 +848,8 @@ function buildNaturalShell(data) {
 function sketchWashMaterial(color = 0x8f7a5f, opacity = .18) {
   return new THREE.ShaderMaterial({
     transparent: true,
-    depthWrite: false,
+    depthWrite: true,
+    depthTest: true,
     side: THREE.DoubleSide,
     uniforms: {
       uColor: { value: new THREE.Color(color) },
@@ -1619,6 +1861,7 @@ function navigateToStructure(index, options = {}) {
   const endPosition = preset ? new THREE.Vector3(...preset.position) : target.clone().add(new THREE.Vector3(size * .8, -size * 1.15, size * .65));
   applyResponsiveShotOffset(endPosition, target);
   selectStructure(index, focusIndices);
+  logVisualProcess(`镜头切换：${group.userData.name}，同侧连续观察`);
   animateCamera(endPosition, target, preset?.fov || 42, () => {
     const focusNames = focusIndices.map(focusIndex => objects.find(item => item.userData.index === focusIndex)?.userData.name).filter(Boolean);
     document.querySelector("#status").textContent = `${focusNames.join(" ＋ ")} · ${focusNames.length > 1 ? "组合特写" : "特写视角"}`;
@@ -1629,6 +1872,7 @@ function navigateToOverall(options = {}) {
   if (!overallView) return;
   closeNarrativeCard();
   selectStructure(-1);
+  logVisualProcess("镜头切换：整体总览，同侧轴线视角");
   animateCamera(overallView.position.clone(), overallView.target.clone(), overallView.fov, () => {
     document.querySelector("#status").textContent = "整体结构 · OVERVIEW";
   });
@@ -2019,13 +2263,17 @@ async function init() {
   overallView = { position: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
   selectStructure(-1);
   setupInterface();
+  createVisualProcessPanel();
+  logVisualProcess("体量生成完成：测绘几何已作为 NPR 深度/法线底模");
   const summary = document.querySelector("#geometry-summary");
   summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / loading artifacts`;
   loadBurialGoods().then(burialGoodsCount => {
     setBurialGoodsOpacity(selectedIndex < 0 || selectedIndex === 0 ? 1 : .14);
     summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
+    logVisualProcess(`随葬品加载完成：${burialGoodsCount} 个点位，代表性模型优先`);
   }).catch(error => {
     summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / artifacts unavailable`;
+    logVisualProcess("随葬品加载失败：主视觉保留体量和空间线稿");
     console.error("Burial goods could not be loaded", error);
   });
 }
@@ -2037,9 +2285,10 @@ function resize() {
     wideMaterials.forEach(material => material.resolution.set(clientWidth, clientHeight));
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
+    sketchPipeline.setSize(clientWidth, clientHeight);
   }
 }
-function animate() { resize(); controls.update(); renderer.render(scene, camera); requestAnimationFrame(animate); }
+function animate(now = 0) { resize(); controls.update(); sketchPipeline.render(now); requestAnimationFrame(animate); }
 
 init().catch(error => { document.querySelector("#status").textContent = error.message; console.error(error); });
 animate();
