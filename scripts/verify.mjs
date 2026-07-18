@@ -8,7 +8,7 @@ const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", 
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
 
-const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress"];
+const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -71,6 +71,27 @@ for (const index of [8, 6, 4, 3, 11, 1, 0]) {
 
 for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState", "activateArtifactByName", '#narrative-artifacts', '#start-artifacts-playback', '#return-space', '#artifact-progress']) {
   if (!main.includes(marker)) throw new Error(`Missing model/artifact linkage marker: ${marker}`);
+}
+for (const marker of ["ARTIFACT_SPATIAL_LOCATIONS", "createArtifactLocationLayer", "updateArtifactSpatialLocation", "focusArtifactTopDown", "enterArtifactMiniView", "exitArtifactMiniView", "artifactLocationRegion"]) {
+  if (!main.includes(marker)) throw new Error(`Missing artifact spatial-location feature: ${marker}`);
+}
+if (!main.includes("new THREE.Vector3(0, 0, 6.2)") || !main.includes("const endUp = new THREE.Vector3(0, 1, 0)")) {
+  throw new Error("Artifact hover camera must move vertically above the selected burial plane");
+}
+const artifactHoverWindow = main.match(/button\.addEventListener\(["']pointerenter["'][\s\S]{0,300}/)?.[0] || "";
+if (!artifactHoverWindow.includes("activateArtifact(button)")) {
+  throw new Error("Artifact hover must activate the selected object and its top-down camera");
+}
+if ((main.match(/new THREE\.WebGLRenderer/g) || []).length !== 1) {
+  throw new Error("Artifact spatial inset must reuse the existing renderer instead of loading a second WebGL scene");
+}
+for (const artifactName of artifactSequence) {
+  if (!new RegExp(`["']${artifactName}["']\\s*:\\s*\\{[\\s\\S]{0,220}anchor\\s*:`).test(main)) {
+    throw new Error(`Missing spatial anchor for artifact: ${artifactName}`);
+  }
+}
+if (!main.includes("host.append(canvas)") || !main.includes("sceneHomeParent.insertBefore(canvas, sceneHomeNextSibling)")) {
+  throw new Error("The shared scene canvas must move into and out of the artifact spatial inset");
 }
 if (!main.includes('autoDemoPhase = "artifacts"') || !main.includes('autoDemoPhase = "model"')) {
   throw new Error("Automatic playback must expose explicit model and artifacts phases");

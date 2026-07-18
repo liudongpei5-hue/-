@@ -10,7 +10,7 @@
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260718-interaction-fit-v2" />
+    <link rel="stylesheet" href="/src/style.css?v=20260718-artifact-topdown-v1" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
@@ -100,6 +100,18 @@
           <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
           <span class="artifact-shadow"></span>
         </div>
+        <aside id="artifact-spatial-inset" class="artifact-spatial-inset" aria-label="当前文物在墓葬空间中的位置">
+          <header class="artifact-spatial-head">
+            <span>SPATIAL LOCATION</span>
+            <small>文物空间定位</small>
+          </header>
+          <div id="artifact-scene-host" class="artifact-scene-host" role="img" aria-label="墓室三维线稿与当前文物出土位置"></div>
+          <div class="artifact-location-meta">
+            <p id="artifact-location-index">M2338:4 · 平面图点位</p>
+            <strong id="artifact-location-caption">墓室入口东侧</strong>
+            <small id="artifact-location-certainty">简报平面图明确点位</small>
+          </div>
+        </aside>
         <article class="artifact-copy">
           <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
           <h2><b id="artifact-name-en">TOMB BEAST</b><span id="artifact-name-cn">镇墓兽</span></h2>
@@ -129,6 +141,6 @@
 
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260718-theft-shaft-route-v2"></script>
+    <script type="module" src="/src/main.js?v=20260718-artifact-topdown-v1"></script>
   </body>
 </html>

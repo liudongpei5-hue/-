@@ -9,6 +9,8 @@ const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
 const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7"]);
 const canvas = document.querySelector("#scene");
+const sceneHomeParent = canvas.parentNode;
+const sceneHomeNextSibling = canvas.nextSibling;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
@@ -257,6 +259,12 @@ let continuousVolumeLayer;
 let groundLayer;
 let sketchVolumeLayer;
 let burialGoodsLayer;
+let artifactLocationLayer;
+let artifactLocationMarker;
+let artifactLocationHalo;
+let artifactLocationRegion;
+let artifactMiniState = null;
+let artifactMiniCameraToken = 0;
 let groundCompass;
 let overallView;
 let cameraMoveToken = 0;
@@ -293,6 +301,50 @@ const PLAN_HOTSPOTS = new Map([
 ]);
 const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0, 9, 10];
 const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
+const ARTIFACT_SPATIAL_LOCATIONS = {
+  "镇墓兽": {
+    anchor: [6.660727, -.147213, -4.12], markerLift: .48, certainty: "exact",
+    objectId: "M2338:4", label: "墓室入口东侧"
+  },
+  "镇墓武士俑": {
+    anchor: [6.347242, -.241987, -4.12], markerLift: .75, certainty: "exact",
+    objectId: "M2338:1", label: "墓室入口东侧"
+  },
+  "墓志": {
+    anchor: [6.616647, .334414, -4.12], markerLift: .22, certainty: "exact",
+    objectId: "M2338:52", label: "墓室入口处"
+  },
+  "铜钱": {
+    anchor: [8.277409, 1.913510, -4.12], markerLift: .16, certainty: "exact-group",
+    objectId: "M2338:57", label: "棺内北侧区域"
+  },
+  "玻璃串珠": {
+    anchor: [8.593945, 1.660852, -4.12], markerLift: .16, certainty: "exact-group",
+    objectId: "M2338:56", label: "棺内北侧"
+  },
+  "贝壳": {
+    anchor: [8.180024, 1.462007, -4.12], markerLift: .18, certainty: "exact",
+    objectId: "M2338:55", label: "棺内北侧"
+  },
+  "银环": {
+    anchor: [8.853829, 1.526160, -4.12], markerLift: .16, certainty: "exact",
+    objectId: "M2338:54", label: "棺内北侧"
+  },
+  "铜钵": {
+    anchor: [8.207321, -.342109, -4.12], markerLift: .18, certainty: "exact",
+    objectId: "M2338:53", label: "墓室东壁下偏中"
+  },
+  "骑马俑": {
+    anchor: [7.209323, .067355, -4.12], markerLift: .44, certainty: "exact-representative",
+    objectId: "M2338:32", label: "墓室东南隅",
+    region: {
+      center: [7.326338, .218220, -4.12],
+      min: [6.765752, -.292051, -4.12],
+      max: [7.761191, .736571, -4.12],
+      count: 11
+    }
+  }
+};
 const NARRATIVE_ARTIFACTS = new Map([
   [11, ["骑马俑"]],
   [0, ARTIFACT_SEQUENCE]
@@ -658,6 +710,7 @@ async function loadBurialGoods() {
   });
   scene.add(layer);
   burialGoodsLayer = layer;
+  if (artifactMiniState) burialGoodsLayer.visible = false;
   return annotations.length;
 }
 
@@ -752,6 +805,225 @@ function setBurialGoodsOpacity(multiplier) {
   burialGoodsLayer.traverse(child => {
     if (child.type === "Sprite" && child.material) child.material.opacity = .9 * multiplier;
   });
+}
+
+function createArtifactLocationLayer() {
+  if (artifactLocationLayer) return artifactLocationLayer;
+  const red = 0xa43b2e;
+  const layer = new THREE.Group();
+  layer.name = "第二幕文物空间定位";
+  layer.visible = false;
+
+  const marker = new THREE.Group();
+  const floorHalo = new THREE.Mesh(
+    new THREE.RingGeometry(.16, .27, 40),
+    new THREE.MeshBasicMaterial({ color: red, transparent: true, opacity: .26, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  floorHalo.position.z = .025;
+  floorHalo.renderOrder = 80;
+  marker.add(floorHalo);
+
+  const floorCore = new THREE.Mesh(
+    new THREE.CircleGeometry(.075, 32),
+    new THREE.MeshBasicMaterial({ color: red, transparent: true, opacity: .94, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  floorCore.position.z = .03;
+  floorCore.renderOrder = 82;
+  marker.add(floorCore);
+
+  const stemGeometry = new THREE.BufferGeometry();
+  stemGeometry.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, .04, 0, 0, .48], 3));
+  const stem = new THREE.Line(
+    stemGeometry,
+    new THREE.LineDashedMaterial({ color: red, transparent: true, opacity: .74, dashSize: .055, gapSize: .035, depthTest: false, depthWrite: false, toneMapped: false })
+  );
+  stem.computeLineDistances();
+  stem.renderOrder = 81;
+  stem.userData.isLocationStem = true;
+  marker.add(stem);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(.17, 20, 14),
+    new THREE.MeshBasicMaterial({ color: red, transparent: true, opacity: .98, depthTest: false, depthWrite: false, toneMapped: false })
+  );
+  head.position.z = .48;
+  head.renderOrder = 84;
+  head.userData.isLocationHead = true;
+  marker.add(head);
+
+  const halo = new THREE.Mesh(
+    new THREE.RingGeometry(.22, .31, 40),
+    new THREE.MeshBasicMaterial({ color: red, transparent: true, opacity: .42, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  halo.position.z = .48;
+  halo.renderOrder = 83;
+  marker.add(halo);
+
+  const region = new THREE.Group();
+  const regionFill = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ color: red, transparent: true, opacity: .09, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  const regionOutlineGeometry = new THREE.BufferGeometry();
+  regionOutlineGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+    -.5, -.5, .012, .5, -.5, .012,
+    .5, -.5, .012, .5, .5, .012,
+    .5, .5, .012, -.5, .5, .012,
+    -.5, .5, .012, -.5, -.5, .012
+  ], 3));
+  const regionOutline = new THREE.LineSegments(
+    regionOutlineGeometry,
+    new THREE.LineDashedMaterial({ color: red, transparent: true, opacity: .46, dashSize: .08, gapSize: .055, depthTest: false, depthWrite: false, toneMapped: false })
+  );
+  regionOutline.computeLineDistances();
+  regionFill.renderOrder = 76;
+  regionOutline.renderOrder = 77;
+  region.add(regionFill, regionOutline);
+  region.visible = false;
+
+  layer.add(region, marker);
+  scene.add(layer);
+  artifactLocationLayer = layer;
+  artifactLocationMarker = marker;
+  artifactLocationHalo = halo;
+  artifactLocationRegion = region;
+  return layer;
+}
+
+function updateArtifactSpatialLocation(name) {
+  const location = ARTIFACT_SPATIAL_LOCATIONS[name];
+  if (!location) return;
+  createArtifactLocationLayer();
+  artifactLocationMarker.position.fromArray(location.anchor);
+  const stem = artifactLocationMarker.children.find(child => child.userData.isLocationStem);
+  const head = artifactLocationMarker.children.find(child => child.userData.isLocationHead);
+  if (stem) {
+    stem.geometry.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, .04, 0, 0, location.markerLift], 3));
+    stem.computeLineDistances();
+  }
+  if (head) head.position.z = location.markerLift;
+  if (artifactLocationHalo) artifactLocationHalo.position.z = location.markerLift;
+
+  const region = location.region;
+  artifactLocationRegion.visible = Boolean(region);
+  if (region) {
+    artifactLocationRegion.position.set(region.center[0], region.center[1], region.center[2] + .025);
+    artifactLocationRegion.scale.set(region.max[0] - region.min[0], region.max[1] - region.min[1], 1);
+  }
+
+  const index = document.querySelector("#artifact-location-index");
+  const caption = document.querySelector("#artifact-location-caption");
+  const certainty = document.querySelector("#artifact-location-certainty");
+  const host = document.querySelector("#artifact-scene-host");
+  if (index) index.textContent = `${location.objectId} · ${location.certainty === "exact-group" ? "同类器物组点" : "平面图点位"}`;
+  if (caption) caption.textContent = location.label;
+  if (certainty) {
+    certainty.textContent = location.certainty === "exact-group"
+      ? "简报同类器物组点，并非单枚独立坐标"
+      : location.certainty === "exact-representative"
+        ? `代表器号定位 · 同类聚集区 ${region?.count || 0} 件`
+        : "简报平面图明确点位";
+  }
+  host?.setAttribute("aria-label", `${name}，${location.objectId}，出土于${location.label}`);
+}
+
+function focusArtifactTopDown(name) {
+  const location = ARTIFACT_SPATIAL_LOCATIONS[name];
+  if (!location || !artifactMiniState || document.querySelector("#app")?.dataset.view !== "artifacts") return false;
+  const token = ++artifactMiniCameraToken;
+  artifactMiniState.focusedArtifact = name;
+  const target = new THREE.Vector3(location.anchor[0], location.anchor[1], location.anchor[2] + .035);
+  const endPosition = target.clone().add(new THREE.Vector3(0, 0, 6.2));
+  const startPosition = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const startUp = camera.up.clone();
+  const endUp = new THREE.Vector3(0, 1, 0);
+  const startFov = camera.fov;
+  const endFov = 36;
+  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 760;
+  const started = performance.now();
+
+  const step = now => {
+    if (token !== artifactMiniCameraToken || !artifactMiniState) return;
+    const raw = Math.min(1, (now - started) / duration);
+    const t = easeBreath(raw);
+    camera.position.lerpVectors(startPosition, endPosition, t);
+    controls.target.lerpVectors(startTarget, target, t);
+    camera.up.lerpVectors(startUp, endUp, t).normalize();
+    camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
+    camera.updateProjectionMatrix();
+    camera.lookAt(controls.target);
+    if (raw < 1) {
+      requestAnimationFrame(step);
+      return;
+    }
+    camera.position.copy(endPosition);
+    controls.target.copy(target);
+    camera.up.copy(endUp);
+    camera.fov = endFov;
+    camera.updateProjectionMatrix();
+    camera.lookAt(target);
+    controls.update();
+  };
+  requestAnimationFrame(step);
+  return true;
+}
+
+function enterArtifactMiniView() {
+  const host = document.querySelector("#artifact-scene-host");
+  if (!host || artifactMiniState) return;
+  createArtifactLocationLayer();
+  artifactMiniState = {
+    enablePan: controls.enablePan,
+    enableZoom: controls.enableZoom,
+    enableRotate: controls.enableRotate,
+    cameraUp: camera.up.toArray(),
+    measurementVisible: measurementGroup.visible,
+    burialGoodsVisible: burialGoodsLayer?.visible,
+    compassVisible: groundCompass?.visible
+  };
+  cameraMoveToken++;
+  controls.enabled = true;
+  controls.enablePan = false;
+  controls.enableZoom = false;
+  controls.enableRotate = matchMedia("(pointer:fine)").matches;
+  canvas.style.transform = "none";
+  host.append(canvas);
+  selectStructure(-1);
+  measurementGroup.visible = false;
+  if (burialGoodsLayer) burialGoodsLayer.visible = false;
+  if (groundCompass) groundCompass.visible = false;
+  artifactLocationLayer.visible = true;
+  updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0]);
+  artifactMiniState.focusedArtifact = "";
+
+  const target = overallView?.target.clone() || new THREE.Vector3(0, 0, 0);
+  const position = overallView?.position.clone() || new THREE.Vector3(20, -25, 18);
+  camera.up.set(0, 0, 1);
+  camera.position.copy(position);
+  controls.target.copy(target);
+  camera.fov = overallView?.fov || 38;
+  camera.updateProjectionMatrix();
+  camera.lookAt(target);
+  controls.update();
+}
+
+function exitArtifactMiniView() {
+  if (!artifactMiniState) return;
+  artifactMiniCameraToken++;
+  cameraMoveToken++;
+  artifactLocationLayer.visible = false;
+  measurementGroup.visible = artifactMiniState.measurementVisible;
+  if (burialGoodsLayer && artifactMiniState.burialGoodsVisible !== undefined) burialGoodsLayer.visible = artifactMiniState.burialGoodsVisible;
+  if (groundCompass && artifactMiniState.compassVisible !== undefined) groundCompass.visible = artifactMiniState.compassVisible;
+  controls.enablePan = artifactMiniState.enablePan;
+  controls.enableZoom = artifactMiniState.enableZoom;
+  controls.enableRotate = artifactMiniState.enableRotate;
+  controls.enabled = true;
+  camera.up.fromArray(artifactMiniState.cameraUp);
+  sceneHomeParent.insertBefore(canvas, sceneHomeNextSibling);
+  canvas.style.transform = "";
+  artifactMiniState = null;
 }
 
 function boundsOf(item) {
@@ -2169,13 +2441,17 @@ function setView(view, event, options = {}) {
   }
   if (view !== "artifacts") closeEpitaphModal();
   playTransition(event);
+  if (view !== "artifacts") exitArtifactMiniView();
   document.querySelectorAll(".page-layer").forEach(layer => { const active = layer.id === `${view}-page`; layer.classList.toggle("active", active); layer.setAttribute("aria-hidden", String(!active)); });
   const modelInterface = document.querySelector(".model-interface");
   const modelActive = view === "model";
   modelInterface?.setAttribute("aria-hidden", String(!modelActive));
   if (modelInterface) modelInterface.inert = !modelActive;
   document.querySelector("#app").dataset.view = view;
-  if (view === "artifacts") document.querySelector("#artifacts-page")?.scrollTo({ top: 0, behavior: "auto" });
+  if (view === "artifacts") {
+    enterArtifactMiniView();
+    document.querySelector("#artifacts-page")?.scrollTo({ top: 0, behavior: "auto" });
+  }
   return true;
 }
 
@@ -2212,7 +2488,7 @@ function setupInterface() {
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
   const artifactCatalog = {
-    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。PDF 简报记载通高 36 cm，尺寸标注保留在此处，展示图按版面统一放大。", facts:[["编号","M2338:2"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
+    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。PDF 简报记载通高 36 cm，尺寸标注保留在此处，展示图按版面统一放大。", facts:[["编号","M2338:4"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
     "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。PDF 图版列为 M2338:1，当前简报页未列单件尺寸。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["尺寸","简报未列单件尺寸"]], display:{ scale:1.02, x:"0%", y:"0%" } },
     "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质。志盖边长 30 cm、厚 8 cm；志石边长 37 cm、厚 8 cm，正文 23 行、满行 23 字，共 516 字。", facts:[["编号","M2338:52"],["志盖","边长 30 cm / 厚 8 cm"],["志石","边长 37 cm / 厚 8 cm"],["字数","516 字"]], display:{ scale:1.16, x:"0%", y:"0%" } },
     "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”。PDF 简报记载钱径 2.4 cm、穿径 0.8 cm，是墓葬断代的重要参照。", facts:[["编号","M2338:57-4"],["钱径","2.4 cm"],["穿径","0.8 cm"],["材质","铜"]], display:{ scale:1.42, x:"0%", y:"0%" } },
@@ -2234,9 +2510,12 @@ function setupInterface() {
   artifactTourButtons = artifactButtons;
   const activateArtifact = (button, options = {}) => {
     if (!button) return false;
-    if (activeArtifactName === button.dataset.artifact && !options.force) return false;
-    activeArtifactName = button.dataset.artifact;
-    const artifact = artifactCatalog[button.dataset.artifact];
+    const artifactName = button.dataset.artifact;
+    if (artifactMiniState && options.focusCamera !== false) focusArtifactTopDown(artifactName);
+    if (activeArtifactName === artifactName && !options.force) return false;
+    activeArtifactName = artifactName;
+    const artifact = artifactCatalog[artifactName];
+    updateArtifactSpatialLocation(activeArtifactName);
     const artifactIndex = Math.max(0, artifactButtons.indexOf(button));
     artifactButtons.forEach(item => {
       const active = item === button;
@@ -2272,7 +2551,8 @@ function setupInterface() {
   };
   artifactButtons.forEach(button => {
     button.addEventListener("pointerenter", () => {
-      if (!autoDemoActive) activateArtifact(button);
+      noteUserActivity();
+      activateArtifact(button);
     });
     button.addEventListener("click", () => {
       noteUserActivity();
@@ -2307,7 +2587,7 @@ function setupInterface() {
     noteUserActivity();
     if (!canParallax) return;
     pointer.x = event.clientX / innerWidth - .5; pointer.y = event.clientY / innerHeight - .5;
-    canvas.style.transform = `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
+    canvas.style.transform = app.dataset.view === "artifacts" ? "none" : `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
     stage.style.transform = `rotateY(${pointer.x * 5}deg) rotateX(${-pointer.y * 3}deg)`;
   });
   ["pointerdown", "wheel", "touchstart"].forEach(type => document.addEventListener(type, noteUserActivity, { passive: true }));
@@ -2387,6 +2667,7 @@ async function init() {
 
 function resize() {
   const { clientWidth, clientHeight } = canvas;
+  if (!clientWidth || !clientHeight) return;
   if (canvas.width !== clientWidth * renderer.getPixelRatio() || canvas.height !== clientHeight * renderer.getPixelRatio()) {
     renderer.setSize(clientWidth, clientHeight, false);
     wideMaterials.forEach(material => material.resolution.set(clientWidth, clientHeight));
@@ -2395,7 +2676,17 @@ function resize() {
     sketchPipeline.setSize(clientWidth, clientHeight);
   }
 }
-function animate(now = 0) { resize(); controls.update(); sketchPipeline.render(now); requestAnimationFrame(animate); }
+function animate(now = 0) {
+  resize();
+  if (artifactLocationHalo?.visible && artifactLocationLayer?.visible) {
+    const pulse = 1 + Math.sin(now * .0042) * .14;
+    artifactLocationHalo.scale.setScalar(pulse);
+    artifactLocationHalo.material.opacity = .32 + (Math.sin(now * .0042) + 1) * .1;
+  }
+  controls.update();
+  sketchPipeline.render(now);
+  requestAnimationFrame(animate);
+}
 
 init().catch(error => { document.querySelector("#status").textContent = error.message; console.error(error); });
 animate();
