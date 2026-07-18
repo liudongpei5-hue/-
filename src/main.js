@@ -29,7 +29,8 @@ const artifactFillLight = new THREE.DirectionalLight(0xd7e8ff, .9);
 artifactFillLight.position.set(-5.5, 4.5, 3.2);
 scene.add(artifactFillLight);
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 500);
-camera.up.set(0, 0, 1);
+const SPATIAL_CAMERA_UP = new THREE.Vector3(0, 0, 1);
+camera.up.copy(SPATIAL_CAMERA_UP);
 camera.position.set(20, -25, 18);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
@@ -282,7 +283,7 @@ let spatialReturnState = null;
 let visualProcessPanel;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
-let activeNarrativeIndex = -1;
+let activeNarrativeId = "";
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
@@ -301,7 +302,7 @@ const PLAN_HOTSPOTS = new Map([
   [9, { x: 24.29, y: 42.12, secondary: true }],
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
-const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0, 9, 10];
+const DEMO_ROUTE = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
 const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
 const ARTIFACT_SPATIAL_LOCATIONS = {
   "镇墓兽": {
@@ -347,12 +348,8 @@ const ARTIFACT_SPATIAL_LOCATIONS = {
     }
   }
 };
-const NARRATIVE_ARTIFACTS = new Map([
-  [11, ["骑马俑"]],
-  [0, ARTIFACT_SEQUENCE]
-]);
 const AUTO_TIMING = {
-  model: 6600,
+  model: 8200,
   artifact: 4800,
   transition: 1050,
   restart: 2200,
@@ -360,39 +357,60 @@ const AUTO_TIMING = {
 };
 const NARRATIVE_ENTRIES = [
   {
-    index: 8, no: "01", name: "墓道", title: "向北入地",
-    summary: "墓道从最南端以 27° 斜坡向地下延伸，白灰残痕标记进入葬域的第一段。",
-    quote: "墓道，位于该墓葬最南端，略呈南宽北窄梯形状……最深处距现地表 3.32 米，斜坡 27°，壁面光滑，可见白灰刷饰残留。"
+    id: "hongduyuan", no: "01", name: "洪渎原纪年墓", title: "664年 · 一条19.88米的地下轴线",
+    cameraIndex: -1, mode: "overall", focusIndices: [], triggerIndices: [-1],
+    summary: "2021年，M2338在咸阳机场三期扩建考古中出土。墓志记卢夫人于661年去世，三年后迁葬洪渎原，文中并记有“哀子玄瑾”；明确的年代，让这座中型唐墓成为观察初唐关中葬制的空间坐标。",
+    quote: "该墓葬系一座斜坡墓道、三天井单室土洞墓，整体平面略呈“刀”形，方向176°，水平全长19.88米，墓底距现地表深8.32米。",
+    artifacts: []
   },
   {
-    index: 6, no: "02", name: "第一井洞", title: "第一重 · 见天",
-    summary: "第一过洞接入上下贯通的第一天井，完成从封闭斜洞到竖向开口的第一次明暗转换。",
-    quote: "第一过洞进深 1.08、宽 1.24、高 1.52 米；第一天井南壁上口略有坍塌，长 1.96、宽 1.08，底部长 1.7、宽 1.34 米。"
+    id: "ramp", no: "02", name: "墓道", title: "由地表向北下行",
+    cameraIndex: 8, focusIndices: [8], triggerIndices: [8],
+    summary: "入口位于墓葬最南端。南宽北窄的长斜坡以27°向地下深入，壁面残留白灰刷饰，却没有发现壁画；它是整条地下轴线的第一段。",
+    quote: "墓道，位于该墓葬最南端，略呈南宽北窄梯形状……最深处距现地表3.32米，斜坡27°，壁面光滑，可见白灰刷饰残留。",
+    artifacts: []
   },
   {
-    index: 4, no: "03", name: "第二井洞", title: "第二重 · 收束",
-    summary: "尺度更窄的第二过洞与第二天井继续向北收束，在相似节奏中把行进引向墓室深处。",
-    quote: "第二过洞进深 0.9、宽 0.92、高 1.6 米；第二天井长 1.96、南宽 1、北宽 0.96、底部长 1.8、宽 1.24～1.32 米。"
+    id: "shaft-sequence", no: "03", name: "三重井洞", title: "六段相接 · 三次见天",
+    cameraIndex: 4, mode: "overall", focusIndices: [2, 3, 4, 5, 6, 7], triggerIndices: [2, 3, 4, 5, 6, 7],
+    summary: "三段斜向拱顶过洞延续墓道坡度，三座上下贯通的天井插入其间。封闭土洞与竖向开口交替，使向北行进不再是重复的六次停顿，而成为一组完整的空间节奏。",
+    quote: "过洞3个，均为斜向拱顶土洞……底面与墓道底面为同一斜坡。天井3个，平面均呈南北向长方形，上下贯通。",
+    artifacts: []
   },
   {
-    index: 3, no: "04", name: "第三井洞", title: "第三重 · 转折",
-    summary: "第三过洞与受损的第三天井构成最后一组井洞，早期盗洞 1 也在这里切入墓葬空间。",
-    quote: "第三过洞进深 1.08、宽 1.24、高 1.76 米；第三天井东、西两壁略有损坏，长 2.04、南宽 1.16、北宽 1.28 米。"
+    id: "niches", no: "04", name: "东西壁龛", title: "第三过洞两侧的器物空间",
+    cameraIndex: 11, focusIndices: [3, 11, 12], triggerIndices: [11, 12],
+    summary: "最后一段过洞向两侧展开壁龛：东龛为拱顶平底，西龛则口部小、内部大。两种尺度不同的侧向空间共同容纳随葬品，其中东龛后来受到盗洞D1的严重扰动。",
+    quote: "壁龛2个，均位于第三过洞内……东一号龛为拱顶平底土洞结构；西一号龛为平顶底土洞结构，口部小，内部大。",
+    artifacts: ["骑马俑"]
   },
   {
-    index: 11, no: "05", name: "东西壁龛", title: "双龛 · 列仪",
-    summary: "第三过洞两侧展开形制不同的东、西壁龛，人物、动物与生活器物形成两组空间叙事。",
-    quote: "壁龛 2 个，均位于第三过洞内，编号分别为东一号龛（EK1）和西一号龛（WK1）。东龛为拱顶平底，西龛口部小、内部大。"
+    id: "threshold", no: "05", name: "甬道与封门", title: "斜坡终止后的最后边界",
+    cameraIndex: 1, focusIndices: [1], triggerIndices: [1],
+    summary: "越过第三天井，行进由斜坡转入平底甬道。甬道中部原有土坯封门，虽已坍塌，仍标示出墓室与外部通道之间最后一道实体边界。",
+    quote: "甬道，南接第三天井，北侧与墓室相连，拱顶土洞，保存完整，平底……封门位于甬道中部，土坯封堵，均已坍塌。",
+    artifacts: []
   },
   {
-    index: 1, no: "06", name: "甬道", title: "封门之前",
-    summary: "保存完整的拱顶甬道连接第三天井与墓室，中部坍塌的土坯封门提示内外葬域的最后边界。",
-    quote: "甬道，南接第三天井，北侧与墓室相连，拱顶土洞，保存完整，平底，进深 1.08、宽 1.28、高 1.92 米。"
+    id: "chamber", no: "06", name: "北端墓室", title: "西侧棺床 · 东南隅器物群",
+    cameraIndex: 0, focusIndices: [0], triggerIndices: [0],
+    summary: "拱顶墓室位于轴线最北端：木棺南北向置于西侧砖砌棺床，墓主头向北；百件随葬品则主要集中在墓室东南隅与壁龛，镇墓武士俑、镇墓兽分列入口两侧，墓志也出自入口处。",
+    quote: "随葬品共计100件……随葬品大多数出土于墓室的东南隅和壁龛，墓室内东北隅有一处木箱残留遗迹。",
+    artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")
   },
   {
-    index: 0, no: "07", name: "墓室", title: "北端 · 安寝",
-    summary: "最北端墓室以拱顶直壁、砖铺地面和西侧棺床容纳墓主，随葬品主要集中于东南隅及入口附近。",
-    quote: "墓室，位于该墓葬最北端，单室土洞，拱顶，残存直壁平而规整，尚可观察到白灰面；墓室进深 3.68、宽 3.04、高 2.52 米。"
+    id: "epitaph", no: "07", name: "墓志与墓主", title: "661年去世 · 664年迁葬",
+    cameraIndex: 0, focusIndices: [0], triggerIndices: [0], primary: false,
+    summary: "墓室入口的青石墓志以516字连接空间与人物：墓主为范阳卢氏，丈夫早逝后长期寡居并抚育幼子。简报认为“李将军魏公”与李密生平相契合，但其具体身份仍存疑。",
+    quote: "魏公早随运往，积祀孀居……抚育孤幼，羽翮已成。以麟德元年十一月廿八日迁葬于洪渎原。",
+    artifacts: ["墓志"]
+  },
+  {
+    id: "theft", no: "08", name: "两处盗洞", title: "D1至壁龛 · D2抵墓室",
+    cameraIndex: 10, mode: "overall", focusIndices: [9, 10], triggerIndices: [9, 10],
+    summary: "两次早期盗扰选择了最短路径：D1从第三天井直抵壁龛，严重扰动东龛；D2垂直打穿甬道北侧顶部，直接抵达墓室。它们也是今天理解遗物缺失与保存差异的重要空间证据。",
+    quote: "盗洞D1……位于第三天井上口，打破天井两壁直抵壁龛位置所在。盗洞D2……位于甬道北侧，垂直打破甬道顶部后直抵墓室。",
+    artifacts: []
   }
 ];
 const VISUAL_PROCESS_STEPS = [
@@ -1951,19 +1969,23 @@ function showMeasurements(index,selected) {
 }
 
 function narrativeEntryForStructure(index) {
-  if (index < 0 || index === 9 || index === 10) return null;
-  return NARRATIVE_ENTRIES.find(entry => CAMERA_PRESETS[entry.index]?.focus?.includes(index) || entry.index === index) || null;
+  const candidates = NARRATIVE_ENTRIES.filter(entry => entry.triggerIndices.includes(index));
+  return candidates.find(entry => entry.primary !== false) || candidates[0] || null;
+}
+
+function narrativeEntryById(id) {
+  return NARRATIVE_ENTRIES.find(entry => entry.id === id) || null;
 }
 
 function renderNarrativeCard(entry) {
   if (!entry) return;
-  document.querySelector("#narrative-card-index").textContent = `${entry.no} / 07 · EXCAVATION BRIEF`;
+  document.querySelector("#narrative-card-index").textContent = `${entry.no} / ${String(NARRATIVE_ENTRIES.length).padStart(2, "0")} · EXCAVATION BRIEF`;
   document.querySelector("#narrative-card-title").textContent = entry.name;
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
   document.querySelector("#narrative-card-quote").textContent = `“${entry.quote}”`;
   const related = document.querySelector("#narrative-artifacts");
-  const artifactNames = NARRATIVE_ARTIFACTS.get(entry.index) || [];
+  const artifactNames = entry.artifacts || [];
   related.replaceChildren();
   related.hidden = artifactNames.length === 0;
   if (artifactNames.length) {
@@ -1990,11 +2012,14 @@ function renderNarrativeCard(entry) {
   });
 }
 
-function syncNarrativeAxis(index) {
-  const entry = narrativeEntryForStructure(index);
-  activeNarrativeIndex = entry?.index ?? -1;
+function syncNarrativeAxis(index, preferredNarrativeId = "") {
+  const preferredEntry = narrativeEntryById(preferredNarrativeId);
+  const currentEntry = narrativeEntryById(activeNarrativeId);
+  const currentMatches = currentEntry?.triggerIndices.includes(index);
+  const entry = preferredEntry || (narrativeCardOpen && currentMatches ? currentEntry : narrativeEntryForStructure(index));
+  activeNarrativeId = entry?.id || "";
   document.querySelectorAll(".narrative-node").forEach(button => {
-    const active = Number(button.dataset.camera) === activeNarrativeIndex;
+    const active = button.dataset.narrativeId === activeNarrativeId;
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "step" : "false");
     button.setAttribute("aria-expanded", String(active && narrativeCardOpen));
@@ -2009,12 +2034,12 @@ function syncNarrativeAxis(index) {
 function openNarrativeCard(entry) {
   if (!entry) return;
   narrativeCardOpen = true;
-  activeNarrativeIndex = entry.index;
+  activeNarrativeId = entry.id;
   renderNarrativeCard(entry);
   const card = document.querySelector("#narrative-card");
   card.classList.add("open");
   card.setAttribute("aria-hidden", "false");
-  syncNarrativeAxis(entry.index);
+  syncNarrativeAxis(entry.cameraIndex, entry.id);
 }
 
 function closeNarrativeCard() {
@@ -2034,7 +2059,7 @@ function setupNarrativeAxis() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "narrative-node";
-    button.dataset.camera = entry.index;
+    button.dataset.narrativeId = entry.id;
     button.setAttribute("aria-controls", "narrative-card");
     button.setAttribute("aria-label", `${entry.no} ${entry.name} ${entry.title}`);
     button.setAttribute("aria-expanded", "false");
@@ -2043,8 +2068,7 @@ function setupNarrativeAxis() {
     button.addEventListener("click", event => {
       event.stopPropagation();
       noteUserActivity();
-      openNarrativeCard(entry);
-      navigateToStructure(entry.index, { source: "narrative" });
+      navigateToNarrativeEntry(entry, { source: "narrative" });
     });
     item.append(button);
     list.append(item);
@@ -2056,7 +2080,7 @@ function setupNarrativeAxis() {
   syncNarrativeAxis(selectedIndex);
 }
 
-function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
+function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrativeId = "") {
   selectedIndex = index;
   selectedFocusIndices = index < 0 ? [] : [...new Set(focusIndices)];
   objects.forEach(group => {
@@ -2113,7 +2137,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index]) {
   const currentLabel = index < 0 ? "整体结构" : focusNames.join(" ＋ ") || selected?.userData.name || "结构";
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${currentLabel} · 结构已突出`;
   showMeasurements(selectedFocusIndices.length === 1 ? index : -1, selectedFocusIndices.length === 1 ? selected : null);
-  syncNarrativeAxis(index);
+  syncNarrativeAxis(index, narrativeId);
 }
 
 function buildControls(data) {
@@ -2166,10 +2190,11 @@ function easeBreath(t) {
   return THREE.MathUtils.clamp(smooth + Math.sin(t * Math.PI) * .012, 0, 1);
 }
 
-function animateCamera(endPosition, endTarget, endFov, onComplete) {
+function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATIAL_CAMERA_UP) {
   const token = ++cameraMoveToken;
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
+  const startUp = camera.up.clone();
   const startFov = camera.fov;
   const distance = startPosition.distanceTo(endPosition);
   const lift = THREE.MathUtils.clamp(distance * .04, .2, .7);
@@ -2188,26 +2213,27 @@ function animateCamera(endPosition, endTarget, endFov, onComplete) {
     const t = easeBreath(raw);
     camera.position.copy(curve.getPoint(t));
     controls.target.lerpVectors(startTarget, endTarget, t);
+    camera.up.lerpVectors(startUp, endUp, t).normalize();
     camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
     camera.updateProjectionMatrix();
     camera.lookAt(controls.target);
     if (raw < 1) requestAnimationFrame(step);
     else {
-      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.fov = endFov; camera.updateProjectionMatrix(); controls.update(); controls.enabled = true;
+      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(endUp); camera.fov = endFov; camera.updateProjectionMatrix(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
       onComplete?.();
     }
   };
   requestAnimationFrame(step);
 }
 
-function applyResponsiveShotOffset(position, target) {
+function applyResponsiveShotOffset(position, target, viewUp = SPATIAL_CAMERA_UP) {
   const aspect = canvas.clientWidth / Math.max(canvas.clientHeight, 1);
   const narrowFactor = THREE.MathUtils.clamp((1.1 - aspect) / .65, 0, 1);
   const narrativeFactor = narrativeCardOpen && aspect > .9 ? THREE.MathUtils.clamp((aspect - .9) / .55, 0, 1) : 0;
   if (!narrowFactor && !narrativeFactor) return;
   const distance = position.distanceTo(target);
   const forward = target.clone().sub(position).normalize();
-  const screenRight = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const screenRight = new THREE.Vector3().crossVectors(forward, viewUp).normalize();
   const screenUp = new THREE.Vector3().crossVectors(screenRight, forward).normalize();
   const offset = screenRight.multiplyScalar(-distance * (.14 * narrowFactor + .12 * narrativeFactor))
     .add(screenUp.multiplyScalar(-distance * .04 * narrowFactor));
@@ -2218,16 +2244,15 @@ function applyResponsiveShotOffset(position, target) {
 function navigateToStructure(index, options = {}) {
   const group = objects.find(item => item.userData.index === index);
   if (!group) return;
-  if (options.auto) openNarrativeCard(narrativeEntryForStructure(index));
   const geometricTarget = structureTargets.get(index) || new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
   const bbox = new THREE.Box3().setFromObject(group);
   const size = bbox.getSize(new THREE.Vector3()).length();
   const preset = CAMERA_PRESETS[index];
-  const focusIndices = preset?.focus || [index];
+  const focusIndices = options.focusIndices || preset?.focus || [index];
   const target = preset ? new THREE.Vector3(...preset.target) : geometricTarget;
   const endPosition = preset ? new THREE.Vector3(...preset.position) : target.clone().add(new THREE.Vector3(size * .8, -size * 1.15, size * .65));
   applyResponsiveShotOffset(endPosition, target);
-  selectStructure(index, focusIndices);
+  selectStructure(index, focusIndices, options.narrativeId);
   logVisualProcess(`镜头切换：${group.userData.name}，同侧连续观察`);
   animateCamera(endPosition, target, preset?.fov || 42, () => {
     const focusNames = focusIndices.map(focusIndex => objects.find(item => item.userData.index === focusIndex)?.userData.name).filter(Boolean);
@@ -2237,11 +2262,38 @@ function navigateToStructure(index, options = {}) {
 
 function navigateToOverall(options = {}) {
   if (!overallView) return;
-  closeNarrativeCard();
-  selectStructure(-1);
+  const narrativeEntry = narrativeEntryById(options.narrativeId);
+  if (!narrativeEntry) closeNarrativeCard();
+  const focusIndices = options.focusIndices || [];
+  const anchorIndex = Number.isInteger(options.anchorIndex) ? options.anchorIndex : -1;
+  selectStructure(anchorIndex, focusIndices, options.narrativeId);
+  const endPosition = overallView.position.clone();
+  const endTarget = overallView.target.clone();
+  if (narrativeEntry) applyResponsiveShotOffset(endPosition, endTarget);
   logVisualProcess("镜头切换：整体总览，同侧轴线视角");
-  animateCamera(overallView.position.clone(), overallView.target.clone(), overallView.fov, () => {
-    document.querySelector("#status").textContent = "整体结构 · OVERVIEW";
+  animateCamera(endPosition, endTarget, overallView.fov, () => {
+    document.querySelector("#status").textContent = narrativeEntry
+      ? `${narrativeEntry.name} · 空间叙事`
+      : "整体结构 · OVERVIEW";
+  });
+}
+
+function navigateToNarrativeEntry(entry, options = {}) {
+  if (!entry) return;
+  openNarrativeCard(entry);
+  if (entry.mode === "overall") {
+    navigateToOverall({
+      source: options.source,
+      narrativeId: entry.id,
+      focusIndices: entry.focusIndices,
+      anchorIndex: entry.cameraIndex
+    });
+    return;
+  }
+  navigateToStructure(entry.cameraIndex, {
+    source: options.source,
+    narrativeId: entry.id,
+    focusIndices: entry.focusIndices
   });
 }
 
@@ -2260,9 +2312,10 @@ function captureSpatialContext() {
     selectedIndex,
     focusIndices: [...selectedFocusIndices],
     narrativeCardOpen,
-    activeNarrativeIndex,
+    activeNarrativeId,
     cameraPosition: snapshotPosition.toArray(),
     cameraTarget: snapshotTarget.toArray(),
+    cameraUp: camera.up.toArray(),
     cameraFov: snapshotFov
   };
 }
@@ -2280,15 +2333,17 @@ function restoreSpatialContext(snapshot = spatialReturnState, options = {}) {
   cameraMoveToken++;
   controls.enabled = true;
   if (!options.preserveCamera) {
+    camera.up.fromArray(snapshot.cameraUp || [0, 0, 1]);
     camera.position.fromArray(snapshot.cameraPosition);
     controls.target.fromArray(snapshot.cameraTarget);
     camera.fov = snapshot.cameraFov;
     camera.updateProjectionMatrix();
+    camera.lookAt(controls.target);
     controls.update();
   }
   selectStructure(snapshot.selectedIndex, snapshot.focusIndices);
   if (snapshot.narrativeCardOpen) {
-    const entry = NARRATIVE_ENTRIES.find(item => item.index === snapshot.activeNarrativeIndex)
+    const entry = narrativeEntryById(snapshot.activeNarrativeId)
       || narrativeEntryForStructure(snapshot.selectedIndex);
     if (entry) openNarrativeCard(entry);
   } else {
@@ -2392,9 +2447,9 @@ function runAutoDemoStep() {
       autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.transition);
       return;
     }
-    const index = DEMO_ROUTE[autoDemoStep];
+    const narrativeId = DEMO_ROUTE[autoDemoStep];
     autoDemoStep++;
-    navigateToStructure(index, { auto: true });
+    navigateToNarrativeEntry(narrativeEntryById(narrativeId), { source: "auto" });
     autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.model);
     return;
   }

@@ -60,14 +60,36 @@ for (const vector of viewVectors.slice(1)) {
   const dot = vector.reduce((sum, value, index) => sum + value * viewVectors[0][index], 0);
   if (dot < .998) throw new Error("Camera presets must retain one stable viewing direction");
 }
-if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0, 9, 10]) || !main.includes("const DEMO_ROUTE = [8, 6, 4, 3, 11, 1, 0, 9, 10]")) {
+if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0, 9, 10])) {
   throw new Error("Competition camera route is missing or out of sync");
+}
+const narrativeRoute = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
+const narrativeRouteSource = main.match(/const\s+DEMO_ROUTE\s*=\s*\[([\s\S]*?)\]\s*;/)?.[1] || "";
+const runtimeNarrativeRoute = [...narrativeRouteSource.matchAll(/["'`]([^"'`]+)["'`]/g)].map(match => match[1]);
+if (JSON.stringify(runtimeNarrativeRoute) !== JSON.stringify(narrativeRoute)) {
+  throw new Error(`Narrative playback route mismatch: ${runtimeNarrativeRoute.join(" -> ")}`);
 }
 if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeAxis") || !main.includes("syncNarrativeAxis")) {
   throw new Error("Excavation-brief narrative axis is missing");
 }
-for (const index of [8, 6, 4, 3, 11, 1, 0]) {
-  if (!main.includes(`index: ${index}, no:`)) throw new Error(`Missing narrative node for camera ${index}`);
+for (const id of narrativeRoute) {
+  if (!main.includes(`id: "${id}"`)) throw new Error(`Missing narrative node: ${id}`);
+}
+if (!main.includes("focusIndices: [2, 3, 4, 5, 6, 7]") || !main.includes("focusIndices: [9, 10]")) {
+  throw new Error("Narrative must support combined spatial structures");
+}
+if ((main.match(/cameraIndex:\s*0/g) || []).length < 2 || !main.includes("primary: false")) {
+  throw new Error("The chamber must support more than one narrative point");
+}
+const narrativeHeader = html.match(/<header\b[^>]*class="narrative-head"[^>]*>([\s\S]*?)<\/header>/)?.[1] || "";
+if (!narrativeHeader.includes("EXCAVATION BRIEF") || !narrativeHeader.includes("《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》") || !narrativeHeader.includes("考古简报空间叙事")) {
+  throw new Error("The shared excavation-brief source heading is incomplete");
+}
+if (/<article\b[^>]*id="narrative-card"[\s\S]*?<cite>/.test(html)) {
+  throw new Error("Narrative cards must not repeat the shared report citation");
+}
+if (!style.includes(".narrative-card{position:relative;align-self:start") || !style.includes(".narrative-head cite{")) {
+  throw new Error("Narrative card and shared source heading are not top-aligned");
 }
 
 for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState", "activateArtifactByName", '#narrative-artifacts', '#start-artifacts-playback', '#return-space', '#artifact-progress']) {
@@ -79,8 +101,14 @@ for (const marker of ["ARTIFACT_SPATIAL_LOCATIONS", "createArtifactLocationLayer
 for (const marker of ["sceneMorphActive", "animateSharedSceneMorph", "applyViewLayerState", "canvas.animate", "scene-morphing"]) {
   if (!main.includes(marker) && !style.includes(marker)) throw new Error(`Missing shared-scene morph transition: ${marker}`);
 }
+if (!main.includes("cameraUp: camera.up.toArray()") || !main.includes("camera.up.fromArray(snapshot.cameraUp || [0, 0, 1])")) {
+  throw new Error("Returning from artifacts must restore the complete spatial camera orientation");
+}
 if (!main.includes('restoreSpatialContext(spatialReturnState, { preserveCamera: true })')) {
-  throw new Error("Returning from artifacts must preserve the shared camera direction");
+  throw new Error("Returning from artifacts must initially preserve the artifact camera");
+}
+if (!main.includes("const SPATIAL_CAMERA_UP = new THREE.Vector3(0, 0, 1)") || !main.includes("camera.up.lerpVectors(startUp, endUp, t).normalize()") || !main.includes("viewUp = SPATIAL_CAMERA_UP")) {
+  throw new Error("First-act camera navigation must smoothly restore the canonical spatial up axis");
 }
 if (!style.includes("#app.scene-morphing #scene") || !style.includes("will-change:left,top,width,height")) {
   throw new Error("Shared WebGL canvas has no continuous layout-transition styling");
@@ -138,10 +166,10 @@ const returnSpaceControl = main.match(/querySelector\(["']#return-space["']\)([\
 if (!returnSpaceControl || !/addEventListener\(["']click["']/.test(returnSpaceControl[1]) || !/(spatialReturnState|setView\(["']model["'])/.test(returnSpaceControl[1])) {
   throw new Error("The artifact view has no wired return-to-space control");
 }
-if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeIndex") || !main.includes("spatialReturnState = captureSpatialContext()")) {
+if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeId") || !main.includes("spatialReturnState = captureSpatialContext()")) {
   throw new Error("Narrative-to-artifact navigation must preserve the spatial and narrative return context");
 }
-if (!main.includes("const NARRATIVE_ARTIFACTS") || !main.includes('[0, ARTIFACT_SEQUENCE]') || !main.includes('document.querySelector("#narrative-artifacts")')) {
+if (!main.includes('artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")') || !main.includes('artifacts: ["墓志"]') || !main.includes('artifacts: ["骑马俑"]') || !main.includes('document.querySelector("#narrative-artifacts")')) {
   throw new Error("Narrative entries must expose linked artifact terms in the narrative card");
 }
 
@@ -159,7 +187,7 @@ if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
 if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor") || !main.includes("narrativeFactor")) {
   throw new Error("Responsive close-up safe-area compensation is missing");
 }
-if (!main.includes("if (options.auto) openNarrativeCard(narrativeEntryForStructure(index))")) {
+if (!main.includes("navigateToNarrativeEntry(narrativeEntryById(narrativeId), { source: \"auto\" })")) {
   throw new Error("Automatic camera demo must reveal the narrative card");
 }
 if (!main.includes("new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7)")) {

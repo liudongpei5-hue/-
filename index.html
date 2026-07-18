@@ -10,7 +10,7 @@
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260718-scene-morph-v3" />
+    <link rel="stylesheet" href="/src/style.css?v=20260718-narrative-structure-v2" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
@@ -36,7 +36,11 @@
         <button id="start-artifacts-playback" class="section-switch section-switch-artifacts" type="button"><small>02 / ARTIFACTS</small><span>播放文物</span><i>→</i></button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
-            <header class="narrative-head"><span>EXCAVATION BRIEF</span><small>简报叙事</small></header>
+            <header class="narrative-head">
+              <span>EXCAVATION BRIEF</span>
+              <cite>《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》</cite>
+              <small>考古简报空间叙事</small>
+            </header>
             <ol id="narrative-list" class="narrative-list"></ol>
           </div>
           <article id="narrative-card" class="narrative-card" role="region" aria-live="polite" aria-hidden="true">
@@ -47,7 +51,6 @@
             <p id="narrative-card-summary" class="narrative-card-summary"></p>
             <blockquote id="narrative-card-quote"></blockquote>
             <div id="narrative-artifacts" class="narrative-artifacts" aria-label="相关文物"></div>
-            <cite>《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》</cite>
           </article>
         </aside>
         <aside class="controls">
@@ -127,20 +130,20 @@
           <p class="artifact-kicker">M2338:52 / FULL INSCRIPTION</p>
           <h2 id="epitaph-title">大唐故李将军魏公故夫人卢氏墓志</h2>
           <div class="epitaph-meta"><span>青石质</span><span>麟德元年 · 664</span><span>23行 · 满行23字</span><span>全文516字</span></div>
-          <p>夫人讳囗囗，范阳人也。昔九鼎数迁，有客之基方峻；两京交丧，甘棠之祚逾隆。降三仁之茂祉，贻二南之遐庆。故能鹊巢流化，河鲂媲美。祖囗囗，父囗囗。玉铉联辉，槐庭结荫。道高舟楫，绩被笙镛。</p>
-          <p>夫人擢秀情田，舒芳蕙渚。西山昆岳，振琼柯于瑶树；东溟碧海，映仙实于蟠桃。黼藻中和，含弘淑慎。柔色外湛，峻节内凝。爰自待年，言归李氏。魏公早随运往，积祀孀居。抚育孤幼，羽翮已成。愁肃闺庭，规模毕理。庶延遐寿，长范母仪。</p>
-          <p>中景遽倾，芳菠奄坠。粤以龙朔元年八月三日薨于泾阳庄第，春秋五十有九。呜呼哀哉！淑人云谢，慈训长沦。以麟德元年十一月廿八日迁葬于洪渎原。哀子玄瑾，忠孝自天。庶传芳于谣咏，与金石而无朽。乃为词曰：</p>
+          <p>夫人讳□□，范阳人也。昔九鼎数迁，有客之基方峻；两京交丧，甘棠之祚逾隆。降三仁之茂社，贻二南之遐庆。故能鹤巢流化，河鲂媲美。</p>
+          <p>祖□□，父□□。玉铉联辉，槐庭结荫。道高舟楫，绩被笙镛。夫人擢秀情田，舒芳蕙渚。西山昆岳，振琼柯于瑶树。东溟碧海，映仙实于蟠桃。黼藻中和，含弘淑慎。柔色外湛，峻节内凝。爰自侍年，言归李氏。魏公早随运往，积祀孀居。亟切崩城之哀，终亏致馌之敬。抚育孤幼，羽翮已成。慭肃闺庭，规模毕理。庶延遐寿，长范母仪。</p>
+          <p>中景遽倾，芳荍奄坠。粤以龙朔元年八月三日薨于泾阳庄第，春秋五十有九。呜呼哀哉！淑人云谢，慈训长沦。舜华之诗，遽悲零落。采蘩之咏，翻成薤歌。呜呼哀哉，以麟德元年十一月廿八日迁葬于洪渎原。哀子玄瑾，忠孝自天，风枝奄及，号慕过礼。痛人事之几何，非天地之长存。庶传芳于谣咏，与金石而无朽。乃为词曰：</p>
           <h3>铭文</h3>
-          <p>仙峰产瑜，圆折怀珠。照车入魏，垂棘在虞。休哉代禄，仁风不渝。台光接汉，璧彩联蒲。庆流自远，祥发彼妹。其一。</p>
-          <p>猗欤淑人，山河其德。幽意窈窕，柔情绸直。茂质松华，芳仪兰植。麟萃其趾，鹗骞其翼。惠问风徂，嘉音川塞。其二。</p>
-          <p>亦既有行，作嫔君子。副笄成饰，褧衣增美。蔓葛劳稷，芳苹映沚。内勤浣濯，傍综缃史。饬性循规，修容监水。其三。</p>
+          <p>仙峰产瑜，圆折怀珠。照车入魏，垂棘在虞。休哉代禄，仁风不渝。台光接汉，璧彩联蒲。庆流自远，祥发彼姝。其一。</p>
+          <p>猗欤淑人，山河其德。幽意窈窕，柔情绸直。茂质松华，芳仪兰植。麟萃其趾，䳨鶱其翼。惠问风徂，嘉音川塞。其二。</p>
+          <p>亦既有行，作嫔君子。副笄成饰，褧衣增美。蔓葛劳樛，芳苹映沚。内勤浣濯，傍综缃史。饬性循规，修容监水。其三。</p>
           <p>琴歌在御，钟鼓高悬。赵瑟纡轸，郑舞分筵。殷勤晚岁，怊怅芳年。月华委夕，素魄亏圆。沉哀厚夜，流恨穷泉。其四。</p>
-          <p>祖觞俄奠，龙轜遽发。凄怆山川，徘徊城阙。草衰原迥，烟深垄没。杨路多风，松扉罢月。贞石一纪，芳尘讵歇。其五。</p>
+          <p>祖觞俄奠，龙辎遽发。凄怆山川，徘徊城阙。草衰原迥，烟深垄没。杨路多风，松扃罢月。贞石一纪，芳尘讵歇。其五。</p>
         </article>
       </aside>
 
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260718-scene-morph-v3"></script>
+    <script type="module" src="/src/main.js?v=20260718-narrative-structure-v2"></script>
   </body>
 </html>
