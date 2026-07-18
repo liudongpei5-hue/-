@@ -454,7 +454,7 @@ const STRUCTURE_MEASURES = {
   12: [{axis:"y",label:"2.36-2.40 m"},{axis:"y",label:"0.50 m",side:"minx",fraction:.21,offset:.38},{axis:"x",label:"1.92 m",side:"mouth"},{axis:"x",label:"2.08 m",side:"back",offset:.32},{axis:"z",label:"1.60 m"}]
 };
 const CAMERA_PRESETS = {
-  0: { position: [-.01, 8.23, 1.39], target: [5.83, .13, -3.63], fov: 40, focus: [0] },
+  0: { position: [1.35, 17.8, 6.25], target: [7.7, .98, -2.72], fov: 57, focus: [0] },
   1: { position: [.84, 4.19, -.82], target: [4.07, -.30, -3.60], fov: 40, focus: [1] },
   2: { position: [-8.11, 10.48, 5.97], target: [.26, -1.15, -1.24], fov: 40, focus: [2, 3] },
   3: { position: [-8.11, 10.48, 5.97], target: [.26, -1.15, -1.24], fov: 40, focus: [2, 3] },
@@ -2120,12 +2120,12 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB, xray, xraySoft } = group.userData.lines;
-    understroke.material.opacity = index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .018;
-    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .045;
-    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .012;
-    echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .005;
-    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .44) : active ? .44 : .065;
-    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .11 : .2) : active ? .2 : .025;
+    understroke.material.opacity = index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .006;
+    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .014;
+    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .004;
+    echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .002;
+    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .44) : active ? .44 : .018;
+    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .11 : .2) : active ? .2 : .007;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = index < 0;
