@@ -340,3 +340,10 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .artifact-copy{grid-column:1;grid-row:5;padding-bottom:0}
   .artifact-scene-host{pointer-events:none;touch-action:auto;cursor:default}
 }
+
+/* Shared-scene FLIP transition: one live WebGL canvas moves between both acts. */
+#app.scene-morphing #scene{position:fixed!important;z-index:60!important;filter:none!important;opacity:1!important;transform:none!important;transition:none!important;pointer-events:none!important;will-change:left,top,width,height,box-shadow}
+#app.scene-morphing .page-layer.active>*,#app.scene-morph-settled .page-layer.active>*{animation:none!important}
+#app.scene-morphing .artifact-spatial-inset,#app.scene-morphing .artifact-scene-host{overflow:visible}
+#app.scene-morphing .model-interface,#app.scene-morphing .page-layer{pointer-events:none!important}
+#app.scene-morphing .transition-veil{display:none}

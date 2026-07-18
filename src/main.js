@@ -265,6 +265,8 @@ let artifactLocationHalo;
 let artifactLocationRegion;
 let artifactMiniState = null;
 let artifactMiniCameraToken = 0;
+let sceneMorphActive = false;
+let sceneMorphPromise = Promise.resolve(true);
 let groundCompass;
 let overallView;
 let cameraMoveToken = 0;
@@ -969,7 +971,7 @@ function focusArtifactTopDown(name) {
   return true;
 }
 
-function enterArtifactMiniView() {
+function enterArtifactMiniView(options = {}) {
   const host = document.querySelector("#artifact-scene-host");
   if (!host || artifactMiniState) return;
   createArtifactLocationLayer();
@@ -977,7 +979,6 @@ function enterArtifactMiniView() {
     enablePan: controls.enablePan,
     enableZoom: controls.enableZoom,
     enableRotate: controls.enableRotate,
-    cameraUp: camera.up.toArray(),
     measurementVisible: measurementGroup.visible,
     burialGoodsVisible: burialGoodsLayer?.visible,
     compassVisible: groundCompass?.visible
@@ -988,7 +989,7 @@ function enterArtifactMiniView() {
   controls.enableZoom = false;
   controls.enableRotate = matchMedia("(pointer:fine)").matches;
   canvas.style.transform = "none";
-  host.append(canvas);
+  if (!options.deferCanvas) host.append(canvas);
   selectStructure(-1);
   measurementGroup.visible = false;
   if (burialGoodsLayer) burialGoodsLayer.visible = false;
@@ -996,16 +997,6 @@ function enterArtifactMiniView() {
   artifactLocationLayer.visible = true;
   updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0]);
   artifactMiniState.focusedArtifact = "";
-
-  const target = overallView?.target.clone() || new THREE.Vector3(0, 0, 0);
-  const position = overallView?.position.clone() || new THREE.Vector3(20, -25, 18);
-  camera.up.set(0, 0, 1);
-  camera.position.copy(position);
-  controls.target.copy(target);
-  camera.fov = overallView?.fov || 38;
-  camera.updateProjectionMatrix();
-  camera.lookAt(target);
-  controls.update();
 }
 
 function exitArtifactMiniView() {
@@ -1020,7 +1011,6 @@ function exitArtifactMiniView() {
   controls.enableZoom = artifactMiniState.enableZoom;
   controls.enableRotate = artifactMiniState.enableRotate;
   controls.enabled = true;
-  camera.up.fromArray(artifactMiniState.cameraUp);
   sceneHomeParent.insertBefore(canvas, sceneHomeNextSibling);
   canvas.style.transform = "";
   artifactMiniState = null;
@@ -1991,9 +1981,10 @@ function renderNarrativeCard(entry) {
       event.stopPropagation();
       stopAutoDemo();
       spatialReturnState = captureSpatialContext();
-      setView("artifacts", event, { source: "narrative" });
-      activateArtifactByName(name, { force: true });
-      scheduleAutoDemo();
+      setView("artifacts", event, { source: "narrative" }).then(() => {
+        activateArtifactByName(name, { force: true });
+        scheduleAutoDemo();
+      });
     });
     related.append(button);
   });
@@ -2276,18 +2267,25 @@ function captureSpatialContext() {
   };
 }
 
-function restoreSpatialContext(snapshot = spatialReturnState) {
+function restoreSpatialContext(snapshot = spatialReturnState, options = {}) {
   if (!snapshot) {
-    navigateToOverall();
+    if (options.preserveCamera) {
+      selectStructure(-1);
+      closeNarrativeCard();
+    } else {
+      navigateToOverall();
+    }
     return;
   }
   cameraMoveToken++;
   controls.enabled = true;
-  camera.position.fromArray(snapshot.cameraPosition);
-  controls.target.fromArray(snapshot.cameraTarget);
-  camera.fov = snapshot.cameraFov;
-  camera.updateProjectionMatrix();
-  controls.update();
+  if (!options.preserveCamera) {
+    camera.position.fromArray(snapshot.cameraPosition);
+    controls.target.fromArray(snapshot.cameraTarget);
+    camera.fov = snapshot.cameraFov;
+    camera.updateProjectionMatrix();
+    controls.update();
+  }
   selectStructure(snapshot.selectedIndex, snapshot.focusIndices);
   if (snapshot.narrativeCardOpen) {
     const entry = NARRATIVE_ENTRIES.find(item => item.index === snapshot.activeNarrativeIndex)
@@ -2407,9 +2405,11 @@ function runAutoDemoStep() {
     artifactAutoStep = 0;
     spatialReturnState = null;
     syncAutoDemoUi();
-    setView("model", null, { source: "auto" });
-    navigateToOverall({ auto: true });
-    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.restart);
+    setView("model", null, { source: "auto" }).then(() => {
+      if (!autoDemoActive || autoDemoPhase !== "model") return;
+      navigateToOverall({ auto: true });
+      autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.restart);
+    });
     return;
   }
   const artifactName = ARTIFACT_SEQUENCE[artifactAutoStep];
@@ -2430,8 +2430,102 @@ function playTransition(origin) {
   veil.classList.remove("play"); void veil.offsetWidth; veil.classList.add("play");
 }
 
+function applyViewLayerState(view) {
+  document.querySelectorAll(".page-layer").forEach(layer => {
+    const active = layer.id === `${view}-page`;
+    layer.classList.toggle("active", active);
+    layer.setAttribute("aria-hidden", String(!active));
+  });
+  const modelInterface = document.querySelector(".model-interface");
+  const modelActive = view === "model";
+  modelInterface?.setAttribute("aria-hidden", String(!modelActive));
+  if (modelInterface) modelInterface.inert = !modelActive;
+  document.querySelector("#app").dataset.view = view;
+}
+
+function animateSharedSceneMorph(fromView, toView) {
+  if (sceneMorphActive) return sceneMorphPromise;
+  const app = document.querySelector("#app");
+  const host = document.querySelector("#artifact-scene-host");
+  const inset = document.querySelector("#artifact-spatial-inset");
+  const artifactsPage = document.querySelector("#artifacts-page");
+  if (!app || !host || !inset || !artifactsPage) return Promise.resolve(false);
+
+  if (toView === "artifacts") artifactsPage.scrollTo({ top: 0, behavior: "auto" });
+  const startRect = canvas.getBoundingClientRect();
+  const targetRect = toView === "artifacts" ? host.getBoundingClientRect() : app.getBoundingClientRect();
+  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 220 : 980;
+  sceneMorphActive = true;
+  artifactMiniCameraToken++;
+  app.classList.remove("scene-morph-settled");
+  app.classList.add("scene-morphing", `scene-morph-${fromView}-to-${toView}`);
+
+  app.append(canvas);
+  canvas.style.position = "fixed";
+  canvas.style.inset = "auto";
+  canvas.style.left = `${startRect.left}px`;
+  canvas.style.top = `${startRect.top}px`;
+  canvas.style.width = `${startRect.width}px`;
+  canvas.style.height = `${startRect.height}px`;
+  canvas.style.zIndex = "60";
+  canvas.style.transform = "none";
+  canvas.style.transformOrigin = "0 0";
+  canvas.style.pointerEvents = "none";
+  canvas.style.filter = "none";
+  canvas.style.opacity = "1";
+  void canvas.getBoundingClientRect();
+
+  applyViewLayerState(toView);
+  if (toView === "artifacts") enterArtifactMiniView({ deferCanvas: true });
+
+  const animation = canvas.animate([
+    {
+      left: `${startRect.left}px`,
+      top: `${startRect.top}px`,
+      width: `${startRect.width}px`,
+      height: `${startRect.height}px`,
+      borderRadius: fromView === "artifacts" ? "2px" : "0px",
+      boxShadow: fromView === "artifacts" ? "0 18px 42px rgba(58,45,33,.09)" : "0 0 0 rgba(58,45,33,0)"
+    },
+    {
+      left: `${targetRect.left}px`,
+      top: `${targetRect.top}px`,
+      width: `${targetRect.width}px`,
+      height: `${targetRect.height}px`,
+      borderRadius: toView === "artifacts" ? "2px" : "0px",
+      boxShadow: toView === "artifacts" ? "0 18px 42px rgba(58,45,33,.09)" : "0 0 0 rgba(58,45,33,0)"
+    }
+  ], {
+    duration,
+    easing: "cubic-bezier(.72,0,.2,1)",
+    fill: "forwards"
+  });
+
+  sceneMorphPromise = animation.finished.catch(() => {}).then(() => {
+    if (toView === "artifacts") {
+      host.append(canvas);
+    } else {
+      exitArtifactMiniView();
+    }
+    animation.cancel();
+    ["position", "inset", "left", "top", "width", "height", "z-index", "transform-origin", "pointer-events", "filter", "opacity", "border-radius", "box-shadow"].forEach(property => canvas.style.removeProperty(property));
+    canvas.style.transform = toView === "artifacts" ? "none" : "";
+    app.classList.remove("scene-morphing", `scene-morph-${fromView}-to-${toView}`);
+    app.classList.add("scene-morph-settled");
+    sceneMorphActive = false;
+    resize();
+    return true;
+  });
+  return sceneMorphPromise;
+}
+
 function setView(view, event, options = {}) {
-  if (!["home", "model", "artifacts"].includes(view)) return false;
+  if (!["home", "model", "artifacts"].includes(view)) return Promise.resolve(false);
+  const app = document.querySelector("#app");
+  const currentView = app?.dataset.view;
+  if (view === currentView) return sceneMorphActive ? sceneMorphPromise : Promise.resolve(false);
+  const sharedSceneTransition = (currentView === "model" && view === "artifacts")
+    || (currentView === "artifacts" && view === "model");
   if (view !== "model") {
     if (controls.enabled === false) {
       cameraMoveToken++;
@@ -2440,19 +2534,17 @@ function setView(view, event, options = {}) {
     closeNarrativeCard();
   }
   if (view !== "artifacts") closeEpitaphModal();
+  if (sharedSceneTransition) return animateSharedSceneMorph(currentView, view);
+
   playTransition(event);
   if (view !== "artifacts") exitArtifactMiniView();
-  document.querySelectorAll(".page-layer").forEach(layer => { const active = layer.id === `${view}-page`; layer.classList.toggle("active", active); layer.setAttribute("aria-hidden", String(!active)); });
-  const modelInterface = document.querySelector(".model-interface");
-  const modelActive = view === "model";
-  modelInterface?.setAttribute("aria-hidden", String(!modelActive));
-  if (modelInterface) modelInterface.inert = !modelActive;
-  document.querySelector("#app").dataset.view = view;
+  applyViewLayerState(view);
   if (view === "artifacts") {
     enterArtifactMiniView();
     document.querySelector("#artifacts-page")?.scrollTo({ top: 0, behavior: "auto" });
   }
-  return true;
+  app?.classList.remove("scene-morph-settled");
+  return Promise.resolve(true);
 }
 
 function setupInterface() {
@@ -2570,9 +2662,10 @@ function setupInterface() {
   document.querySelector("#return-space").addEventListener("click", event => {
     event.stopPropagation();
     stopAutoDemo();
-    setView("model", event, { source: "manual" });
-    restoreSpatialContext();
-    scheduleAutoDemo();
+    setView("model", event, { source: "manual" }).then(() => {
+      restoreSpatialContext(spatialReturnState, { preserveCamera: true });
+      scheduleAutoDemo();
+    });
   });
   artifactDetails.addEventListener("click", event => {
     event.stopPropagation();
@@ -2586,6 +2679,7 @@ function setupInterface() {
   document.addEventListener("pointermove", event => {
     noteUserActivity();
     if (!canParallax) return;
+    if (sceneMorphActive) return;
     pointer.x = event.clientX / innerWidth - .5; pointer.y = event.clientY / innerHeight - .5;
     canvas.style.transform = app.dataset.view === "artifacts" ? "none" : `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
     stage.style.transform = `rotateY(${pointer.x * 5}deg) rotateX(${-pointer.y * 3}deg)`;
@@ -2598,9 +2692,10 @@ function setupInterface() {
       if (closeEpitaphModal(true)) { scheduleAutoDemo(); return; }
       if (closeNarrativeCard()) return;
       if (app.dataset.view === "artifacts") {
-        setView("model", event, { source: "keyboard" });
-        restoreSpatialContext();
-        scheduleAutoDemo();
+        setView("model", event, { source: "keyboard" }).then(() => {
+          restoreSpatialContext(spatialReturnState, { preserveCamera: true });
+          scheduleAutoDemo();
+        });
         return;
       }
       if (app.dataset.view === "model") navigateToOverall();
@@ -2666,6 +2761,7 @@ async function init() {
 }
 
 function resize() {
+  if (sceneMorphActive) return;
   const { clientWidth, clientHeight } = canvas;
   if (!clientWidth || !clientHeight) return;
   if (canvas.width !== clientWidth * renderer.getPixelRatio() || canvas.height !== clientHeight * renderer.getPixelRatio()) {

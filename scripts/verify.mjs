@@ -2,6 +2,7 @@ import fs from "node:fs";
 
 const html = fs.readFileSync("index.html", "utf8");
 const main = fs.readFileSync("src/main.js", "utf8");
+const style = fs.readFileSync("src/style.css", "utf8");
 const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8"));
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
@@ -74,6 +75,21 @@ for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState",
 }
 for (const marker of ["ARTIFACT_SPATIAL_LOCATIONS", "createArtifactLocationLayer", "updateArtifactSpatialLocation", "focusArtifactTopDown", "enterArtifactMiniView", "exitArtifactMiniView", "artifactLocationRegion"]) {
   if (!main.includes(marker)) throw new Error(`Missing artifact spatial-location feature: ${marker}`);
+}
+for (const marker of ["sceneMorphActive", "animateSharedSceneMorph", "applyViewLayerState", "canvas.animate", "scene-morphing"]) {
+  if (!main.includes(marker) && !style.includes(marker)) throw new Error(`Missing shared-scene morph transition: ${marker}`);
+}
+if (!main.includes('restoreSpatialContext(spatialReturnState, { preserveCamera: true })')) {
+  throw new Error("Returning from artifacts must preserve the shared camera direction");
+}
+if (!style.includes("#app.scene-morphing #scene") || !style.includes("will-change:left,top,width,height")) {
+  throw new Error("Shared WebGL canvas has no continuous layout-transition styling");
+}
+if (/scene-morphing #scene\{[^}]*inset:auto!important/.test(style)) {
+  throw new Error("Morph styling must not override the animated left/top coordinates");
+}
+if (!/function resize\(\)\s*\{\s*if \(sceneMorphActive\) return;/.test(main)) {
+  throw new Error("Renderer resizing must stay frozen while the shared scene canvas is moving");
 }
 if (!main.includes("new THREE.Vector3(0, 0, 6.2)") || !main.includes("const endUp = new THREE.Vector3(0, 1, 0)")) {
   throw new Error("Artifact hover camera must move vertically above the selected burial plane");
