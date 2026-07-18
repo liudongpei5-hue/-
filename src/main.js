@@ -2811,6 +2811,7 @@ async function init() {
   setupInterface();
   logVisualProcess("连续实体底模完成：NPR 边缘来自测绘体量的深度/法线，不再依赖分块拼接线框");
   logVisualProcess("体量生成完成：测绘几何已作为 NPR 深度/法线底模");
+  logVisualProcess("X-ray 内构层完成：内部结构以浅色铅笔线透出，并按深度自然衰减");
   const summary = document.querySelector("#geometry-summary");
   summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / loading artifacts`;
   loadBurialGoods().then(burialGoodsCount => {
