@@ -224,7 +224,7 @@ function createSketchPipeline() {
         float graphite=max(broken*(1.08+uMoving*.14),pencilShade*.18);
         graphite*=.9+.1*smoothstep(.08,.0,abs(hash(floor(vUv*uResolution*.48))-grain));
         vec3 color=mix(washed,uInk,graphite);
-        color=mix(color,paper,.18+mist*.2);
+        color=mix(color,paper,.10+mist*.13);
         float vignette=smoothstep(.92,.22,length(vUv-.5));
         color=mix(paper*0.94,color,.88+vignette*.12);
         gl_FragColor=vec4(color,1.0);
@@ -581,6 +581,29 @@ function geometryFrom(item, layer = 0, edges = renderedEdges(item)) {
   return geometry;
 }
 
+function floatingProfileGeometry(item, index) {
+  const box = boundsOf(item);
+  const vaulted = [0, 1, 3, 5, 7].includes(index);
+  const profile = makeProfile(box, vaulted).slice(0, -1);
+  const xStations = [box.min.x, (box.min.x + box.max.x) / 2, box.max.x];
+  const positions = [];
+  const push = (a, b) => positions.push(...a, ...b);
+  const profileAt = x => profile.map(point => [x, point.y, point.z]);
+  const profiles = xStations.map(profileAt);
+  profiles.forEach(points => {
+    for (let i = 0; i < points.length; i++) push(points[i], points[(i + 1) % points.length]);
+  });
+  const maxPoints = Math.max(...profiles.map(points => points.length));
+  for (let i = 0; i < maxPoints; i++) {
+    const rail = profiles.map(points => points[Math.min(i, points.length - 1)]);
+    push(rail[0], rail[1]);
+    push(rail[1], rail[2]);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  return geometry;
+}
+
 function addStructure(item, index) {
   if (!item.vertices.length || !item.edges.length) return;
   const group = new THREE.Group();
@@ -588,9 +611,51 @@ function addStructure(item, index) {
   const main = new THREE.LineSegments(geometryFrom(item, 0), material(0, .9));
   const echoA = new THREE.LineSegments(geometryFrom(item, 1), material(1, .32));
   const echoB = new THREE.LineSegments(geometryFrom(item, 2), material(2, .2));
+  const surveySkeleton = new THREE.LineSegments(
+    geometryFrom(item, 0, item.edges),
+    material(5, .9, { depthTest: false, color: 0x171613, jitter: .001 })
+  );
+  surveySkeleton.name = "floating-survey-skeleton";
+  surveySkeleton.renderOrder = 16;
+  const surveyWideGeometry = new LineSegmentsGeometry();
+  surveyWideGeometry.setPositions(surveySkeleton.geometry.attributes.position.array);
+  const surveyWideMaterial = new LineMaterial({
+    color: 0x171613,
+    linewidth: 2,
+    transparent: true,
+    opacity: .82,
+    depthWrite: false,
+    depthTest: false
+  });
+  const surveyWide = new LineSegments2(surveyWideGeometry, surveyWideMaterial);
+  surveyWide.name = "floating-survey-skeleton-wide";
+  surveyWide.renderOrder = 15;
+  surveyWide.computeLineDistances();
+  wideMaterials.push(surveyWideMaterial);
+  const profileSkeleton = new THREE.LineSegments(
+    floatingProfileGeometry(item, index),
+    material(6, .42, { depthTest: false, color: 0x201e1a, jitter: .002 })
+  );
+  profileSkeleton.name = "floating-profile-skeleton";
+  profileSkeleton.renderOrder = 15;
+  const profileWideGeometry = new LineSegmentsGeometry();
+  profileWideGeometry.setPositions(profileSkeleton.geometry.attributes.position.array);
+  const profileWideMaterial = new LineMaterial({
+    color: 0x201e1a,
+    linewidth: 2.35,
+    transparent: true,
+    opacity: .52,
+    depthWrite: false,
+    depthTest: false
+  });
+  const profileWide = new LineSegments2(profileWideGeometry, profileWideMaterial);
+  profileWide.name = "floating-profile-skeleton-wide";
+  profileWide.renderOrder = 14;
+  profileWide.computeLineDistances();
+  wideMaterials.push(profileWideMaterial);
   const xray = new THREE.LineSegments(
     geometryFrom(item, 3, item.edges),
-    material(3, .28, { depthTest: false, color: 0x3f3a33, jitter: .014 })
+    material(3, .28, { depthTest: false, color: 0x302d28, jitter: .014 })
   );
   xray.name = "xray-pencil-interior";
   xray.renderOrder = 9;
@@ -605,6 +670,10 @@ function addStructure(item, index) {
     main.material.uniforms.uColor.value.setHex(accent);
     echoA.material.uniforms.uColor.value.setHex(accent);
     echoB.material.uniforms.uColor.value.setHex(accent);
+    surveySkeleton.material.uniforms.uColor.value.setHex(accent);
+    surveyWide.material.color.setHex(accent);
+    profileSkeleton.material.uniforms.uColor.value.setHex(accent);
+    profileWide.material.color.setHex(accent);
     xray.material.uniforms.uColor.value.setHex(accent);
     xraySoft.material.uniforms.uColor.value.setHex(accent);
   }
@@ -615,14 +684,15 @@ function addStructure(item, index) {
   understroke.computeLineDistances();
   wideMaterials.push(wideMaterial);
   main.material.uniforms.uJitter.value = .003;
-  [main, echoA, echoB].forEach((line, order) => {
+  [main, echoA, echoB, surveySkeleton, profileSkeleton].forEach((line, order) => {
     line.material.depthTest = false;
     line.renderOrder = 12 + order;
   });
   understroke.material.depthTest = false;
   understroke.renderOrder = 11;
-  group.userData.lines = { understroke, main, echoA, echoB, xray, xraySoft };
-  group.add(xraySoft, xray, understroke, main, echoA, echoB);
+  surveySkeleton.renderOrder = 16;
+  group.userData.lines = { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft };
+  group.add(xraySoft, xray, understroke, main, echoA, echoB, profileWide, profileSkeleton, surveyWide, surveySkeleton);
   if (index === 0) {
     group.userData.interior = createTombInterior(item);
     group.add(group.userData.interior);
@@ -2119,13 +2189,17 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   objects.forEach(group => {
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
-    const { understroke, main, echoA, echoB, xray, xraySoft } = group.userData.lines;
+    const { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft } = group.userData.lines;
     understroke.material.opacity = index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .006;
     main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .014;
     echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .004;
     echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .002;
-    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .44) : active ? .44 : .018;
-    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .11 : .2) : active ? .2 : .007;
+    if (surveySkeleton) surveySkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .62 : 1) : active ? 1 : .018;
+    if (surveyWide) surveyWide.material.opacity = index < 0 ? (isTheftShaft ? .34 : .82) : active ? .9 : .006;
+    if (profileSkeleton) profileSkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .2 : .46) : active ? .72 : .01;
+    if (profileWide) profileWide.material.opacity = index < 0 ? (isTheftShaft ? .12 : .46) : active ? .68 : .004;
+    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .34 : .68) : active ? .68 : .018;
+    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .28) : active ? .28 : .007;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = index < 0;
