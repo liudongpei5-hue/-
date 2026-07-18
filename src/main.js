@@ -768,8 +768,9 @@ function createVisualProcessPanel() {
   if (visualProcessPanel) return visualProcessPanel;
   const style = document.createElement("style");
   style.textContent = `
-    .visual-process-panel{position:absolute;right:24px;top:112px;z-index:34;width:min(330px,calc(100vw - 48px));max-height:calc(100dvh - 180px);overflow:hidden;border:1px solid rgba(58,50,42,.2);background:rgba(244,240,229,.72);backdrop-filter:blur(12px);box-shadow:0 18px 55px rgba(52,42,31,.12);color:#2d2924;font:12px/1.55 "DengXian","Microsoft YaHei",sans-serif;transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .35s}
+    .visual-process-panel{position:absolute;right:18px;top:104px;z-index:34;width:min(300px,calc(100vw - 42px));max-height:calc(100dvh - 190px);overflow:hidden;border:1px solid rgba(58,50,42,.18);background:rgba(244,240,229,.66);backdrop-filter:blur(12px);box-shadow:0 18px 55px rgba(52,42,31,.1);color:#2d2924;font:11px/1.55 "DengXian","Microsoft YaHei",sans-serif;transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .35s}
     .visual-process-panel.collapsed{transform:translateX(calc(100% - 42px))}
+    .visual-process-panel.collapsed:hover,.visual-process-panel.collapsed:focus-within{transform:translateX(0)}
     .visual-process-panel header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px 10px;border-bottom:1px solid rgba(70,62,52,.16)}
     .visual-process-panel h3{margin:0;font:13px/1.2 "Noto Serif SC","Songti SC",serif;font-weight:600;letter-spacing:.04em}
     .visual-process-panel small{display:block;margin-top:3px;color:#8f4537;font:8px/1.2 Arial,sans-serif;letter-spacing:.16em}
@@ -778,13 +779,13 @@ function createVisualProcessPanel() {
     .visual-process-panel li{display:grid;grid-template-columns:44px 1fr;gap:9px;align-items:start;padding-bottom:7px;border-bottom:1px solid rgba(70,62,52,.1)}
     .visual-process-panel b{color:#8f4537;font:10px/1.5 Arial,sans-serif;letter-spacing:.12em}
     .visual-process-panel span{color:#575047}
-    .visual-process-panel .visual-log{margin:0;padding:9px 13px 13px;max-height:112px;overflow:auto;color:#71685f;font:10px/1.7 "DengXian","Microsoft YaHei",sans-serif}
+    .visual-process-panel .visual-log{margin:0;padding:9px 13px 13px;max-height:92px;overflow:auto;color:#71685f;font:10px/1.7 "DengXian","Microsoft YaHei",sans-serif}
     .visual-process-panel .visual-log p{margin:0 0 4px}
     @media(max-width:800px){.visual-process-panel{right:12px;top:84px;width:min(300px,calc(100vw - 24px));max-height:44dvh}.visual-process-panel ol{display:none}}
   `;
   document.head.append(style);
   const panel = document.createElement("aside");
-  panel.className = "visual-process-panel";
+  panel.className = "visual-process-panel collapsed";
   panel.setAttribute("aria-label", "主视觉迭代过程");
   panel.innerHTML = `
     <header>
