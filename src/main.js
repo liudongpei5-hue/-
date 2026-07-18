@@ -280,7 +280,6 @@ let artifactTourButtons = [];
 let activateArtifactByName = () => false;
 let activeArtifactName = "";
 let spatialReturnState = null;
-let visualProcessPanel;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeId = "";
@@ -820,13 +819,7 @@ function createVisualProcessPanel() {
 }
 
 function logVisualProcess(message) {
-  const panel = visualProcessPanel;
-  if (!panel) return;
-  const log = panel.querySelector(".visual-log");
-  const row = document.createElement("p");
-  row.textContent = `${new Date().toLocaleTimeString("zh-CN", { hour12: false })}  ${message}`;
-  log.prepend(row);
-  while (log.children.length > 8) log.lastElementChild.remove();
+  void message;
 }
 
 function setBurialGoodsOpacity(multiplier) {
@@ -2816,7 +2809,6 @@ async function init() {
   overallView = { position: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
   selectStructure(-1);
   setupInterface();
-  createVisualProcessPanel();
   logVisualProcess("连续实体底模完成：NPR 边缘来自测绘体量的深度/法线，不再依赖分块拼接线框");
   logVisualProcess("体量生成完成：测绘几何已作为 NPR 深度/法线底模");
   const summary = document.querySelector("#geometry-summary");
