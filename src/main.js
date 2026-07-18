@@ -526,9 +526,9 @@ function renderedEdges(item) {
   });
 }
 
-function geometryFrom(item, layer = 0) {
+function geometryFrom(item, layer = 0, edges = renderedEdges(item)) {
   const positions = [];
-  renderedEdges(item).forEach((edge, edgeIndex) => {
+  edges.forEach((edge, edgeIndex) => {
     if (layer === 1 && edgeIndex % 5 === 2) return;
     if (layer === 2 && edgeIndex % 3 !== 0) return;
     const start = new THREE.Vector3(...item.vertices[edge.from_vertex_index].xyz_m);
@@ -570,11 +570,25 @@ function addStructure(item, index) {
   const main = new THREE.LineSegments(geometryFrom(item, 0), material(0, .9));
   const echoA = new THREE.LineSegments(geometryFrom(item, 1), material(1, .32));
   const echoB = new THREE.LineSegments(geometryFrom(item, 2), material(2, .2));
+  const xray = new THREE.LineSegments(
+    geometryFrom(item, 3, item.edges),
+    material(3, .28, { depthTest: false, color: 0x3f3a33, jitter: .014 })
+  );
+  xray.name = "xray-pencil-interior";
+  xray.renderOrder = 9;
+  const xraySoft = new THREE.LineSegments(
+    geometryFrom(item, 4, item.edges),
+    material(4, .16, { depthTest: false, color: 0x7d7365, jitter: .032 })
+  );
+  xraySoft.name = "xray-pencil-interior-soft";
+  xraySoft.renderOrder = 8;
   const accent = item.name === "D1" ? 0x8f574a : item.name === "D2" ? 0x4d6f78 : 0x37342f;
   if (item.name === "D1" || item.name === "D2") {
     main.material.uniforms.uColor.value.setHex(accent);
     echoA.material.uniforms.uColor.value.setHex(accent);
     echoB.material.uniforms.uColor.value.setHex(accent);
+    xray.material.uniforms.uColor.value.setHex(accent);
+    xraySoft.material.uniforms.uColor.value.setHex(accent);
   }
   const wideGeometry = new LineSegmentsGeometry();
   wideGeometry.setPositions(main.geometry.attributes.position.array);
@@ -583,8 +597,8 @@ function addStructure(item, index) {
   understroke.computeLineDistances();
   wideMaterials.push(wideMaterial);
   main.material.uniforms.uJitter.value = .003;
-  group.userData.lines = { understroke, main, echoA, echoB };
-  group.add(understroke, main, echoA, echoB);
+  group.userData.lines = { understroke, main, echoA, echoB, xray, xraySoft };
+  group.add(xraySoft, xray, understroke, main, echoA, echoB);
   if (index === 0) {
     group.userData.interior = createTombInterior(item);
     group.add(group.userData.interior);
@@ -2087,11 +2101,13 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   objects.forEach(group => {
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
-    const { understroke, main, echoA, echoB } = group.userData.lines;
-    understroke.material.opacity = index < 0 ? (isTheftShaft ? .14 : .028) : active ? .28 : .018;
-    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .42 : .1) : active ? .72 : .035;
-    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .1 : .03) : active ? .18 : .012;
-    echoB.material.uniforms.uOpacity.value = index < 0 ? .024 : active ? .1 : .006;
+    const { understroke, main, echoA, echoB, xray, xraySoft } = group.userData.lines;
+    understroke.material.opacity = index < 0 ? (isTheftShaft ? .16 : .045) : active ? .32 : .02;
+    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .46 : .18) : active ? .78 : .042;
+    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .12 : .05) : active ? .2 : .014;
+    echoB.material.uniforms.uOpacity.value = index < 0 ? .034 : active ? .12 : .007;
+    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .38) : active ? .52 : .09;
+    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .13 : .22) : active ? .3 : .04;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = index < 0;
