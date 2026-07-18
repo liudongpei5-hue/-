@@ -36,13 +36,31 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
+controls.minPolarAngle = THREE.MathUtils.degToRad(8);
+controls.maxPolarAngle = THREE.MathUtils.degToRad(82);
 controls.minDistance = 5;
 controls.maxDistance = 80;
 controls.enablePan = true;
 controls.panSpeed = .85;
-controls.screenSpacePanning = true;
+controls.screenSpacePanning = false;
 controls.touches.ONE = THREE.TOUCH.ROTATE;
 controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+
+const Z_UP = new THREE.Vector3(0, 0, 1);
+const scratchSpherical = new THREE.Spherical();
+
+function normalizeGroundedCameraView(position = camera.position, target = controls.target) {
+  const offset = position.clone().sub(target);
+  if (offset.lengthSq() === 0) return;
+  scratchSpherical.setFromVector3(offset);
+  const phi = THREE.MathUtils.clamp(scratchSpherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
+  if (Math.abs(phi - scratchSpherical.phi) > 1e-5 || camera.up.distanceToSquared(Z_UP) > 1e-8) {
+    scratchSpherical.phi = phi;
+    offset.setFromSpherical(scratchSpherical);
+    position.copy(target).add(offset);
+    camera.up.copy(Z_UP);
+  }
+}
 
 const twoFingerGesture = {
   startDistance: 0,
@@ -202,8 +220,9 @@ function createSketchPipeline() {
         vec3 paper=uPaper+vec3(paperTooth);
         float tone=dot(source.rgb,vec3(.299,.587,.114));
         float pencilShade=smoothstep(.94,.34,tone)*(1.0-mist*.34);
-        vec3 washed=mix(paper,source.rgb,.095*(1.0-mist*.18));
-        float graphite=max(broken*(1.02+uMoving*.16),pencilShade*.11);
+        vec3 washed=mix(paper,source.rgb,.16*(1.0-mist*.18));
+        float graphite=max(broken*(1.08+uMoving*.14),pencilShade*.18);
+        graphite*=.9+.1*smoothstep(.08,.0,abs(hash(floor(vUv*uResolution*.48))-grain));
         vec3 color=mix(washed,uInk,graphite);
         color=mix(color,paper,.18+mist*.2);
         float vignette=smoothstep(.92,.22,length(vUv-.5));
@@ -474,10 +493,10 @@ varying float vGrain;
 varying float vViewDepth;
 void main(){
   float graphite=.72+.28*sin(vGrain*37.0+uLayer*2.0);
-  float distanceMist=smoothstep(11.0,42.0,vViewDepth);
+  float distanceMist=smoothstep(24.0,68.0,vViewDepth);
   vec3 paper=vec3(.72,.69,.62);
-  vec3 ink=mix(uColor,paper,distanceMist*.42);
-  float alpha=uOpacity*graphite*(1.0-distanceMist*.45);
+  vec3 ink=mix(uColor,paper,distanceMist*.24);
+  float alpha=uOpacity*graphite*(1.0-distanceMist*.22);
   gl_FragColor=vec4(ink,alpha);
 }`;
 
@@ -596,6 +615,12 @@ function addStructure(item, index) {
   understroke.computeLineDistances();
   wideMaterials.push(wideMaterial);
   main.material.uniforms.uJitter.value = .003;
+  [main, echoA, echoB].forEach((line, order) => {
+    line.material.depthTest = false;
+    line.renderOrder = 12 + order;
+  });
+  understroke.material.depthTest = false;
+  understroke.renderOrder = 11;
   group.userData.lines = { understroke, main, echoA, echoB, xray, xraySoft };
   group.add(xraySoft, xray, understroke, main, echoA, echoB);
   if (index === 0) {
@@ -2095,27 +2120,27 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB, xray, xraySoft } = group.userData.lines;
-    understroke.material.opacity = index < 0 ? (isTheftShaft ? .16 : .045) : active ? .32 : .02;
-    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .46 : .18) : active ? .78 : .042;
-    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .12 : .05) : active ? .2 : .014;
-    echoB.material.uniforms.uOpacity.value = index < 0 ? .034 : active ? .12 : .007;
-    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .38) : active ? .52 : .09;
-    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .13 : .22) : active ? .3 : .04;
+    understroke.material.opacity = index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .018;
+    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .045;
+    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .012;
+    echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .005;
+    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .26 : .44) : active ? .44 : .065;
+    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .11 : .2) : active ? .2 : .025;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = index < 0;
   if (continuousVolumeLayer) {
     continuousVolumeLayer.visible = true;
     continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? 1 : .72);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? 1 : .72);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .18 : .1);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .18 : .1);
     });
   }
   if (sketchVolumeLayer) {
     sketchVolumeLayer.visible = true;
     sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .2 : .12);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .2 : .12);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .045 : .025);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .045 : .025);
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
@@ -2226,6 +2251,7 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     camera.up.lerpVectors(startUp, endUp, t).normalize();
     camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
     camera.updateProjectionMatrix();
+    normalizeGroundedCameraView();
     camera.lookAt(controls.target);
     if (raw < 1) requestAnimationFrame(step);
     else {
@@ -2318,6 +2344,7 @@ function captureSpatialContext() {
     snapshotFov = pendingPreset.fov;
     applyResponsiveShotOffset(snapshotPosition, snapshotTarget);
   }
+  normalizeGroundedCameraView(snapshotPosition, snapshotTarget);
   return {
     selectedIndex,
     focusIndices: [...selectedFocusIndices],
