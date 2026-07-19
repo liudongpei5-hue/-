@@ -587,6 +587,30 @@ function floatingInteriorGuideGeometry(item, index) {
   const positions = [];
   const push = (a, b) => positions.push(...a, ...b);
 
+  if (index === 11 || index === 12) {
+    const floorZ = box.min.z + .035;
+    const roofZ = box.max.z;
+    const mouthY = index === 11 ? box.max.y : box.min.y;
+    const backY = index === 11 ? box.min.y : box.max.y;
+    const x0 = box.min.x;
+    const x1 = box.max.x;
+    const addOpenNicheSide = x => {
+      push([x, mouthY, floorZ], [x, backY, floorZ]);
+      push([x, backY, floorZ], [x, backY, roofZ]);
+      push([x, backY, roofZ], [x, mouthY, roofZ]);
+      push([x, mouthY, roofZ], [x, mouthY, floorZ]);
+    };
+    addOpenNicheSide(x0);
+    addOpenNicheSide(x1);
+    push([x0, backY, floorZ], [x1, backY, floorZ]);
+    push([x0, backY, roofZ], [x1, backY, roofZ]);
+    push([x0, mouthY, roofZ], [x1, mouthY, roofZ]);
+    push([x0, mouthY, floorZ], [x1, mouthY, floorZ]);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    return geometry;
+  }
+
   const floorZ = box.min.z + .035;
   const roofZ = box.max.z;
   const springZ = vaulted ? box.max.z - (index === 0 ? .78 : .46) : box.max.z;
@@ -1315,6 +1339,8 @@ function buildNaturalShell(data) {
     shell.add(naturalLine([[x0,mouthY,floorZ],[x0,backY,floorZ],[x1,backY,floorZ],[x1,mouthY,floorZ]], .78));
     shell.add(naturalLine([[x0,mouthY,crownZ],[x0,backY,crownZ],[x1,backY,crownZ],[x1,mouthY,crownZ]], .66));
     shell.add(naturalLine([[x0,backY,floorZ],[x0,backY,crownZ],[x1,backY,crownZ],[x1,backY,floorZ]], .62));
+    shell.add(naturalLine([[x0,mouthY,floorZ],[x0,mouthY,crownZ],[x0,backY,crownZ],[x0,backY,floorZ],[x0,mouthY,floorZ]], .58));
+    shell.add(naturalLine([[x1,mouthY,floorZ],[x1,mouthY,crownZ],[x1,backY,crownZ],[x1,backY,floorZ],[x1,mouthY,floorZ]], .58));
   });
 
   // Report-based structural profiles restored: three over-caves, corridor and chamber are arched earth caves.
@@ -1628,6 +1654,8 @@ function buildSketchVolumeLayer(data) {
     const seed = 1800 + index * 37;
     addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [0, -1, 0], color: nicheIndex ? 0x765d49 : 0x8b7157, opacity: .12, seed });
     addSketchQuad(group, [[box.min.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 1, 0], color: 0x735a45, opacity: .16, seed: seed + 61 });
+    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.min.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [-1, 0, 0], color: 0x725a45, opacity: .12, divisionsU: 3, divisionsV: 2, seed: seed + 83 });
+    addSketchQuad(group, [[box.max.x, box.max.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.max.x, box.max.y, box.max.z]], { normal: [1, 0, 0], color: 0x7b634b, opacity: .12, divisionsU: 3, divisionsV: 2, seed: seed + 91 });
     addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.min.z]], { normal: [0, 0, 1], color: 0xa98b67, opacity: .12, divisionsU: 4, divisionsV: 3, seed: seed + 103 });
     addSketchQuad(group, [[box.min.x, box.min.y, box.max.z], [box.max.x, box.min.y, box.max.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 0, 1], color: 0x7f684f, opacity: .07, divisionsU: 4, divisionsV: 2, seed: seed + 149, hatching: false });
   });
