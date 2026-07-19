@@ -581,23 +581,41 @@ function geometryFrom(item, layer = 0, edges = renderedEdges(item)) {
   return geometry;
 }
 
-function floatingProfileGeometry(item, index) {
+function floatingInteriorGuideGeometry(item, index) {
   const box = boundsOf(item);
   const vaulted = [0, 1, 3, 5, 7].includes(index);
-  const profile = makeProfile(box, vaulted).slice(0, -1);
-  const xStations = [box.min.x, (box.min.x + box.max.x) / 2, box.max.x];
   const positions = [];
   const push = (a, b) => positions.push(...a, ...b);
-  const profileAt = x => profile.map(point => [x, point.y, point.z]);
-  const profiles = xStations.map(profileAt);
-  profiles.forEach(points => {
-    for (let i = 0; i < points.length; i++) push(points[i], points[(i + 1) % points.length]);
+
+  const floorZ = box.min.z + .035;
+  const roofZ = box.max.z;
+  const springZ = vaulted ? box.max.z - (index === 0 ? .78 : .46) : box.max.z;
+  const yMid = (box.min.y + box.max.y) / 2;
+
+  // Floor and shoulder rails describe the internal space without drawing
+  // full vertical section rectangles that read as stitched wall panels.
+  [box.min.y, box.max.y].forEach(y => {
+    push([box.min.x, y, floorZ], [box.max.x, y, floorZ]);
+    push([box.min.x, y, springZ], [box.max.x, y, springZ]);
   });
-  const maxPoints = Math.max(...profiles.map(points => points.length));
-  for (let i = 0; i < maxPoints; i++) {
-    const rail = profiles.map(points => points[Math.min(i, points.length - 1)]);
-    push(rail[0], rail[1]);
-    push(rail[1], rail[2]);
+  push([box.min.x, yMid, floorZ], [box.max.x, yMid, floorZ]);
+
+  if (vaulted) {
+    const samples = 10;
+    let previous = null;
+    for (let sample = 0; sample <= samples; sample++) {
+      const t = sample / samples;
+      const y = THREE.MathUtils.lerp(box.min.y, box.max.y, t);
+      const z = springZ + Math.sin(t * Math.PI) * (roofZ - springZ);
+      const point = [(box.min.x + box.max.x) / 2, y, z];
+      if (previous) push(previous, point);
+      previous = point;
+    }
+    push([box.min.x, yMid, roofZ], [box.max.x, yMid, roofZ]);
+  } else {
+    push([box.min.x, box.min.y, roofZ], [box.max.x, box.min.y, roofZ]);
+    push([box.min.x, box.max.y, roofZ], [box.max.x, box.max.y, roofZ]);
+    push([box.min.x, yMid, roofZ], [box.max.x, yMid, roofZ]);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -633,7 +651,7 @@ function addStructure(item, index) {
   surveyWide.computeLineDistances();
   wideMaterials.push(surveyWideMaterial);
   const profileSkeleton = new THREE.LineSegments(
-    floatingProfileGeometry(item, index),
+    floatingInteriorGuideGeometry(item, index),
     material(6, .42, { depthTest: false, color: 0x201e1a, jitter: .002 })
   );
   profileSkeleton.name = "floating-profile-skeleton";
@@ -1611,6 +1629,7 @@ function buildSketchVolumeLayer(data) {
     addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [0, -1, 0], color: nicheIndex ? 0x765d49 : 0x8b7157, opacity: .12, seed });
     addSketchQuad(group, [[box.min.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 1, 0], color: 0x735a45, opacity: .16, seed: seed + 61 });
     addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.min.z]], { normal: [0, 0, 1], color: 0xa98b67, opacity: .12, divisionsU: 4, divisionsV: 3, seed: seed + 103 });
+    addSketchQuad(group, [[box.min.x, box.min.y, box.max.z], [box.max.x, box.min.y, box.max.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 0, 1], color: 0x7f684f, opacity: .07, divisionsU: 4, divisionsV: 2, seed: seed + 149, hatching: false });
   });
   return group;
 }
@@ -2196,8 +2215,8 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .002;
     if (surveySkeleton) surveySkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .62 : 1) : active ? 1 : .018;
     if (surveyWide) surveyWide.material.opacity = index < 0 ? (isTheftShaft ? .34 : .82) : active ? .9 : .006;
-    if (profileSkeleton) profileSkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .2 : .46) : active ? .72 : .01;
-    if (profileWide) profileWide.material.opacity = index < 0 ? (isTheftShaft ? .12 : .46) : active ? .68 : .004;
+    if (profileSkeleton) profileSkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .58) : active ? .78 : .01;
+    if (profileWide) profileWide.material.opacity = index < 0 ? (isTheftShaft ? .08 : .34) : active ? .5 : .004;
     if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .34 : .68) : active ? .68 : .018;
     if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .28) : active ? .28 : .007;
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
@@ -2206,15 +2225,15 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   if (continuousVolumeLayer) {
     continuousVolumeLayer.visible = true;
     continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .18 : .1);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .18 : .1);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .1 : .06);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .1 : .06);
     });
   }
   if (sketchVolumeLayer) {
     sketchVolumeLayer.visible = true;
     sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .045 : .025);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .045 : .025);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .02 : .012);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .02 : .012);
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
