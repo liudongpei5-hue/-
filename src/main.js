@@ -2372,7 +2372,6 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     camera.up.lerpVectors(startUp, endUp, t).normalize();
     camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
     camera.updateProjectionMatrix();
-    normalizeGroundedCameraView();
     camera.lookAt(controls.target);
     if (raw < 1) requestAnimationFrame(step);
     else {
@@ -2465,7 +2464,6 @@ function captureSpatialContext() {
     snapshotFov = pendingPreset.fov;
     applyResponsiveShotOffset(snapshotPosition, snapshotTarget);
   }
-  normalizeGroundedCameraView(snapshotPosition, snapshotTarget);
   return {
     selectedIndex,
     focusIndices: [...selectedFocusIndices],
