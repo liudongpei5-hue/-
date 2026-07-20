@@ -36,8 +36,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
-controls.minPolarAngle = THREE.MathUtils.degToRad(8);
-controls.maxPolarAngle = THREE.MathUtils.degToRad(82);
+controls.minPolarAngle = THREE.MathUtils.degToRad(12);
+controls.maxPolarAngle = THREE.MathUtils.degToRad(76);
 controls.minDistance = 5;
 controls.maxDistance = 80;
 controls.enablePan = true;
@@ -213,18 +213,19 @@ function createSketchPipeline() {
         float fiberA=sin((vUv.x*920.0+vUv.y*210.0)+grain*2.5);
         float fiberB=sin((vUv.y*760.0-vUv.x*120.0)+grain*1.7);
         float paperTooth=(grain-.5)*0.09+fiberA*0.018+fiberB*0.012;
+        float strokeMask=smoothstep(0.02,0.82,source.a);
         float edge=max(depthEdge(vUv,px)*1.65,normalEdge(vUv,px)*.98);
         float diagonal=max(depthEdge(vUv,px*vec2(1.45,1.45))*.62,normalEdge(vUv,px*vec2(1.25,1.25))*.42);
         edge=max(edge,diagonal);
         float broken=edge*(0.62+grain*.58)*(1.0-mist*.34);
         vec3 paper=uPaper+vec3(paperTooth);
         float tone=dot(source.rgb,vec3(.299,.587,.114));
-        float pencilShade=smoothstep(.94,.34,tone)*(1.0-mist*.34);
-        vec3 washed=mix(paper,source.rgb,.16*(1.0-mist*.18));
-        float graphite=max(broken*(1.08+uMoving*.14),pencilShade*.18);
+        float pencilShade=smoothstep(.94,.34,tone)*strokeMask*(1.0-mist*.34);
+        vec3 washed=mix(paper,source.rgb,.72*strokeMask*(1.0-mist*.04));
+        float graphite=max(broken*(1.08+uMoving*.14),pencilShade*.46);
         graphite*=.9+.1*smoothstep(.08,.0,abs(hash(floor(vUv*uResolution*.48))-grain));
         vec3 color=mix(washed,uInk,graphite);
-        color=mix(color,paper,.10+mist*.13);
+        color=mix(color,paper,.035+mist*.045);
         float vignette=smoothstep(.92,.22,length(vUv-.5));
         color=mix(paper*0.94,color,.88+vignette*.12);
         gl_FragColor=vec4(color,1.0);
@@ -1264,7 +1265,10 @@ function addArchitecturalLine(group, points, options = {}) {
     depthTest: false
   });
   const thin = new THREE.LineSegments(geometry, thinMaterial);
-  thin.renderOrder = options.renderOrder ?? 72;
+  thinMaterial.toneMapped = false;
+  thinMaterial.userData.baseOpacity = thinMaterial.opacity;
+  thin.renderOrder = options.renderOrder ?? 180;
+  thin.frustumCulled = false;
   group.add(thin);
 
   const wideGeometry = new LineSegmentsGeometry();
@@ -1277,10 +1281,13 @@ function addArchitecturalLine(group, points, options = {}) {
     depthWrite: false,
     depthTest: false
   });
+  wideMaterial.toneMapped = false;
+  wideMaterial.userData.baseOpacity = wideMaterial.opacity;
   wideMaterial.resolution.set(canvas.clientWidth || innerWidth, canvas.clientHeight || innerHeight);
   const wide = new LineSegments2(wideGeometry, wideMaterial);
   wide.computeLineDistances();
-  wide.renderOrder = (options.renderOrder ?? 72) - 1;
+  wide.renderOrder = (options.renderOrder ?? 180) - 1;
+  wide.frustumCulled = false;
   wideMaterials.push(wideMaterial);
   group.add(wide);
 }
@@ -1329,8 +1336,8 @@ function buildStructuralSkeletonLayer(data) {
   const group = new THREE.Group();
   group.name = "clean-structural-skeleton";
   group.renderOrder = 70;
-  const mainOptions = { color: 0x0b0a08, opacity: .96, wideOpacity: .58, width: 3.15, renderOrder: 76 };
-  const interiorOptions = { color: 0x201b15, opacity: .74, wideOpacity: .34, width: 2.45, renderOrder: 74 };
+  const mainOptions = { color: 0x040403, opacity: 1, wideOpacity: .86, width: 4.2, renderOrder: 190 };
+  const interiorOptions = { color: 0x0b0907, opacity: .94, wideOpacity: .62, width: 3.35, renderOrder: 188 };
 
   data.geometries.slice(0, 8).forEach((item, index) => {
     const box = boundsOf(item);
@@ -1341,8 +1348,8 @@ function buildStructuralSkeletonLayer(data) {
   const ramp = data.geometries[8];
   const rp = index => ramp.vertices[index].xyz_m;
   // Clean ramp wedge: no exported rear rectangle, no folded backside corner.
-  [[2, 4], [3, 5], [4, 5], [4, 0], [5, 1], [0, 1]].forEach(([a, b]) => {
-    addArchitecturalLine(group, [rp(a), rp(b)], { ...mainOptions, width: 3.25 });
+  [[4, 5], [4, 0], [5, 1], [0, 1]].forEach(([a, b]) => {
+    addArchitecturalLine(group, [rp(a), rp(b)], { ...mainOptions, width: 4.4 });
   });
 
   [11, 12].forEach(index => {
@@ -1353,8 +1360,8 @@ function buildStructuralSkeletonLayer(data) {
         color: 0x0b0a08,
         opacity: .98,
         wideOpacity: .64,
-        width: 3.7,
-        renderOrder: 78
+        width: 4.7,
+        renderOrder: 194
       });
     });
     const mouthY = index === 11 ? box.max.y : box.min.y;
@@ -1362,8 +1369,8 @@ function buildStructuralSkeletonLayer(data) {
       color: 0x080706,
       opacity: 1,
       wideOpacity: .7,
-      width: 4.1,
-      renderOrder: 80
+      width: 5.1,
+      renderOrder: 196
     });
   });
   return group;
@@ -1752,6 +1759,7 @@ function addOpenEndedStructureSketch(group, item, seed, vaulted) {
     }
   }
 }
+controls.addEventListener("change", () => normalizeGroundedCameraView());
 
 function addNicheSketchVolume(group, item, index, seed) {
   const box = boundsOf(item);
@@ -2457,6 +2465,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   objects.forEach(group => {
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
+    group.visible = false;
     const { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft } = group.userData.lines;
     setLineLayerOpacity(understroke, index < 0 ? .01 : active ? .018 : .001);
     setLineLayerOpacity(main, index < 0 ? .018 : active ? .028 : .001);
@@ -2472,6 +2481,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   });
   if (naturalShell) naturalShell.visible = false;
   if (structuralSkeletonLayer) structuralSkeletonLayer.visible = true;
+  if (groundLayer) groundLayer.visible = false;
   if (continuousVolumeLayer) {
     continuousVolumeLayer.visible = false;
     continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
@@ -2573,7 +2583,6 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
   const token = ++cameraMoveToken;
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
-  const startUp = camera.up.clone();
   const startFov = camera.fov;
   const distance = startPosition.distanceTo(endPosition);
   const lift = THREE.MathUtils.clamp(distance * .04, .2, .7);
@@ -2592,13 +2601,14 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     const t = easeBreath(raw);
     camera.position.copy(curve.getPoint(t));
     controls.target.lerpVectors(startTarget, endTarget, t);
-    camera.up.lerpVectors(startUp, endUp, t).normalize();
+    camera.up.copy(SPATIAL_CAMERA_UP);
     camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
     camera.updateProjectionMatrix();
+    normalizeGroundedCameraView();
     camera.lookAt(controls.target);
     if (raw < 1) requestAnimationFrame(step);
     else {
-      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(endUp); camera.fov = endFov; camera.updateProjectionMatrix(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
+      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(SPATIAL_CAMERA_UP); camera.fov = endFov; camera.updateProjectionMatrix(); normalizeGroundedCameraView(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
       onComplete?.();
     }
   };
@@ -3172,7 +3182,8 @@ async function init() {
   continuousVolumeLayer.renderOrder = -4;
   sketchVolumeLayer.renderOrder = -1;
   naturalShell.visible = false;
-  scene.add(continuousVolumeLayer, sketchVolumeLayer, structuralSkeletonLayer, groundLayer);
+  groundLayer.visible = false;
+  scene.add(continuousVolumeLayer, sketchVolumeLayer, groundLayer, structuralSkeletonLayer);
   addConstructionGuides();
   addGroundCompass();
   buildControls(data);
@@ -3216,6 +3227,7 @@ function animate(now = 0) {
     artifactLocationHalo.material.opacity = .32 + (Math.sin(now * .0042) + 1) * .1;
   }
   controls.update();
+  normalizeGroundedCameraView();
   applyDepthAwareLineOpacity();
   sketchPipeline.render(now);
   requestAnimationFrame(animate);
