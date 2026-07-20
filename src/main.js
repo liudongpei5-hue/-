@@ -6,6 +6,7 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
+const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb?v=20260720-sketch";
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
 const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7"]);
 const canvas = document.querySelector("#scene");
@@ -277,6 +278,7 @@ let selectedIndex = -1;
 let perspectiveGuides;
 let naturalShell;
 let structuralSkeletonLayer;
+let mainVisualModel;
 let continuousVolumeLayer;
 let groundLayer;
 let sketchVolumeLayer;
@@ -846,6 +848,36 @@ function tuneArtifactMaterials(model, opacityMaterials) {
     child.material = material;
     opacityMaterials.push(material);
   });
+}
+
+function tuneMainVisualModel(model) {
+  model.name = "lady-lu-tomb-sketch-main-visual";
+  model.traverse(child => {
+    child.frustumCulled = false;
+    child.renderOrder = Math.max(child.renderOrder || 0, 120);
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach(source => {
+      source.transparent = source.transparent || source.opacity < 1;
+      source.depthWrite = false;
+      source.depthTest = false;
+      source.toneMapped = false;
+      if ("linewidth" in source && !source.linewidth) source.linewidth = 1;
+      source.needsUpdate = true;
+    });
+  });
+  model.updateMatrixWorld(true);
+}
+
+async function loadMainVisualModel() {
+  const loader = new GLTFLoader();
+  const gltf = await loader.loadAsync(MAIN_VISUAL_MODEL_PATH);
+  const model = gltf.scene;
+  tuneMainVisualModel(model);
+  scene.add(model);
+  mainVisualModel = model;
+  if (structuralSkeletonLayer) structuralSkeletonLayer.visible = false;
+  return model;
 }
 
 async function loadBurialGoods() {
@@ -2480,7 +2512,8 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = false;
-  if (structuralSkeletonLayer) structuralSkeletonLayer.visible = true;
+  if (mainVisualModel) mainVisualModel.visible = true;
+  if (structuralSkeletonLayer) structuralSkeletonLayer.visible = !mainVisualModel;
   if (groundLayer) groundLayer.visible = false;
   if (continuousVolumeLayer) {
     continuousVolumeLayer.visible = false;
@@ -3184,6 +3217,10 @@ async function init() {
   naturalShell.visible = false;
   groundLayer.visible = false;
   scene.add(continuousVolumeLayer, sketchVolumeLayer, groundLayer, structuralSkeletonLayer);
+  await loadMainVisualModel().catch(error => {
+    console.error("Main visual model could not be loaded", error);
+    if (structuralSkeletonLayer) structuralSkeletonLayer.visible = true;
+  });
   addConstructionGuides();
   addGroundCompass();
   buildControls(data);
