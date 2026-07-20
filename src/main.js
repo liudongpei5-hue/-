@@ -275,6 +275,7 @@ const wideMaterials = [];
 let selectedIndex = -1;
 let perspectiveGuides;
 let naturalShell;
+let structuralSkeletonLayer;
 let continuousVolumeLayer;
 let groundLayer;
 let sketchVolumeLayer;
@@ -667,18 +668,18 @@ function addStructure(item, index) {
   const echoA = new THREE.LineSegments(geometryFrom(item, 1), material(1, .32));
   const echoB = new THREE.LineSegments(geometryFrom(item, 2), material(2, .2));
   const surveySkeleton = new THREE.LineSegments(
-    geometryFrom(item, 0, item.edges),
-    material(5, .9, { depthTest: false, color: 0x171613, jitter: .001 })
+    geometryFrom(item, 0, surveyEdges(item)),
+    material(5, 1, { depthTest: false, color: 0x0f0f0d, jitter: .001 })
   );
   surveySkeleton.name = "floating-survey-skeleton";
   surveySkeleton.renderOrder = 16;
   const surveyWideGeometry = new LineSegmentsGeometry();
   surveyWideGeometry.setPositions(surveySkeleton.geometry.attributes.position.array);
   const surveyWideMaterial = new LineMaterial({
-    color: 0x171613,
-    linewidth: index === 11 || index === 12 ? 3.1 : 2.25,
+    color: 0x0f0f0d,
+    linewidth: index === 11 || index === 12 ? 3.8 : 3.05,
     transparent: true,
-    opacity: .82,
+    opacity: .96,
     depthWrite: false,
     depthTest: false
   });
@@ -689,17 +690,17 @@ function addStructure(item, index) {
   wideMaterials.push(surveyWideMaterial);
   const profileSkeleton = new THREE.LineSegments(
     floatingInteriorGuideGeometry(item, index),
-    material(6, .42, { depthTest: false, color: 0x201e1a, jitter: .002 })
+    material(6, .78, { depthTest: false, color: 0x151411, jitter: .0015 })
   );
   profileSkeleton.name = "floating-profile-skeleton";
   profileSkeleton.renderOrder = 15;
   const profileWideGeometry = new LineSegmentsGeometry();
   profileWideGeometry.setPositions(profileSkeleton.geometry.attributes.position.array);
   const profileWideMaterial = new LineMaterial({
-    color: 0x201e1a,
-    linewidth: index === 11 || index === 12 ? 3.45 : 2.85,
+    color: 0x151411,
+    linewidth: index === 11 || index === 12 ? 4.2 : 3.35,
     transparent: true,
-    opacity: .52,
+    opacity: .78,
     depthWrite: false,
     depthTest: false
   });
@@ -709,14 +710,14 @@ function addStructure(item, index) {
   profileWide.computeLineDistances();
   wideMaterials.push(profileWideMaterial);
   const xray = new THREE.LineSegments(
-    geometryFrom(item, 3, item.edges),
-    material(3, .28, { depthTest: false, color: 0x302d28, jitter: .014 })
+    geometryFrom(item, 3, surveyEdges(item)),
+    material(3, .52, { depthTest: false, color: 0x221f1b, jitter: .008 })
   );
   xray.name = "xray-pencil-interior";
   xray.renderOrder = 9;
   const xraySoft = new THREE.LineSegments(
-    geometryFrom(item, 4, item.edges),
-    material(4, .16, { depthTest: false, color: 0x7d7365, jitter: .032 })
+    geometryFrom(item, 4, surveyEdges(item)),
+    material(4, .28, { depthTest: false, color: 0x5d5449, jitter: .018 })
   );
   xraySoft.name = "xray-pencil-interior-soft";
   xraySoft.renderOrder = 8;
@@ -734,7 +735,7 @@ function addStructure(item, index) {
   }
   const wideGeometry = new LineSegmentsGeometry();
   wideGeometry.setPositions(main.geometry.attributes.position.array);
-  const wideMaterial = new LineMaterial({ color: accent, linewidth: 1.75, transparent: true, opacity: .38, depthWrite: false });
+  const wideMaterial = new LineMaterial({ color: accent, linewidth: 2.15, transparent: true, opacity: .5, depthWrite: false });
   const understroke = new LineSegments2(wideGeometry, wideMaterial);
   understroke.computeLineDistances();
   wideMaterials.push(wideMaterial);
@@ -989,9 +990,9 @@ function applyDepthAwareLineOpacity() {
   const span = Math.max(maxDepth - minDepth, .001);
   objects.forEach((group, groupIndex) => {
     const depth01 = THREE.MathUtils.clamp((depths[groupIndex] - minDepth) / span, 0, 1);
-    const exteriorScale = THREE.MathUtils.lerp(1.1, .76, depth01);
-    const interiorScale = THREE.MathUtils.lerp(1.18, .62, depth01);
-    const softScale = THREE.MathUtils.lerp(1, .46, depth01);
+    const exteriorScale = THREE.MathUtils.lerp(1.16, .86, depth01);
+    const interiorScale = THREE.MathUtils.lerp(1.28, .82, depth01);
+    const softScale = THREE.MathUtils.lerp(1.08, .64, depth01);
     const lines = group.userData.lines || {};
     [[lines.understroke, exteriorScale], [lines.main, exteriorScale], [lines.echoA, softScale], [lines.echoB, softScale],
       [lines.surveySkeleton, exteriorScale], [lines.surveyWide, exteriorScale],
@@ -1003,6 +1004,11 @@ function applyDepthAwareLineOpacity() {
         else line.material.opacity = base * scale;
       });
   });
+}
+
+function surveyEdges(item) {
+  if (item.name === "墓道" || item.name === FALLBACK_NAMES[8]) return renderedEdges(item);
+  return item.edges;
 }
 
 function setBurialGoodsOpacity(multiplier) {
@@ -1244,6 +1250,125 @@ function naturalLine(points, opacity = .72, color = 0x403d38) {
   return group;
 }
 
+function addArchitecturalLine(group, points, options = {}) {
+  if (points.length < 2) return;
+  const positions = [];
+  for (let i = 0; i < points.length - 1; i++) positions.push(...points[i], ...points[i + 1]);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  const thinMaterial = new THREE.LineBasicMaterial({
+    color: options.color ?? 0x11100d,
+    transparent: true,
+    opacity: options.opacity ?? .86,
+    depthWrite: false,
+    depthTest: false
+  });
+  const thin = new THREE.LineSegments(geometry, thinMaterial);
+  thin.renderOrder = options.renderOrder ?? 72;
+  group.add(thin);
+
+  const wideGeometry = new LineSegmentsGeometry();
+  wideGeometry.setPositions(positions);
+  const wideMaterial = new LineMaterial({
+    color: options.color ?? 0x11100d,
+    linewidth: options.width ?? 2.8,
+    transparent: true,
+    opacity: options.wideOpacity ?? ((options.opacity ?? .86) * .56),
+    depthWrite: false,
+    depthTest: false
+  });
+  wideMaterial.resolution.set(canvas.clientWidth || innerWidth, canvas.clientHeight || innerHeight);
+  const wide = new LineSegments2(wideGeometry, wideMaterial);
+  wide.computeLineDistances();
+  wide.renderOrder = (options.renderOrder ?? 72) - 1;
+  wideMaterials.push(wideMaterial);
+  group.add(wide);
+}
+
+function addBoxSkeleton(group, box, options = {}) {
+  const p = (x, y, z) => [x, y, z];
+  const floor = [
+    p(box.min.x, box.min.y, box.min.z),
+    p(box.max.x, box.min.y, box.min.z),
+    p(box.max.x, box.max.y, box.min.z),
+    p(box.min.x, box.max.y, box.min.z),
+    p(box.min.x, box.min.y, box.min.z)
+  ];
+  const top = [
+    p(box.min.x, box.min.y, box.max.z),
+    p(box.max.x, box.min.y, box.max.z),
+    p(box.max.x, box.max.y, box.max.z),
+    p(box.min.x, box.max.y, box.max.z),
+    p(box.min.x, box.min.y, box.max.z)
+  ];
+  addArchitecturalLine(group, floor, options);
+  addArchitecturalLine(group, top, { ...options, opacity: (options.opacity ?? .86) * .86, wideOpacity: (options.wideOpacity ?? .48) * .86 });
+  [[box.min.x, box.min.y], [box.max.x, box.min.y], [box.max.x, box.max.y], [box.min.x, box.max.y]].forEach(([x, y]) => {
+    addArchitecturalLine(group, [p(x, y, box.min.z), p(x, y, box.max.z)], { ...options, opacity: (options.opacity ?? .86) * .9 });
+  });
+}
+
+function addArchRibs(group, box, index, options = {}) {
+  if (![0, 1, 3, 5, 7].includes(index)) return;
+  const springZ = box.max.z - (index === 0 ? .78 : .46);
+  const samples = 14;
+  [box.min.x, (box.min.x + box.max.x) / 2, box.max.x].forEach(x => {
+    const rib = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      rib.push([x, THREE.MathUtils.lerp(box.min.y, box.max.y, t), springZ + Math.sin(t * Math.PI) * (box.max.z - springZ)]);
+    }
+    addArchitecturalLine(group, rib, { ...options, opacity: (options.opacity ?? .86) * .78, width: (options.width ?? 2.8) * .82 });
+  });
+  const yMid = (box.min.y + box.max.y) / 2;
+  addArchitecturalLine(group, [[box.min.x, yMid, box.min.z], [box.max.x, yMid, box.min.z]], { ...options, opacity: (options.opacity ?? .86) * .68, width: (options.width ?? 2.8) * .72 });
+  addArchitecturalLine(group, [[box.min.x, yMid, springZ], [box.max.x, yMid, springZ]], { ...options, opacity: (options.opacity ?? .86) * .62, width: (options.width ?? 2.8) * .7 });
+}
+
+function buildStructuralSkeletonLayer(data) {
+  const group = new THREE.Group();
+  group.name = "clean-structural-skeleton";
+  group.renderOrder = 70;
+  const mainOptions = { color: 0x0b0a08, opacity: .96, wideOpacity: .58, width: 3.15, renderOrder: 76 };
+  const interiorOptions = { color: 0x201b15, opacity: .74, wideOpacity: .34, width: 2.45, renderOrder: 74 };
+
+  data.geometries.slice(0, 8).forEach((item, index) => {
+    const box = boundsOf(item);
+    addBoxSkeleton(group, box, mainOptions);
+    addArchRibs(group, box, index, interiorOptions);
+  });
+
+  const ramp = data.geometries[8];
+  const rp = index => ramp.vertices[index].xyz_m;
+  // Clean ramp wedge: no exported rear rectangle, no folded backside corner.
+  [[2, 4], [3, 5], [4, 5], [4, 0], [5, 1], [0, 1]].forEach(([a, b]) => {
+    addArchitecturalLine(group, [rp(a), rp(b)], { ...mainOptions, width: 3.25 });
+  });
+
+  [11, 12].forEach(index => {
+    const item = data.geometries[index];
+    const box = boundsOf(item);
+    surveyEdges(item).forEach(edge => {
+      addArchitecturalLine(group, [item.vertices[edge.from_vertex_index].xyz_m, item.vertices[edge.to_vertex_index].xyz_m], {
+        color: 0x0b0a08,
+        opacity: .98,
+        wideOpacity: .64,
+        width: 3.7,
+        renderOrder: 78
+      });
+    });
+    const mouthY = index === 11 ? box.max.y : box.min.y;
+    addArchitecturalLine(group, [[box.min.x, mouthY, box.min.z], [box.max.x, mouthY, box.min.z], [box.max.x, mouthY, box.max.z], [box.min.x, mouthY, box.max.z], [box.min.x, mouthY, box.min.z]], {
+      color: 0x080706,
+      opacity: 1,
+      wideOpacity: .7,
+      width: 4.1,
+      renderOrder: 80
+    });
+  });
+  return group;
+}
+
 function makeProfile(box, vaulted) {
   const yMin = box.min.y;
   const yMax = box.max.y;
@@ -1342,35 +1467,36 @@ function buildContinuousVolumeLayer(data) {
 function buildNaturalShell(data) {
   const shell = new THREE.Group();
   shell.name = "整体连续墓穴外轮廓";
-  const stations = data.geometries.slice(0, 9).map((item, index) => {
+  data.geometries.slice(0, 9).forEach((item, index) => {
+    if (index === 8) {
+      surveyEdges(item).forEach(edge => {
+        const start = item.vertices[edge.from_vertex_index].xyz_m;
+        const end = item.vertices[edge.to_vertex_index].xyz_m;
+        shell.add(naturalLine([start, end], .66));
+      });
+      return;
+    }
     const box = boundsOf(item);
-    return { index, item, box, x: (box.min.x + box.max.x) / 2 };
-  }).sort((a, b) => a.x - b.x);
-
-  const leftFloor = [], rightFloor = [], leftCrown = [], rightCrown = [];
-  stations.forEach(({ box, x }) => {
-    leftFloor.push([x, box.min.y, box.min.z]);
-    rightFloor.push([x, box.max.y, box.min.z]);
-    leftCrown.push([x, box.min.y, box.max.z]);
-    rightCrown.push([x, box.max.y, box.max.z]);
+    const floor = [
+      [box.min.x, box.min.y, box.min.z],
+      [box.max.x, box.min.y, box.min.z],
+      [box.max.x, box.max.y, box.min.z],
+      [box.min.x, box.max.y, box.min.z],
+      [box.min.x, box.min.y, box.min.z]
+    ];
+    const crown = [
+      [box.min.x, box.min.y, box.max.z],
+      [box.max.x, box.min.y, box.max.z],
+      [box.max.x, box.max.y, box.max.z],
+      [box.min.x, box.max.y, box.max.z],
+      [box.min.x, box.min.y, box.max.z]
+    ];
+    shell.add(naturalLine(floor, .56));
+    shell.add(naturalLine(crown, [0, 1, 3, 5, 7].includes(index) ? .38 : .48));
+    [[box.min.x, box.min.y], [box.max.x, box.min.y], [box.max.x, box.max.y], [box.min.x, box.max.y]].forEach(([x, y]) => {
+      shell.add(naturalLine([[x, y, box.min.z], [x, y, box.max.z]], .42));
+    });
   });
-  [leftFloor, rightFloor, leftCrown, rightCrown].forEach((points, i) => shell.add(naturalLine(points, i < 2 ? .82 : .68)));
-
-  // Only the two true ends are closed in overall view. Internal geometry partitions stay hidden.
-  const entrance = boundsOf(data.geometries[8]);
-  const chamber = boundsOf(data.geometries[0]);
-  shell.add(naturalLine([
-    [entrance.min.x, entrance.min.y, entrance.min.z],
-    [entrance.min.x, entrance.min.y, entrance.max.z],
-    [entrance.min.x, entrance.max.y, entrance.max.z],
-    [entrance.min.x, entrance.max.y, entrance.min.z]
-  ], .72));
-  shell.add(naturalLine([
-    [chamber.max.x, chamber.min.y, chamber.min.z],
-    [chamber.max.x, chamber.min.y, chamber.max.z],
-    [chamber.max.x, chamber.max.y, chamber.max.z],
-    [chamber.max.x, chamber.max.y, chamber.min.z]
-  ], .72));
 
   // East and west niches remain independent selectable structures, but their mouths are open to passage 3.
   const passage = boundsOf(data.geometries[3]);
@@ -2332,31 +2458,32 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft } = group.userData.lines;
-    setLineLayerOpacity(understroke, index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .006);
-    setLineLayerOpacity(main, index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .014);
-    setLineLayerOpacity(echoA, index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .004);
-    setLineLayerOpacity(echoB, index < 0 ? .046 : active ? .1 : .002);
-    setLineLayerOpacity(surveySkeleton, index < 0 ? (isTheftShaft ? .62 : 1) : active ? 1 : .018);
-    setLineLayerOpacity(surveyWide, index < 0 ? (isTheftShaft ? .34 : .82) : active ? .9 : .006);
-    setLineLayerOpacity(profileSkeleton, index < 0 ? (isTheftShaft ? .28 : .82) : active ? .9 : .018);
-    setLineLayerOpacity(profileWide, index < 0 ? (isTheftShaft ? .13 : .52) : active ? .62 : .008);
-    setLineLayerOpacity(xray, index < 0 ? (isTheftShaft ? .44 : .86) : active ? .84 : .028);
-    setLineLayerOpacity(xraySoft, index < 0 ? (isTheftShaft ? .22 : .42) : active ? .4 : .012);
+    setLineLayerOpacity(understroke, index < 0 ? .01 : active ? .018 : .001);
+    setLineLayerOpacity(main, index < 0 ? .018 : active ? .028 : .001);
+    setLineLayerOpacity(echoA, index < 0 ? .006 : active ? .009 : .001);
+    setLineLayerOpacity(echoB, index < 0 ? .003 : active ? .005 : .001);
+    setLineLayerOpacity(surveySkeleton, index < 0 ? .014 : active ? .02 : .001);
+    setLineLayerOpacity(surveyWide, index < 0 ? .008 : active ? .012 : .001);
+    setLineLayerOpacity(profileSkeleton, index < 0 ? .014 : active ? .02 : .001);
+    setLineLayerOpacity(profileWide, index < 0 ? .008 : active ? .012 : .001);
+    setLineLayerOpacity(xray, index < 0 ? .014 : active ? .02 : .001);
+    setLineLayerOpacity(xraySoft, index < 0 ? .008 : active ? .012 : .001);
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
-  if (naturalShell) naturalShell.visible = index < 0;
+  if (naturalShell) naturalShell.visible = false;
+  if (structuralSkeletonLayer) structuralSkeletonLayer.visible = true;
   if (continuousVolumeLayer) {
-    continuousVolumeLayer.visible = true;
+    continuousVolumeLayer.visible = false;
     continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .055 : .024);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .055 : .024);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .038 : .018);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .038 : .018);
     });
   }
   if (sketchVolumeLayer) {
-    sketchVolumeLayer.visible = true;
+    sketchVolumeLayer.visible = false;
     sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .01 : .004);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .01 : .004);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .006 : .0025);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .006 : .0025);
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
@@ -3038,12 +3165,14 @@ async function init() {
     if (item.vertices.length) structureTargets.set(index, boundsOf(item).getCenter(new THREE.Vector3()));
   });
   naturalShell = buildNaturalShell(data);
+  structuralSkeletonLayer = buildStructuralSkeletonLayer(data);
   continuousVolumeLayer = buildContinuousVolumeLayer(data);
   sketchVolumeLayer = buildSketchVolumeLayer(data);
   groundLayer = buildGroundLayer(data);
   continuousVolumeLayer.renderOrder = -4;
   sketchVolumeLayer.renderOrder = -1;
-  scene.add(continuousVolumeLayer, sketchVolumeLayer, naturalShell, groundLayer);
+  naturalShell.visible = false;
+  scene.add(continuousVolumeLayer, sketchVolumeLayer, structuralSkeletonLayer, groundLayer);
   addConstructionGuides();
   addGroundCompass();
   buildControls(data);
