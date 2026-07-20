@@ -41,6 +41,7 @@ controls.minPolarAngle = THREE.MathUtils.degToRad(12);
 controls.maxPolarAngle = THREE.MathUtils.degToRad(76);
 controls.minDistance = 5;
 controls.maxDistance = 80;
+if ("zoomToCursor" in controls) controls.zoomToCursor = true;
 controls.enablePan = true;
 controls.panSpeed = .85;
 controls.screenSpacePanning = false;
@@ -49,12 +50,32 @@ controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
 
 const Z_UP = new THREE.Vector3(0, 0, 1);
 const scratchSpherical = new THREE.Spherical();
+let lockedOrbitPhi = null;
+let lockedTargetZ = 0;
+
+function lockGroundedNavigation(position = camera.position, target = controls.target) {
+  scratchSpherical.setFromVector3(position.clone().sub(target));
+  lockedOrbitPhi = THREE.MathUtils.clamp(scratchSpherical.phi, THREE.MathUtils.degToRad(12), THREE.MathUtils.degToRad(76));
+  controls.minPolarAngle = lockedOrbitPhi;
+  controls.maxPolarAngle = lockedOrbitPhi;
+  lockedTargetZ = target.z;
+}
+
+function unlockGroundedNavigation() {
+  controls.minPolarAngle = THREE.MathUtils.degToRad(12);
+  controls.maxPolarAngle = THREE.MathUtils.degToRad(76);
+}
 
 function normalizeGroundedCameraView(position = camera.position, target = controls.target) {
   const offset = position.clone().sub(target);
   if (offset.lengthSq() === 0) return;
+  const targetZDelta = target.z - lockedTargetZ;
+  if (Math.abs(targetZDelta) > 1e-6) {
+    target.z = lockedTargetZ;
+    position.z -= targetZDelta;
+  }
   scratchSpherical.setFromVector3(offset);
-  const phi = THREE.MathUtils.clamp(scratchSpherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
+  const phi = lockedOrbitPhi ?? THREE.MathUtils.clamp(scratchSpherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
   if (Math.abs(phi - scratchSpherical.phi) > 1e-5 || camera.up.distanceToSquared(Z_UP) > 1e-8) {
     scratchSpherical.phi = phi;
     offset.setFromSpherical(scratchSpherical);
@@ -872,12 +893,19 @@ function tuneMainVisualModel(model) {
 async function loadMainVisualModel() {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(MAIN_VISUAL_MODEL_PATH);
+  const wrapper = new THREE.Group();
+  wrapper.name = "lady-lu-tomb-sketch-axis-adapter";
   const model = gltf.scene;
+  // Blender/glTF is Y-up here; the site geometry is Z-up. This maps source Y to site Z
+  // and source Z to the site's south-north plane without changing the measured origin.
+  model.rotation.x = Math.PI / 2;
   tuneMainVisualModel(model);
-  scene.add(model);
-  mainVisualModel = model;
+  wrapper.add(model);
+  wrapper.updateMatrixWorld(true);
+  scene.add(wrapper);
+  mainVisualModel = wrapper;
   if (structuralSkeletonLayer) structuralSkeletonLayer.visible = false;
-  return model;
+  return wrapper;
 }
 
 async function loadBurialGoods() {
@@ -2296,6 +2324,8 @@ function fitView() {
   camera.position.copy(center).add(new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7));
   camera.fov = 38;
   camera.updateProjectionMatrix();
+  lockGroundedNavigation();
+  normalizeGroundedCameraView();
   controls.update();
 }
 
@@ -2613,6 +2643,7 @@ function easeBreath(t) {
 }
 
 function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATIAL_CAMERA_UP) {
+  unlockGroundedNavigation();
   const token = ++cameraMoveToken;
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
@@ -2641,7 +2672,7 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     camera.lookAt(controls.target);
     if (raw < 1) requestAnimationFrame(step);
     else {
-      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(SPATIAL_CAMERA_UP); camera.fov = endFov; camera.updateProjectionMatrix(); normalizeGroundedCameraView(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
+      camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(SPATIAL_CAMERA_UP); camera.fov = endFov; camera.updateProjectionMatrix(); lockGroundedNavigation(); normalizeGroundedCameraView(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
       onComplete?.();
     }
   };
@@ -2760,6 +2791,8 @@ function restoreSpatialContext(snapshot = spatialReturnState, options = {}) {
     controls.target.fromArray(snapshot.cameraTarget);
     camera.fov = snapshot.cameraFov;
     camera.updateProjectionMatrix();
+    lockGroundedNavigation();
+    normalizeGroundedCameraView();
     camera.lookAt(controls.target);
     controls.update();
   }
