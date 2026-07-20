@@ -472,6 +472,37 @@ const CAMERA_PRESETS = {
   11: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] },
   12: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] }
 };
+const STRUCTURE_SHOT_OFFSETS = {
+  default: [-7.2, 9.4, 5.2],
+  0: [-8.6, 10.4, 6.2],
+  1: [-6.2, 8.1, 4.5],
+  2: [-6.8, 8.8, 4.9],
+  3: [-6.8, 8.8, 4.9],
+  4: [-6.8, 8.8, 4.9],
+  5: [-6.8, 8.8, 4.9],
+  6: [-6.8, 8.8, 4.9],
+  7: [-6.8, 8.8, 4.9],
+  8: [-9.8, 11.8, 6.6],
+  9: [-5.6, 7.2, 4.1],
+  10: [-5.6, 7.2, 4.1],
+  11: [-5.2, 6.8, 3.3],
+  12: [-5.2, 6.8, 3.3]
+};
+const STRUCTURE_SHOT_FOV = {
+  0: 45,
+  1: 37,
+  2: 39,
+  3: 39,
+  4: 39,
+  5: 39,
+  6: 39,
+  7: 39,
+  8: 42,
+  9: 35,
+  10: 35,
+  11: 34,
+  12: 34
+};
 
 const vertexShader = `
 uniform float uJitter;
@@ -835,14 +866,18 @@ function tuneArtifactMaterials(model, opacityMaterials) {
     if (!child.isMesh) return;
     child.castShadow = false;
     child.receiveShadow = false;
+    child.frustumCulled = false;
+    child.renderOrder = 240;
     const source = child.material || new THREE.MeshStandardMaterial();
     const material = source.clone();
     material.transparent = true;
-    material.opacity = .96;
-    material.depthWrite = true;
-    material.depthTest = true;
+    material.opacity = 1;
+    material.depthWrite = false;
+    material.depthTest = false;
     material.roughness = Math.max(material.roughness ?? .75, .64);
     material.metalness = Math.min(material.metalness ?? 0, .08);
+    material.toneMapped = false;
+    material.userData.baseOpacity = material.opacity;
     if (material.color && !material.map) material.color.lerp(new THREE.Color(0xb98f66), .28);
     if ("envMapIntensity" in material) material.envMapIntensity = .8;
     child.material = material;
@@ -858,6 +893,7 @@ function tuneMainVisualModel(model) {
     if (!child.material) return;
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     materials.forEach(source => {
+      source.userData.baseOpacity = source.opacity ?? 1;
       source.transparent = source.transparent || source.opacity < 1;
       source.depthWrite = false;
       source.depthTest = false;
@@ -867,6 +903,21 @@ function tuneMainVisualModel(model) {
     });
   });
   model.updateMatrixWorld(true);
+}
+
+function setMainVisualModelFocus(index) {
+  if (!mainVisualModel) return;
+  const opacityScale = index < 0 ? 1 : .46;
+  mainVisualModel.traverse(child => {
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach(material => {
+      const baseOpacity = material.userData.baseOpacity ?? material.opacity ?? 1;
+      material.opacity = baseOpacity * opacityScale;
+      material.transparent = true;
+      material.needsUpdate = true;
+    });
+  });
 }
 
 async function loadMainVisualModel() {
@@ -945,24 +996,26 @@ function createArtifactProxy(targetHeight) {
   const fillMaterial = new THREE.MeshBasicMaterial({
     color: 0x8f6d52,
     transparent: true,
-    opacity: .24,
+    opacity: .42,
     depthWrite: false,
-    depthTest: true,
+    depthTest: false,
     side: THREE.DoubleSide
   });
   fillMaterial.userData.baseOpacity = fillMaterial.opacity;
   const disc = new THREE.Mesh(geometry, fillMaterial);
   disc.rotation.x = Math.PI / 2;
+  disc.renderOrder = 232;
   const ringMaterial = new THREE.LineBasicMaterial({
     color: 0x514940,
     transparent: true,
-    opacity: .32,
+    opacity: .62,
     depthWrite: false,
-    depthTest: true
+    depthTest: false
   });
   ringMaterial.userData.baseOpacity = ringMaterial.opacity;
   const ring = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), ringMaterial);
   ring.rotation.x = Math.PI / 2;
+  ring.renderOrder = 234;
   group.add(disc, ring);
   group.userData.opacityMaterials = [fillMaterial, ringMaterial];
   return group;
@@ -1247,7 +1300,11 @@ function enterArtifactMiniView(options = {}) {
   if (!options.deferCanvas) host.append(canvas);
   selectStructure(-1);
   measurementGroup.visible = false;
-  if (burialGoodsLayer) burialGoodsLayer.visible = false;
+  if (burialGoodsLayer) {
+    burialGoodsLayer.visible = true;
+    setBurialGoodsOpacity(1);
+    setArtifactForegroundMode(true);
+  }
   if (groundCompass) groundCompass.visible = false;
   artifactLocationLayer.visible = true;
   updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0]);
@@ -1261,6 +1318,7 @@ function exitArtifactMiniView() {
   artifactLocationLayer.visible = false;
   measurementGroup.visible = artifactMiniState.measurementVisible;
   if (burialGoodsLayer && artifactMiniState.burialGoodsVisible !== undefined) burialGoodsLayer.visible = artifactMiniState.burialGoodsVisible;
+  setArtifactForegroundMode(selectedIndex >= 0);
   if (groundCompass && artifactMiniState.compassVisible !== undefined) groundCompass.visible = artifactMiniState.compassVisible;
   controls.enablePan = artifactMiniState.enablePan;
   controls.enableZoom = artifactMiniState.enableZoom;
@@ -1351,6 +1409,20 @@ function addBoxSkeleton(group, box, options = {}) {
   addArchitecturalLine(group, top, { ...options, opacity: (options.opacity ?? .86) * .86, wideOpacity: (options.wideOpacity ?? .48) * .86 });
   [[box.min.x, box.min.y], [box.max.x, box.min.y], [box.max.x, box.max.y], [box.min.x, box.max.y]].forEach(([x, y]) => {
     addArchitecturalLine(group, [p(x, y, box.min.z), p(x, y, box.max.z)], { ...options, opacity: (options.opacity ?? .86) * .9 });
+  });
+}
+
+function setArtifactForegroundMode(enabled) {
+  if (!burialGoodsLayer) return;
+  burialGoodsLayer.traverse(child => {
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach(material => {
+      if (material.depthTest !== undefined) material.depthTest = !enabled;
+      if (material.depthWrite !== undefined) material.depthWrite = false;
+      material.needsUpdate = true;
+    });
+    child.renderOrder = Math.max(child.renderOrder || 0, enabled ? 240 : 120);
   });
 }
 
@@ -2504,22 +2576,23 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   objects.forEach(group => {
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
-    group.visible = false;
+    group.visible = index >= 0;
     const { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft } = group.userData.lines;
-    setLineLayerOpacity(understroke, index < 0 ? .01 : active ? .018 : .001);
-    setLineLayerOpacity(main, index < 0 ? .018 : active ? .028 : .001);
-    setLineLayerOpacity(echoA, index < 0 ? .006 : active ? .009 : .001);
-    setLineLayerOpacity(echoB, index < 0 ? .003 : active ? .005 : .001);
-    setLineLayerOpacity(surveySkeleton, index < 0 ? .014 : active ? .02 : .001);
-    setLineLayerOpacity(surveyWide, index < 0 ? .008 : active ? .012 : .001);
-    setLineLayerOpacity(profileSkeleton, index < 0 ? .014 : active ? .02 : .001);
-    setLineLayerOpacity(profileWide, index < 0 ? .008 : active ? .012 : .001);
-    setLineLayerOpacity(xray, index < 0 ? .014 : active ? .02 : .001);
-    setLineLayerOpacity(xraySoft, index < 0 ? .008 : active ? .012 : .001);
+    setLineLayerOpacity(understroke, index < 0 ? .01 : active ? .12 : .012);
+    setLineLayerOpacity(main, index < 0 ? .018 : active ? .18 : .018);
+    setLineLayerOpacity(echoA, index < 0 ? .006 : active ? .052 : .006);
+    setLineLayerOpacity(echoB, index < 0 ? .003 : active ? .026 : .003);
+    setLineLayerOpacity(surveySkeleton, index < 0 ? .014 : active ? .20 : .018);
+    setLineLayerOpacity(surveyWide, index < 0 ? .008 : active ? .16 : .014);
+    setLineLayerOpacity(profileSkeleton, index < 0 ? .014 : active ? .22 : .018);
+    setLineLayerOpacity(profileWide, index < 0 ? .008 : active ? .18 : .012);
+    setLineLayerOpacity(xray, index < 0 ? .014 : active ? .14 : .014);
+    setLineLayerOpacity(xraySoft, index < 0 ? .008 : active ? .056 : .006);
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = false;
   if (mainVisualModel) mainVisualModel.visible = true;
+  setMainVisualModelFocus(index);
   if (structuralSkeletonLayer) structuralSkeletonLayer.visible = !mainVisualModel;
   if (groundLayer) groundLayer.visible = false;
   if (continuousVolumeLayer) {
@@ -2537,7 +2610,8 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
-  setBurialGoodsOpacity(index < 0 || selectedFocusIndices.includes(0) ? 1 : .14);
+  setBurialGoodsOpacity(index < 0 || selectedFocusIndices.includes(0) ? 1 : .45);
+  setArtifactForegroundMode(index >= 0 || Boolean(artifactMiniState));
   document.querySelectorAll("#structure-list button").forEach(button => {
     const buttonIndex = Number(button.dataset.index);
     const active = button.classList.contains("overall") ? index < 0 : buttonIndex === index;
@@ -2554,6 +2628,8 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
         const left = button.offsetLeft + button.offsetWidth / 2 - viewport.clientWidth / 2;
         viewport.scrollTo({ left, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
       }
+    } else {
+      button.classList.remove("axis-hit");
     }
   });
   document.querySelectorAll(".structure-hotspot-leader").forEach(leader => {
@@ -2670,20 +2746,39 @@ function applyResponsiveShotOffset(position, target, viewUp = SPATIAL_CAMERA_UP)
   target.add(offset);
 }
 
+function focusBoundsForIndices(focusIndices, fallbackGroup) {
+  const bounds = new THREE.Box3();
+  focusIndices.forEach(focusIndex => {
+    const focusGroup = objects.find(item => item.userData.index === focusIndex);
+    if (focusGroup) bounds.union(new THREE.Box3().setFromObject(focusGroup));
+  });
+  if (bounds.isEmpty() && fallbackGroup) bounds.setFromObject(fallbackGroup);
+  return bounds;
+}
+
+function cameraOffsetForStructure(index, focusSize) {
+  const offset = new THREE.Vector3(...(STRUCTURE_SHOT_OFFSETS[index] || STRUCTURE_SHOT_OFFSETS.default));
+  const scale = THREE.MathUtils.clamp(focusSize / 7.2, .72, 1.38);
+  return offset.multiplyScalar(scale);
+}
+
 function navigateToStructure(index, options = {}) {
   const group = objects.find(item => item.userData.index === index);
   if (!group) return;
+  if (!options.narrativeId) closeNarrativeCard();
   const geometricTarget = structureTargets.get(index) || new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
-  const bbox = new THREE.Box3().setFromObject(group);
-  const size = bbox.getSize(new THREE.Vector3()).length();
   const preset = CAMERA_PRESETS[index];
   const focusIndices = options.focusIndices || preset?.focus || [index];
-  const target = preset ? new THREE.Vector3(...preset.target) : geometricTarget;
-  const endPosition = preset ? new THREE.Vector3(...preset.position) : target.clone().add(new THREE.Vector3(size * .8, -size * 1.15, size * .65));
-  applyResponsiveShotOffset(endPosition, target);
+  const focusBounds = focusBoundsForIndices(focusIndices, group);
+  const focusSizeVector = focusBounds.getSize(new THREE.Vector3());
+  const target = focusBounds.isEmpty() ? geometricTarget : focusBounds.getCenter(new THREE.Vector3());
+  target.z += THREE.MathUtils.clamp(focusSizeVector.z * .05, .04, .22);
+  const size = focusBounds.isEmpty() ? new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3()).length() : focusSizeVector.length();
+  const endPosition = target.clone().add(cameraOffsetForStructure(index, size));
+  if (options.source === "narrative") applyResponsiveShotOffset(endPosition, target);
   selectStructure(index, focusIndices, options.narrativeId);
   logVisualProcess(`镜头切换：${group.userData.name}，同侧连续观察`);
-  animateCamera(endPosition, target, preset?.fov || 42, () => {
+  animateCamera(endPosition, target, STRUCTURE_SHOT_FOV[index] || preset?.fov || 42, () => {
     const focusNames = focusIndices.map(focusIndex => objects.find(item => item.userData.index === focusIndex)?.userData.name).filter(Boolean);
     document.querySelector("#status").textContent = `${focusNames.join(" ＋ ")} · ${focusNames.length > 1 ? "组合特写" : "特写视角"}`;
   });
@@ -3241,7 +3336,7 @@ async function init() {
   const summary = document.querySelector("#geometry-summary");
   summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / loading artifacts`;
   loadBurialGoods().then(burialGoodsCount => {
-    setBurialGoodsOpacity(selectedIndex < 0 || selectedIndex === 0 ? 1 : .14);
+    setBurialGoodsOpacity(selectedIndex < 0 || selectedIndex === 0 ? 1 : .45);
     summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
     logVisualProcess(`随葬品加载完成：${burialGoodsCount} 个点位，代表性模型优先`);
   }).catch(error => {
