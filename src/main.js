@@ -501,14 +501,15 @@ void main(){
 }`;
 
 
-function material(layer, opacity) {
+function material(layer, opacity, options = {}) {
   return new THREE.ShaderMaterial({
     transparent: true,
-    depthWrite: false,
+    depthWrite: options.depthWrite ?? false,
+    depthTest: options.depthTest ?? false,
     uniforms: {
-      uColor: { value: new THREE.Color(layer === 0 ? 0x34332f : 0x625d54) },
+      uColor: { value: new THREE.Color(options.color ?? (layer === 0 ? 0x34332f : 0x625d54)) },
       uOpacity: { value: opacity },
-      uJitter: { value: layer === 0 ? 0 : 0.012 },
+      uJitter: { value: options.jitter ?? (layer === 0 ? 0 : 0.012) },
       uLayer: { value: layer }
     },
     vertexShader,
@@ -524,7 +525,7 @@ function renderedEdges(item) {
   if (item.name === "墓道") {
     // The survey export closes the inner end of the ramp with a vertical rectangle.
     // It is a construction artifact rather than part of the visible sloping passage.
-    const hiddenPairs = new Set(["0:1", "0:2", "1:3"]);
+    const hiddenPairs = new Set(["0:1", "0:2", "1:3", "2:3"]);
     return item.edges.filter(({ from_vertex_index: from, to_vertex_index: to }) => {
       const pair = `${Math.min(from, to)}:${Math.max(from, to)}`;
       return !hiddenPairs.has(pair);
@@ -606,6 +607,10 @@ function floatingInteriorGuideGeometry(item, index) {
     push([x0, backY, roofZ], [x1, backY, roofZ]);
     push([x0, mouthY, roofZ], [x1, mouthY, roofZ]);
     push([x0, mouthY, floorZ], [x1, mouthY, floorZ]);
+    const xMid = (x0 + x1) / 2;
+    push([xMid, mouthY, floorZ], [xMid, backY, floorZ]);
+    push([xMid, mouthY, roofZ], [xMid, backY, roofZ]);
+    push([xMid, backY, floorZ], [xMid, backY, roofZ]);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
     return geometry;
@@ -623,18 +628,25 @@ function floatingInteriorGuideGeometry(item, index) {
     push([box.min.x, y, springZ], [box.max.x, y, springZ]);
   });
   push([box.min.x, yMid, floorZ], [box.max.x, yMid, floorZ]);
+  [.28, .72].forEach(t => {
+    const y = THREE.MathUtils.lerp(box.min.y, box.max.y, t);
+    push([box.min.x, y, floorZ], [box.max.x, y, floorZ]);
+    push([box.min.x, y, springZ], [box.max.x, y, springZ]);
+  });
 
   if (vaulted) {
     const samples = 10;
-    let previous = null;
-    for (let sample = 0; sample <= samples; sample++) {
-      const t = sample / samples;
-      const y = THREE.MathUtils.lerp(box.min.y, box.max.y, t);
-      const z = springZ + Math.sin(t * Math.PI) * (roofZ - springZ);
-      const point = [(box.min.x + box.max.x) / 2, y, z];
-      if (previous) push(previous, point);
-      previous = point;
-    }
+    [box.min.x, (box.min.x + box.max.x) / 2, box.max.x].forEach((x, archIndex) => {
+      let previous = null;
+      for (let sample = 0; sample <= samples; sample++) {
+        const t = sample / samples;
+        const y = THREE.MathUtils.lerp(box.min.y, box.max.y, t);
+        const z = springZ + Math.sin(t * Math.PI) * (roofZ - springZ);
+        const point = [x, y, z - archIndex % 2 * .015];
+        if (previous) push(previous, point);
+        previous = point;
+      }
+    });
     push([box.min.x, yMid, roofZ], [box.max.x, yMid, roofZ]);
   } else {
     push([box.min.x, box.min.y, roofZ], [box.max.x, box.min.y, roofZ]);
@@ -650,6 +662,7 @@ function addStructure(item, index) {
   if (!item.vertices.length || !item.edges.length) return;
   const group = new THREE.Group();
   group.userData = { index, name: item.name || FALLBACK_NAMES[index] || `结构 ${index + 1}` };
+  group.userData.depthCenter = boundsOf(item).getCenter(new THREE.Vector3());
   const main = new THREE.LineSegments(geometryFrom(item, 0), material(0, .9));
   const echoA = new THREE.LineSegments(geometryFrom(item, 1), material(1, .32));
   const echoB = new THREE.LineSegments(geometryFrom(item, 2), material(2, .2));
@@ -663,7 +676,7 @@ function addStructure(item, index) {
   surveyWideGeometry.setPositions(surveySkeleton.geometry.attributes.position.array);
   const surveyWideMaterial = new LineMaterial({
     color: 0x171613,
-    linewidth: 2,
+    linewidth: index === 11 || index === 12 ? 3.1 : 2.25,
     transparent: true,
     opacity: .82,
     depthWrite: false,
@@ -684,7 +697,7 @@ function addStructure(item, index) {
   profileWideGeometry.setPositions(profileSkeleton.geometry.attributes.position.array);
   const profileWideMaterial = new LineMaterial({
     color: 0x201e1a,
-    linewidth: 2.35,
+    linewidth: index === 11 || index === 12 ? 3.45 : 2.85,
     transparent: true,
     opacity: .52,
     depthWrite: false,
@@ -957,6 +970,39 @@ function createVisualProcessPanel() {
 
 function logVisualProcess(message) {
   void message;
+}
+
+function setLineLayerOpacity(line, opacity) {
+  if (!line?.material) return;
+  line.material.userData.selectionOpacity = opacity;
+  if (line.material.uniforms?.uOpacity) line.material.uniforms.uOpacity.value = opacity;
+  else line.material.opacity = opacity;
+}
+
+function applyDepthAwareLineOpacity() {
+  if (!objects.length) return;
+  const cameraDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraDirection);
+  const depths = objects.map(group => group.userData.depthCenter.clone().sub(camera.position).dot(cameraDirection));
+  const minDepth = Math.min(...depths);
+  const maxDepth = Math.max(...depths);
+  const span = Math.max(maxDepth - minDepth, .001);
+  objects.forEach((group, groupIndex) => {
+    const depth01 = THREE.MathUtils.clamp((depths[groupIndex] - minDepth) / span, 0, 1);
+    const exteriorScale = THREE.MathUtils.lerp(1.1, .76, depth01);
+    const interiorScale = THREE.MathUtils.lerp(1.18, .62, depth01);
+    const softScale = THREE.MathUtils.lerp(1, .46, depth01);
+    const lines = group.userData.lines || {};
+    [[lines.understroke, exteriorScale], [lines.main, exteriorScale], [lines.echoA, softScale], [lines.echoB, softScale],
+      [lines.surveySkeleton, exteriorScale], [lines.surveyWide, exteriorScale],
+      [lines.profileSkeleton, interiorScale], [lines.profileWide, interiorScale],
+      [lines.xray, interiorScale], [lines.xraySoft, softScale]].forEach(([line, scale]) => {
+        if (!line?.material) return;
+        const base = line.material.userData.selectionOpacity ?? (line.material.uniforms?.uOpacity?.value ?? line.material.opacity ?? 0);
+        if (line.material.uniforms?.uOpacity) line.material.uniforms.uOpacity.value = base * scale;
+        else line.material.opacity = base * scale;
+      });
+  });
 }
 
 function setBurialGoodsOpacity(multiplier) {
@@ -1581,6 +1627,60 @@ function addOpenEndedStructureSketch(group, item, seed, vaulted) {
   }
 }
 
+function addNicheSketchVolume(group, item, index, seed) {
+  const box = boundsOf(item);
+  const isEast = index === 11;
+  const mouthY = isEast ? box.max.y : box.min.y;
+  const backY = isEast ? box.min.y : box.max.y;
+  const x0 = box.min.x;
+  const x1 = box.max.x;
+  const z0 = box.min.z;
+  const z1 = box.max.z;
+
+  if (isEast) {
+    const point = vertexIndex => item.vertices[vertexIndex].xyz_m;
+    const mouthProfile = [0, 1, 2, 3, 4, 5].map(point);
+    const backProfile = [10, 6, 9, 8, 7, 11].map(point);
+    for (let i = 0; i < mouthProfile.length - 1; i++) {
+      addSketchQuad(group, [mouthProfile[i], mouthProfile[i + 1], backProfile[i + 1], backProfile[i]], {
+        normal: i < 2 ? [-.55, 0, .45] : i > 2 ? [.55, 0, .45] : [0, 0, 1],
+        color: i === 0 || i === mouthProfile.length - 2 ? 0x765d49 : 0x8b7157,
+        opacity: i === 2 ? .105 : .135,
+        divisionsU: 4,
+        divisionsV: 3,
+        seed: seed + i * 41,
+        hatching: i !== 2
+      });
+    }
+    addSketchQuad(group, [backProfile[0], backProfile[1], backProfile[2], backProfile[0]], {
+      normal: [0, -1, 0], color: 0x735a45, opacity: .11, divisionsU: 2, divisionsV: 2, seed: seed + 211
+    });
+    addSketchQuad(group, [backProfile[0], backProfile[2], backProfile[3], backProfile[0]], {
+      normal: [0, -1, 0], color: 0x735a45, opacity: .105, divisionsU: 2, divisionsV: 2, seed: seed + 227
+    });
+    addSketchQuad(group, [backProfile[0], backProfile[3], backProfile[4], backProfile[5]], {
+      normal: [0, -1, 0], color: 0x735a45, opacity: .11, divisionsU: 2, divisionsV: 2, seed: seed + 239
+    });
+    return;
+  }
+
+  addSketchQuad(group, [[x0, mouthY, z0], [x1, mouthY, z0], [x1, backY, z0], [x0, backY, z0]], {
+    normal: [0, 0, 1], color: 0xa98b67, opacity: .12, divisionsU: 4, divisionsV: 3, seed
+  });
+  addSketchQuad(group, [[x0, mouthY, z1], [x1, mouthY, z1], [x1, backY, z1], [x0, backY, z1]], {
+    normal: [0, 0, 1], color: 0x7f684f, opacity: .075, divisionsU: 4, divisionsV: 2, seed: seed + 37, hatching: false
+  });
+  addSketchQuad(group, [[x0, mouthY, z0], [x0, backY, z0], [x0, backY, z1], [x0, mouthY, z1]], {
+    normal: [-1, 0, 0], color: 0x725a45, opacity: .13, divisionsU: 3, divisionsV: 2, seed: seed + 83
+  });
+  addSketchQuad(group, [[x1, backY, z0], [x1, mouthY, z0], [x1, mouthY, z1], [x1, backY, z1]], {
+    normal: [1, 0, 0], color: 0x7b634b, opacity: .13, divisionsU: 3, divisionsV: 2, seed: seed + 91
+  });
+  addSketchQuad(group, [[x0, backY, z0], [x1, backY, z0], [x1, backY, z1], [x0, backY, z1]], {
+    normal: [0, isEast ? -1 : 1, 0], color: 0x735a45, opacity: .15, divisionsU: 4, divisionsV: 3, seed: seed + 61
+  });
+}
+
 function buildSketchVolumeLayer(data) {
   const group = new THREE.Group();
   group.name = "sketched-earth-volume";
@@ -1650,14 +1750,9 @@ function buildSketchVolumeLayer(data) {
     }
   });
   [11, 12].forEach((index, nicheIndex) => {
-    const box = boundsOf(data.geometries[index]);
     const seed = 1800 + index * 37;
-    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [0, -1, 0], color: nicheIndex ? 0x765d49 : 0x8b7157, opacity: .12, seed });
-    addSketchQuad(group, [[box.min.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 1, 0], color: 0x735a45, opacity: .16, seed: seed + 61 });
-    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.min.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.max.z], [box.min.x, box.min.y, box.max.z]], { normal: [-1, 0, 0], color: 0x725a45, opacity: .12, divisionsU: 3, divisionsV: 2, seed: seed + 83 });
-    addSketchQuad(group, [[box.max.x, box.max.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.max.z], [box.max.x, box.max.y, box.max.z]], { normal: [1, 0, 0], color: 0x7b634b, opacity: .12, divisionsU: 3, divisionsV: 2, seed: seed + 91 });
-    addSketchQuad(group, [[box.min.x, box.min.y, box.min.z], [box.max.x, box.min.y, box.min.z], [box.max.x, box.max.y, box.min.z], [box.min.x, box.max.y, box.min.z]], { normal: [0, 0, 1], color: 0xa98b67, opacity: .12, divisionsU: 4, divisionsV: 3, seed: seed + 103 });
-    addSketchQuad(group, [[box.min.x, box.min.y, box.max.z], [box.max.x, box.min.y, box.max.z], [box.max.x, box.max.y, box.max.z], [box.min.x, box.max.y, box.max.z]], { normal: [0, 0, 1], color: 0x7f684f, opacity: .07, divisionsU: 4, divisionsV: 2, seed: seed + 149, hatching: false });
+    void nicheIndex;
+    addNicheSketchVolume(group, data.geometries[index], index, seed);
   });
   return group;
 }
@@ -2237,31 +2332,31 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
     const active = index < 0 || selectedFocusIndices.includes(group.userData.index);
     const isTheftShaft = group.userData.name === "D1" || group.userData.name === "D2";
     const { understroke, main, echoA, echoB, surveySkeleton, surveyWide, profileSkeleton, profileWide, xray, xraySoft } = group.userData.lines;
-    understroke.material.opacity = index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .006;
-    main.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .014;
-    echoA.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .004;
-    echoB.material.uniforms.uOpacity.value = index < 0 ? .046 : active ? .1 : .002;
-    if (surveySkeleton) surveySkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .62 : 1) : active ? 1 : .018;
-    if (surveyWide) surveyWide.material.opacity = index < 0 ? (isTheftShaft ? .34 : .82) : active ? .9 : .006;
-    if (profileSkeleton) profileSkeleton.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .58) : active ? .78 : .01;
-    if (profileWide) profileWide.material.opacity = index < 0 ? (isTheftShaft ? .08 : .34) : active ? .5 : .004;
-    if (xray) xray.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .34 : .68) : active ? .68 : .018;
-    if (xraySoft) xraySoft.material.uniforms.uOpacity.value = index < 0 ? (isTheftShaft ? .16 : .28) : active ? .28 : .007;
+    setLineLayerOpacity(understroke, index < 0 ? (isTheftShaft ? .22 : .11) : active ? .34 : .006);
+    setLineLayerOpacity(main, index < 0 ? (isTheftShaft ? .54 : .48) : active ? .82 : .014);
+    setLineLayerOpacity(echoA, index < 0 ? (isTheftShaft ? .16 : .13) : active ? .2 : .004);
+    setLineLayerOpacity(echoB, index < 0 ? .046 : active ? .1 : .002);
+    setLineLayerOpacity(surveySkeleton, index < 0 ? (isTheftShaft ? .62 : 1) : active ? 1 : .018);
+    setLineLayerOpacity(surveyWide, index < 0 ? (isTheftShaft ? .34 : .82) : active ? .9 : .006);
+    setLineLayerOpacity(profileSkeleton, index < 0 ? (isTheftShaft ? .28 : .82) : active ? .9 : .018);
+    setLineLayerOpacity(profileWide, index < 0 ? (isTheftShaft ? .13 : .52) : active ? .62 : .008);
+    setLineLayerOpacity(xray, index < 0 ? (isTheftShaft ? .44 : .86) : active ? .84 : .028);
+    setLineLayerOpacity(xraySoft, index < 0 ? (isTheftShaft ? .22 : .42) : active ? .4 : .012);
     if (group.userData.interior) group.userData.interior.visible = index < 0 || active;
   });
   if (naturalShell) naturalShell.visible = index < 0;
   if (continuousVolumeLayer) {
     continuousVolumeLayer.visible = true;
     continuousVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .1 : .06);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .1 : .06);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .055 : .024);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .055 : .024);
     });
   }
   if (sketchVolumeLayer) {
     sketchVolumeLayer.visible = true;
     sketchVolumeLayer.userData.opacityMaterials.forEach(material => {
-      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .02 : .012);
-      else material.opacity = material.userData.baseOpacity * (index < 0 ? .02 : .012);
+      if (material.uniforms?.uOpacity) material.uniforms.uOpacity.value = material.userData.baseOpacity * (index < 0 ? .01 : .004);
+      else material.opacity = material.userData.baseOpacity * (index < 0 ? .01 : .004);
     });
   }
   if (perspectiveGuides?.material) perspectiveGuides.material.opacity = index < 0 ? .11 : .045;
@@ -2294,6 +2389,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   document.querySelector("#status").textContent = index < 0 ? "整体骨架 · 自由检查模式" : `${currentLabel} · 结构已突出`;
   showMeasurements(selectedFocusIndices.length === 1 ? index : -1, selectedFocusIndices.length === 1 ? selected : null);
   syncNarrativeAxis(index, narrativeId);
+  applyDepthAwareLineOpacity();
 }
 
 function buildControls(data) {
@@ -2991,6 +3087,7 @@ function animate(now = 0) {
     artifactLocationHalo.material.opacity = .32 + (Math.sin(now * .0042) + 1) * .1;
   }
   controls.update();
+  applyDepthAwareLineOpacity();
   sketchPipeline.render(now);
   requestAnimationFrame(animate);
 }
