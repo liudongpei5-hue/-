@@ -33,7 +33,6 @@
 
       <section class="model-interface" aria-label="墓葬结构导航">
         <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
-        <button id="start-artifacts-playback" class="section-switch section-switch-artifacts" type="button"><small>02 / ARTIFACTS</small><span>播放文物</span><i>→</i></button>
         <button id="export-narrative-layout" class="narrative-layout-export" type="button">导出卡片布局</button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
@@ -44,6 +43,10 @@
             </header>
             <ol id="narrative-list" class="narrative-list"></ol>
           </div>
+          <aside id="narrative-artifact-branch" class="narrative-artifact-branch" aria-label="本环节器物" aria-hidden="true">
+            <span class="narrative-artifact-label">OBJECTS</span>
+            <ol id="narrative-artifact-list" class="narrative-artifact-list"></ol>
+          </aside>
         </aside>
         <article id="narrative-card" class="narrative-card" role="region" aria-live="polite" aria-hidden="true">
           <button id="narrative-close" class="narrative-close" type="button" aria-label="收起简报叙事">×</button>
@@ -52,8 +55,36 @@
           <p id="narrative-card-subtitle" class="narrative-card-subtitle"></p>
           <p id="narrative-card-summary" class="narrative-card-summary"></p>
           <blockquote id="narrative-card-quote"></blockquote>
-          <div id="narrative-artifacts" class="narrative-artifacts" aria-label="相关文物"></div>
         </article>
+        <section id="artifact-detail" class="narrative-artifact-detail" aria-hidden="true" aria-label="当前器物详情">
+          <button id="artifact-detail-close" class="artifact-detail-close" type="button" aria-label="返回当前环节总览">×</button>
+          <div class="artifact-playback-status" aria-live="polite"><i></i><span id="artifact-progress">01 / 01</span></div>
+          <div class="artifact-stage has-image" aria-hidden="true">
+            <div class="artifact-halo"></div>
+            <img id="artifact-image" class="artifact-image" src="/assets/artifacts/catalog/tomb-beast-east.png" alt="" />
+            <canvas id="artifact-model-canvas" class="artifact-model-canvas"></canvas>
+            <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="artifact-shadow"></span>
+          </div>
+          <aside id="artifact-spatial-inset" class="artifact-spatial-inset" aria-label="当前文物在墓葬空间中的位置">
+            <header class="artifact-spatial-head">
+              <span>SPATIAL LOCATION</span>
+              <small>文物空间定位</small>
+            </header>
+            <div id="artifact-scene-host" class="artifact-scene-host" role="img" aria-label="墓室三维线稿与当前文物出土位置"></div>
+            <div class="artifact-location-meta">
+              <p id="artifact-location-index">M2338:4 · 平面图点位</p>
+              <strong id="artifact-location-caption">墓室入口东侧</strong>
+              <small id="artifact-location-certainty">简报平面图明确点位</small>
+            </div>
+          </aside>
+          <article class="artifact-copy">
+            <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
+            <h2><b id="artifact-name-en">TOMB BEAST</b><span id="artifact-name-cn">镇墓兽</span></h2>
+            <p id="artifact-description">泥质红陶模制，人面短柱冠，白地施红彩。出土于墓室入口东侧，通高36厘米，胸前残留金箔痕迹。</p>
+            <button id="artifact-details" type="button" hidden>阅读全文　→</button>
+          </article>
+        </section>
         <aside class="controls">
           <div class="control-head">
             <div><small>STRUCTURE INDEX</small><span>结构索引</span></div>
@@ -83,54 +114,7 @@
         </div>
       </section>
 
-      <section id="artifacts-page" class="page-layer artifacts-page" aria-hidden="true">
-        <div class="artifact-no">02 <span>ARTIFACTS</span></div>
-        <button id="return-space" class="section-switch section-switch-space" type="button"><i>←</i><span>返回空间</span><small>01 / MODEL</small></button>
-        <div class="artifact-playback-status" aria-live="polite"><i></i><span id="artifact-progress">01 / 13</span></div>
-        <nav class="artifact-list" aria-label="文物类别">
-          <button class="active" data-artifact="镇墓兽">镇墓兽</button>
-          <button data-artifact="镇墓武士俑">镇墓武士俑</button>
-          <button data-artifact="墓志">墓志</button>
-          <button data-artifact="铜钱">铜钱</button>
-          <button data-artifact="玻璃串珠">玻璃串珠</button>
-          <button data-artifact="贝壳">贝壳</button>
-          <button data-artifact="银环">银环</button>
-          <button data-artifact="铜钵">铜钵</button>
-          <button data-artifact="骑马俑">骑马俑</button>
-          <button data-artifact="风帽俑">风帽俑</button>
-          <button data-artifact="笼冠俑">笼冠俑</button>
-          <button data-artifact="女侍俑">女侍俑</button>
-          <button data-artifact="陶羊">陶羊</button>
-        </nav>
-        <div class="artifact-stage has-image" aria-hidden="true">
-          <div class="artifact-halo"></div>
-          <img id="artifact-image" class="artifact-image" src="/assets/artifacts/catalog/tomb-beast-east.png" alt="" />
-          <canvas id="artifact-model-canvas" class="artifact-model-canvas"></canvas>
-          <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
-          <span class="artifact-shadow"></span>
-        </div>
-        <aside id="artifact-spatial-inset" class="artifact-spatial-inset" aria-label="当前文物在墓葬空间中的位置">
-          <header class="artifact-spatial-head">
-            <span>SPATIAL LOCATION</span>
-            <small>文物空间定位</small>
-          </header>
-          <div id="artifact-scene-host" class="artifact-scene-host" role="img" aria-label="墓室三维线稿与当前文物出土位置"></div>
-          <div class="artifact-location-meta">
-            <p id="artifact-location-index">M2338:4 · 平面图点位</p>
-            <strong id="artifact-location-caption">墓室入口东侧</strong>
-            <small id="artifact-location-certainty">简报平面图明确点位</small>
-          </div>
-        </aside>
-        <article class="artifact-copy">
-          <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
-          <h2><b id="artifact-name-en">TOMB BEAST</b><span id="artifact-name-cn">镇墓兽</span></h2>
-          <p id="artifact-description">泥质红陶模制，人面短柱冠，白地施红彩。出土于墓室入口东侧，通高36厘米，胸前残留金箔痕迹。</p>
-          <button id="artifact-details" type="button" hidden>阅读全文　→</button>
-        </article>
-        <footer class="page-footer"><span>CN　EN</span><span>02 / 02</span></footer>
-      </section>
-
-      <aside id="epitaph-modal" class="epitaph-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="epitaph-title">
+      <aside id="epitaph-modal" class="epitaph-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="epitaph-title" inert>
         <button class="epitaph-close" type="button" aria-label="关闭墓志全文">关闭　×</button>
         <article>
           <p class="artifact-kicker">M2338:52 / FULL INSCRIPTION</p>

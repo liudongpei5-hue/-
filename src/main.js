@@ -5,6 +5,14 @@ import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import defaultNarrativeCardLayout from "./narrative-card-layout.json";
+import {
+  ARTIFACT_SEQUENCE,
+  DEMO_ROUTE,
+  NARRATIVE_ARTIFACTS,
+  artifactLinksForEntry,
+  buildNarrativePlaybackSequence,
+  normalizeArtifactLink
+} from "./narrative-playback.js";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
 const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb";
@@ -291,21 +299,19 @@ let artifactLocationRegion;
 let artifactMiniState = null;
 let artifactMiniCameraToken = 0;
 let artifactStageViewer;
-let sceneMorphActive = false;
-let sceneMorphPromise = Promise.resolve(true);
 let groundCompass;
 let overallView;
 let cameraMoveToken = 0;
+let cameraDestination = null;
 let autoDemoTimer = 0;
 let autoDemoActive = false;
 let autoDemoStep = 0;
-let autoDemoPhase = "model";
-let artifactAutoStep = 0;
-let artifactTourButtons = [];
 let activateArtifactByName = () => false;
 let activeArtifactName = "";
 let activeArtifactLocationKey = "";
+let artifactDetailOpen = false;
 let spatialReturnState = null;
+let artifactReturnFocus = null;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeId = "";
@@ -330,8 +336,6 @@ const PLAN_HOTSPOTS = new Map([
   [9, { x: 24.29, y: 42.12, secondary: true }],
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
-const DEMO_ROUTE = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
-const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
 const ARTIFACT_SPATIAL_LOCATIONS = {
   "镇墓兽": {
     anchor: [6.660727, -.147213, -4.12], markerLift: .48, certainty: "exact",
@@ -426,8 +430,6 @@ const ARTIFACT_CONTEXT_LOCATIONS = {
     objectId: "WK11", label: "西壁龛 · WK11"
   }
 };
-const NICHE_ARTIFACT_LINKS = ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"]
-  .map(name => ({ name, locationKey: `niches:${name}` }));
 const AUTO_TIMING = {
   model: 8200,
   artifact: 4800,
@@ -441,56 +443,56 @@ const NARRATIVE_ENTRIES = [
     cameraIndex: -1, mode: "overall", focusIndices: [], triggerIndices: [-1],
     summary: "2021年，M2338在咸阳机场三期扩建考古中出土。墓志记卢夫人于661年去世，三年后迁葬洪渎原，文中并记有“哀子玄瑾”；明确的年代，让这座中型唐墓成为观察初唐关中葬制的空间坐标。",
     quote: "该墓葬系一座斜坡墓道、三天井单室土洞墓，整体平面略呈“刀”形，方向176°，水平全长19.88米，墓底距现地表深8.32米。",
-    artifacts: []
+    artifacts: NARRATIVE_ARTIFACTS.hongduyuan
   },
   {
     id: "ramp", no: "02", name: "墓道", title: "由地表向北下行",
     cameraIndex: 8, focusIndices: [8], triggerIndices: [8],
     summary: "入口位于墓葬最南端。南宽北窄的长斜坡以27°向地下深入，壁面残留白灰刷饰，却没有发现壁画；它是整条地下轴线的第一段。",
     quote: "墓道，位于该墓葬最南端，略呈南宽北窄梯形状……最深处距现地表3.32米，斜坡27°，壁面光滑，可见白灰刷饰残留。",
-    artifacts: []
+    artifacts: NARRATIVE_ARTIFACTS.ramp
   },
   {
     id: "shaft-sequence", no: "03", name: "三重井洞", title: "六段相接 · 三次见天",
     cameraIndex: 4, mode: "overall", focusIndices: [2, 3, 4, 5, 6, 7], triggerIndices: [2, 3, 4, 5, 6, 7],
     summary: "三段斜向拱顶过洞延续墓道坡度，三座上下贯通的天井插入其间。封闭土洞与竖向开口交替，使向北行进不再是重复的六次停顿，而成为一组完整的空间节奏。",
     quote: "过洞3个，均为斜向拱顶土洞……底面与墓道底面为同一斜坡。天井3个，平面均呈南北向长方形，上下贯通。",
-    artifacts: []
+    artifacts: NARRATIVE_ARTIFACTS["shaft-sequence"]
   },
   {
     id: "niches", no: "04", name: "东西壁龛", title: "第三过洞两侧的器物空间",
     cameraIndex: 11, focusIndices: [3, 11, 12], triggerIndices: [11, 12],
     summary: "最后一段过洞向两侧展开壁龛：东龛为拱顶平底，西龛则口部小、内部大。两种尺度不同的侧向空间共同容纳随葬品，其中东龛后来受到盗洞D1的严重扰动。",
     quote: "壁龛2个，均位于第三过洞内……东一号龛为拱顶平底土洞结构；西一号龛为平顶底土洞结构，口部小，内部大。",
-    artifacts: NICHE_ARTIFACT_LINKS
+    artifacts: NARRATIVE_ARTIFACTS.niches
   },
   {
     id: "threshold", no: "05", name: "甬道与封门", title: "斜坡终止后的最后边界",
     cameraIndex: 1, focusIndices: [1], triggerIndices: [1],
     summary: "越过第三天井，行进由斜坡转入平底甬道。甬道中部原有土坯封门，虽已坍塌，仍标示出墓室与外部通道之间最后一道实体边界。",
     quote: "甬道，南接第三天井，北侧与墓室相连，拱顶土洞，保存完整，平底……封门位于甬道中部，土坯封堵，均已坍塌。",
-    artifacts: []
+    artifacts: NARRATIVE_ARTIFACTS.threshold
   },
   {
     id: "chamber", no: "06", name: "北端墓室", title: "西侧棺床 · 东南隅器物群",
     cameraIndex: 0, focusIndices: [0], triggerIndices: [0],
     summary: "拱顶墓室位于轴线最北端：木棺南北向置于西侧砖砌棺床，墓主头向北；百件随葬品则主要集中在墓室东南隅与壁龛，镇墓武士俑、镇墓兽分列入口两侧，墓志也出自入口处。",
     quote: "随葬品共计100件……随葬品大多数出土于墓室的东南隅和壁龛，墓室内东北隅有一处木箱残留遗迹。",
-    artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")
+    artifacts: NARRATIVE_ARTIFACTS.chamber
   },
   {
     id: "epitaph", no: "07", name: "墓志与墓主", title: "661年去世 · 664年迁葬",
     cameraIndex: 0, focusIndices: [0], triggerIndices: [0], primary: false,
     summary: "墓室入口的青石墓志以516字连接空间与人物：墓主为范阳卢氏，丈夫早逝后长期寡居并抚育幼子。简报认为“李将军魏公”与李密生平相契合，但其具体身份仍存疑。",
     quote: "魏公早随运往，积祀孀居……抚育孤幼，羽翮已成。以麟德元年十一月廿八日迁葬于洪渎原。",
-    artifacts: ["墓志"]
+    artifacts: NARRATIVE_ARTIFACTS.epitaph
   },
   {
     id: "theft", no: "08", name: "两处盗洞", title: "D1至壁龛 · D2抵墓室",
     cameraIndex: 10, mode: "overall", focusIndices: [9, 10], triggerIndices: [9, 10],
     summary: "两次早期盗扰选择了最短路径：D1从第三天井直抵壁龛，严重扰动东龛；D2垂直打穿甬道北侧顶部，直接抵达墓室。它们也是今天理解遗物缺失与保存差异的重要空间证据。",
     quote: "盗洞D1……位于第三天井上口，打破天井两壁直抵壁龛位置所在。盗洞D2……位于甬道北侧，垂直打破甬道顶部后直抵墓室。",
-    artifacts: []
+    artifacts: NARRATIVE_ARTIFACTS.theft
   }
 ];
 const VISUAL_PROCESS_STEPS = [
@@ -1433,7 +1435,7 @@ function updateArtifactSpatialLocation(name, locationKey = activeArtifactLocatio
 
 function focusArtifactTopDown(name, locationKey = activeArtifactLocationKey) {
   const location = resolveArtifactSpatialLocation(name, locationKey);
-  if (!location || !artifactMiniState || document.querySelector("#app")?.dataset.view !== "artifacts") return false;
+  if (!location || !artifactMiniState || !artifactDetailOpen) return false;
   const token = ++artifactMiniCameraToken;
   artifactMiniState.focusedArtifact = name;
   const target = new THREE.Vector3(location.anchor[0], location.anchor[1], location.anchor[2] + .035);
@@ -1492,7 +1494,7 @@ function enterArtifactMiniView(options = {}) {
   controls.enableRotate = matchMedia("(pointer:fine)").matches;
   canvas.style.transform = "none";
   if (!options.deferCanvas) host.append(canvas);
-  selectStructure(-1);
+  selectStructure(-1, [], activeNarrativeId);
   measurementGroup.visible = false;
   if (burialGoodsLayer) {
     burialGoodsLayer.visible = true;
@@ -2799,6 +2801,80 @@ function setupNarrativeCardDragging() {
   });
 }
 
+function positionNarrativeArtifactBranch() {
+  const branch = document.querySelector("#narrative-artifact-branch");
+  const axis = document.querySelector("#report-narrative");
+  if (!branch || !axis || branch.getAttribute("aria-hidden") === "true") return;
+  if (matchMedia("(max-width: 800px)").matches) {
+    branch.style.removeProperty("top");
+    branch.style.removeProperty("--connector-y");
+    return;
+  }
+  const node = [...document.querySelectorAll(".narrative-node")]
+    .find(item => item.dataset.narrativeId === branch.dataset.narrativeId);
+  if (!node) return;
+  const axisRect = axis.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
+  const branchRect = branch.getBoundingClientRect();
+  const nodeCenter = nodeRect.top + nodeRect.height / 2 - axisRect.top;
+  const maxTop = Math.max(0, axisRect.height - branchRect.height);
+  const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 0, maxTop);
+  branch.style.top = `${top}px`;
+  branch.style.setProperty("--connector-y", `${THREE.MathUtils.clamp(nodeCenter - top, 10, Math.max(10, branchRect.height - 10))}px`);
+}
+
+function syncNarrativeArtifactBranch(entry) {
+  const branch = document.querySelector("#narrative-artifact-branch");
+  const list = document.querySelector("#narrative-artifact-list");
+  if (!branch || !list) return;
+  const links = artifactLinksForEntry(entry);
+  const visible = Boolean(entry && links.length);
+  branch.classList.toggle("open", visible);
+  branch.setAttribute("aria-hidden", String(!visible));
+  if (!visible) {
+    branch.dataset.narrativeId = "";
+    list.replaceChildren();
+    return;
+  }
+  if (branch.dataset.narrativeId !== entry.id) {
+    branch.dataset.narrativeId = entry.id;
+    list.replaceChildren();
+    links.forEach(({ name, locationKey }) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "narrative-artifact-option";
+      button.dataset.artifact = name;
+      button.dataset.narrativeId = entry.id;
+      if (locationKey) button.dataset.locationKey = locationKey;
+      button.textContent = name;
+      button.setAttribute("aria-controls", "artifact-detail");
+      button.setAttribute("aria-current", "false");
+      button.setAttribute("aria-label", `${entry.name}相关器物：${name}${locationKey ? "，壁龛点位" : ""}`);
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        stopAutoDemo();
+        showNarrativeArtifact(entry, { name, locationKey }, {
+          source: "narrative",
+          trigger: event.currentTarget
+        });
+        scheduleAutoDemo();
+      });
+      item.append(button);
+      list.append(item);
+    });
+  }
+  list.querySelectorAll(".narrative-artifact-option").forEach(button => {
+    const active = artifactDetailOpen
+      && button.dataset.narrativeId === activeNarrativeId
+      && button.dataset.artifact === activeArtifactName
+      && (button.dataset.locationKey || "") === activeArtifactLocationKey;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "true" : "false");
+  });
+  requestAnimationFrame(positionNarrativeArtifactBranch);
+}
+
 function renderNarrativeCard(entry) {
   if (!entry) return;
   const card = document.querySelector("#narrative-card");
@@ -2808,34 +2884,6 @@ function renderNarrativeCard(entry) {
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
   document.querySelector("#narrative-card-quote").textContent = `“${entry.quote}”`;
-  const related = document.querySelector("#narrative-artifacts");
-  const artifactNames = entry.artifacts || [];
-  related.replaceChildren();
-  related.hidden = artifactNames.length === 0;
-  if (artifactNames.length) {
-    const label = document.createElement("span");
-    label.textContent = "相关文物 · OBJECTS";
-    related.append(label);
-  }
-  artifactNames.forEach(item => {
-    const { name, locationKey = "" } = typeof item === "string" ? { name: item } : item;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.artifact = name;
-    if (locationKey) button.dataset.locationKey = locationKey;
-    button.textContent = name;
-    button.setAttribute("aria-label", `前往文物详情：${name}${locationKey ? "（壁龛点位）" : ""}`);
-    button.addEventListener("click", event => {
-      event.stopPropagation();
-      stopAutoDemo();
-      spatialReturnState = captureSpatialContext();
-      setView("artifacts", event, { source: "narrative" }).then(() => {
-        activateArtifactByName(name, { force: true, source: "narrative", locationKey });
-        scheduleAutoDemo();
-      });
-    });
-    related.append(button);
-  });
   applyNarrativeCardPosition(entry.id);
 }
 
@@ -2849,12 +2897,14 @@ function syncNarrativeAxis(index, preferredNarrativeId = "") {
     const active = button.dataset.narrativeId === activeNarrativeId;
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "step" : "false");
-    button.setAttribute("aria-expanded", String(active && narrativeCardOpen));
+    button.setAttribute("aria-expanded", String(active && (narrativeCardOpen || artifactLinksForEntry(entry).length > 0)));
   });
   if (!entry) {
     closeNarrativeCard();
+    syncNarrativeArtifactBranch(null);
     return;
   }
+  syncNarrativeArtifactBranch(entry);
   if (narrativeCardOpen) renderNarrativeCard(entry);
 }
 
@@ -2875,7 +2925,11 @@ function closeNarrativeCard() {
   const card = document.querySelector("#narrative-card");
   card?.classList.remove("open");
   card?.setAttribute("aria-hidden", "true");
-  document.querySelectorAll(".narrative-node").forEach(button => button.setAttribute("aria-expanded", "false"));
+  const activeEntry = narrativeEntryById(activeNarrativeId);
+  document.querySelectorAll(".narrative-node").forEach(button => {
+    const expanded = button.dataset.narrativeId === activeNarrativeId && artifactLinksForEntry(activeEntry).length > 0;
+    button.setAttribute("aria-expanded", String(expanded));
+  });
   return true;
 }
 
@@ -2885,11 +2939,15 @@ function setupNarrativeAxis() {
   const list = document.querySelector("#narrative-list");
   NARRATIVE_ENTRIES.forEach(entry => {
     const item = document.createElement("li");
+    item.className = "narrative-item";
+    item.dataset.narrativeId = entry.id;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "narrative-node";
     button.dataset.narrativeId = entry.id;
-    button.setAttribute("aria-controls", "narrative-card");
+    button.setAttribute("aria-controls", artifactLinksForEntry(entry).length
+      ? "narrative-card narrative-artifact-branch"
+      : "narrative-card");
     button.setAttribute("aria-label", `${entry.no} ${entry.name} ${entry.title}`);
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-current", "false");
@@ -2906,6 +2964,7 @@ function setupNarrativeAxis() {
     event.stopPropagation();
     closeNarrativeCard();
   });
+  window.addEventListener("resize", positionNarrativeArtifactBranch);
   syncNarrativeAxis(selectedIndex);
 }
 
@@ -3036,6 +3095,13 @@ function easeBreath(t) {
 
 function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATIAL_CAMERA_UP) {
   const token = ++cameraMoveToken;
+  cameraDestination = {
+    token,
+    position: endPosition.clone(),
+    target: endTarget.clone(),
+    up: endUp.clone(),
+    fov: endFov
+  };
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
   const startFov = camera.fov;
@@ -3064,6 +3130,7 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     if (raw < 1) requestAnimationFrame(step);
     else {
       camera.position.copy(endPosition); controls.target.copy(endTarget); camera.up.copy(SPATIAL_CAMERA_UP); camera.fov = endFov; camera.updateProjectionMatrix(); normalizeGroundedCameraView(); camera.lookAt(endTarget); controls.update(); controls.enabled = true;
+      if (cameraDestination?.token === token) cameraDestination = null;
       onComplete?.();
     }
   };
@@ -3143,6 +3210,7 @@ function navigateToOverall(options = {}) {
 
 function navigateToNarrativeEntry(entry, options = {}) {
   if (!entry) return;
+  if (artifactDetailOpen) closeArtifactDetail({ restore: false });
   openNarrativeCard(entry);
   if (entry.mode === "overall") {
     navigateToOverall({
@@ -3160,16 +3228,77 @@ function navigateToNarrativeEntry(entry, options = {}) {
   });
 }
 
+function showNarrativeArtifact(entry, item, options = {}) {
+  if (!entry) return false;
+  const { name, locationKey } = normalizeArtifactLink(item);
+  if (!name) return false;
+  const app = document.querySelector("#app");
+  const detail = document.querySelector("#artifact-detail");
+  if (!app || !detail || app.dataset.view !== "model") return false;
+  activeNarrativeId = entry.id;
+  if (options.trigger instanceof HTMLElement) artifactReturnFocus = options.trigger;
+  if (!artifactDetailOpen) {
+    if (!(options.trigger instanceof HTMLElement)) artifactReturnFocus = null;
+    spatialReturnState = captureSpatialContext();
+    artifactDetailOpen = true;
+    app.classList.add("artifact-detail-open");
+    detail.classList.add("open");
+    detail.setAttribute("aria-hidden", "false");
+    detail.inert = false;
+    closeNarrativeCard();
+    enterArtifactMiniView();
+  }
+  syncNarrativeAxis(entry.cameraIndex, entry.id);
+  const activated = activateArtifactByName(name, {
+    force: true,
+    auto: options.auto,
+    source: options.source || "narrative",
+    locationKey,
+    narrativeId: entry.id
+  });
+  syncNarrativeArtifactBranch(entry);
+  requestAnimationFrame(resize);
+  return activated;
+}
+
+function closeArtifactDetail(options = {}) {
+  if (!artifactDetailOpen) return false;
+  const snapshot = spatialReturnState;
+  const returnFocus = artifactReturnFocus;
+  const app = document.querySelector("#app");
+  const detail = document.querySelector("#artifact-detail");
+  artifactDetailOpen = false;
+  exitArtifactMiniView();
+  app?.classList.remove("artifact-detail-open");
+  detail?.classList.remove("open");
+  detail?.setAttribute("aria-hidden", "true");
+  if (detail) detail.inert = true;
+  if (options.restore !== false) restoreSpatialContext(snapshot);
+  else spatialReturnState = null;
+  artifactReturnFocus = null;
+  syncNarrativeArtifactBranch(narrativeEntryById(activeNarrativeId));
+  syncAutoDemoUi();
+  requestAnimationFrame(() => {
+    resize();
+    if (options.restore === false) return;
+    const fallback = document.querySelector(`.narrative-node[data-narrative-id="${activeNarrativeId}"]`);
+    const focusTarget = returnFocus?.isConnected ? returnFocus : fallback;
+    focusTarget?.focus({ preventScroll: true });
+  });
+  return true;
+}
+
 function captureSpatialContext() {
   let snapshotPosition = camera.position.clone();
   let snapshotTarget = controls.target.clone();
+  let snapshotUp = camera.up.clone();
   let snapshotFov = camera.fov;
-  const pendingPreset = controls.enabled === false ? CAMERA_PRESETS[selectedIndex] : null;
-  if (pendingPreset) {
-    snapshotPosition = new THREE.Vector3(...pendingPreset.position);
-    snapshotTarget = new THREE.Vector3(...pendingPreset.target);
-    snapshotFov = pendingPreset.fov;
-    applyResponsiveShotOffset(snapshotPosition, snapshotTarget);
+  const pendingDestination = controls.enabled === false ? cameraDestination : null;
+  if (pendingDestination) {
+    snapshotPosition = pendingDestination.position.clone();
+    snapshotTarget = pendingDestination.target.clone();
+    snapshotUp = pendingDestination.up.clone();
+    snapshotFov = pendingDestination.fov;
   }
   return {
     selectedIndex,
@@ -3178,7 +3307,7 @@ function captureSpatialContext() {
     activeNarrativeId,
     cameraPosition: snapshotPosition.toArray(),
     cameraTarget: snapshotTarget.toArray(),
-    cameraUp: camera.up.toArray(),
+    cameraUp: snapshotUp.toArray(),
     cameraFov: snapshotFov
   };
 }
@@ -3194,6 +3323,7 @@ function restoreSpatialContext(snapshot = spatialReturnState, options = {}) {
     return;
   }
   cameraMoveToken++;
+  cameraDestination = null;
   controls.enabled = true;
   if (!options.preserveCamera) {
     camera.up.fromArray(snapshot.cameraUp || [0, 0, 1]);
@@ -3204,7 +3334,7 @@ function restoreSpatialContext(snapshot = spatialReturnState, options = {}) {
     camera.lookAt(controls.target);
     controls.update();
   }
-  selectStructure(snapshot.selectedIndex, snapshot.focusIndices);
+  selectStructure(snapshot.selectedIndex, snapshot.focusIndices, snapshot.activeNarrativeId);
   if (snapshot.narrativeCardOpen) {
     const entry = narrativeEntryById(snapshot.activeNarrativeId)
       || narrativeEntryForStructure(snapshot.selectedIndex);
@@ -3223,15 +3353,20 @@ function openEpitaphModal() {
   const modal = document.querySelector("#epitaph-modal");
   if (!modal) return;
   stopAutoDemo();
+  document.querySelector(".model-interface").inert = true;
+  modal.inert = false;
   modal.setAttribute("aria-hidden", "false");
-  modal.querySelector(".epitaph-close")?.focus({ preventScroll: true });
+  setTimeout(() => modal.querySelector(".epitaph-close")?.focus({ preventScroll: true }), 0);
 }
 
 function closeEpitaphModal(restoreFocus = false) {
   const modal = document.querySelector("#epitaph-modal");
   if (!modal || modal.getAttribute("aria-hidden") !== "false") return false;
   modal.setAttribute("aria-hidden", "true");
-  if (restoreFocus && document.querySelector("#app")?.dataset.view === "artifacts") {
+  modal.inert = true;
+  const modelInterface = document.querySelector(".model-interface");
+  if (modelInterface) modelInterface.inert = document.querySelector("#app")?.dataset.view !== "model";
+  if (restoreFocus && artifactDetailOpen) {
     document.querySelector("#artifact-details")?.focus({ preventScroll: true });
   }
   return true;
@@ -3245,7 +3380,7 @@ function clearAutoDemoTimer() {
 
 function syncAutoDemoUi() {
   const app = document.querySelector("#app");
-  const artifactPhase = autoDemoActive && autoDemoPhase === "artifacts";
+  const artifactPhase = autoDemoActive && artifactDetailOpen;
   app?.classList.toggle("auto-demo", autoDemoActive);
   app?.classList.toggle("artifact-auto-demo", artifactPhase);
   document.querySelector(".artifact-playback-status")?.classList.toggle("active", artifactPhase);
@@ -3266,7 +3401,7 @@ function scheduleAutoDemo(delay = AUTO_TIMING.idle) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const view = document.querySelector("#app")?.dataset.view;
   if (!view || view === "home" || isEpitaphModalOpen()) return;
-  autoDemoTimer = setTimeout(() => startAutoDemo(view === "artifacts" ? "artifacts" : "model"), delay);
+  autoDemoTimer = setTimeout(startAutoDemo, delay);
 }
 
 function noteUserActivity() {
@@ -3274,65 +3409,56 @@ function noteUserActivity() {
   scheduleAutoDemo();
 }
 
-function startAutoDemo(phase, event) {
+function buildAutoDemoSequence() {
+  return buildNarrativePlaybackSequence(NARRATIVE_ENTRIES, DEMO_ROUTE);
+}
+
+function startAutoDemo() {
   const app = document.querySelector("#app");
   const view = app?.dataset.view;
   if (!app || view === "home" || isEpitaphModalOpen()) {
     scheduleAutoDemo(5000);
     return;
   }
-  if ((phase || view) === "model" && controls.enabled === false) {
+  if (!artifactDetailOpen && controls.enabled === false) {
     scheduleAutoDemo(2500);
     return;
   }
   clearAutoDemoTimer();
+  if (artifactDetailOpen) closeArtifactDetail({ restore: false });
   autoDemoActive = true;
-  autoDemoPhase = phase || (view === "artifacts" ? "artifacts" : "model");
   autoDemoStep = 0;
-  artifactAutoStep = 0;
   syncAutoDemoUi();
-  const targetView = autoDemoPhase === "artifacts" ? "artifacts" : "model";
-  const changedView = view !== targetView;
-  if (changedView) setView(targetView, event, { source: "auto" });
-  autoDemoTimer = setTimeout(runAutoDemoStep, changedView ? AUTO_TIMING.transition : 0);
+  autoDemoTimer = setTimeout(runAutoDemoStep, 0);
 }
 
 function runAutoDemoStep() {
   if (!autoDemoActive) return;
   autoDemoTimer = 0;
-  if (autoDemoPhase === "model") {
-    if (autoDemoStep >= DEMO_ROUTE.length) {
-      closeNarrativeCard();
-      autoDemoPhase = "artifacts";
-      artifactAutoStep = 0;
-      syncAutoDemoUi();
-      setView("artifacts", null, { source: "auto" });
-      autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.transition);
-      return;
-    }
-    const narrativeId = DEMO_ROUTE[autoDemoStep];
-    autoDemoStep++;
-    navigateToNarrativeEntry(narrativeEntryById(narrativeId), { source: "auto" });
+  const sequence = buildAutoDemoSequence();
+  if (autoDemoStep >= sequence.length) {
+    if (artifactDetailOpen) closeArtifactDetail({ restore: false });
+    closeNarrativeCard();
+    autoDemoStep = 0;
+    spatialReturnState = null;
+    syncAutoDemoUi();
+    navigateToOverall({ auto: true });
+    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.restart);
+    return;
+  }
+  const item = sequence[autoDemoStep++];
+  const entry = narrativeEntryById(item.narrativeId);
+  if (!entry) {
+    autoDemoTimer = setTimeout(runAutoDemoStep, 0);
+    return;
+  }
+  if (item.type === "narrative") {
+    navigateToNarrativeEntry(entry, { source: "auto" });
     autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.model);
     return;
   }
-
-  if (artifactAutoStep >= ARTIFACT_SEQUENCE.length || artifactTourButtons.length === 0) {
-    autoDemoPhase = "model";
-    autoDemoStep = 0;
-    artifactAutoStep = 0;
-    spatialReturnState = null;
-    syncAutoDemoUi();
-    setView("model", null, { source: "auto" }).then(() => {
-      if (!autoDemoActive || autoDemoPhase !== "model") return;
-      navigateToOverall({ auto: true });
-      autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.restart);
-    });
-    return;
-  }
-  const artifactName = ARTIFACT_SEQUENCE[artifactAutoStep];
-  artifactAutoStep++;
-  activateArtifactByName(artifactName, { force: true, auto: true });
+  showNarrativeArtifact(entry, item, { source: "auto", auto: true });
+  syncAutoDemoUi();
   autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.artifact);
 }
 
@@ -3361,107 +3487,22 @@ function applyViewLayerState(view) {
   document.querySelector("#app").dataset.view = view;
 }
 
-function animateSharedSceneMorph(fromView, toView) {
-  if (sceneMorphActive) return sceneMorphPromise;
-  const app = document.querySelector("#app");
-  const host = document.querySelector("#artifact-scene-host");
-  const inset = document.querySelector("#artifact-spatial-inset");
-  const artifactsPage = document.querySelector("#artifacts-page");
-  if (!app || !host || !inset || !artifactsPage) return Promise.resolve(false);
-
-  if (toView === "artifacts") artifactsPage.scrollTo({ top: 0, behavior: "auto" });
-  const startRect = canvas.getBoundingClientRect();
-  const targetRect = toView === "artifacts" ? host.getBoundingClientRect() : app.getBoundingClientRect();
-  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 220 : 980;
-  sceneMorphActive = true;
-  artifactMiniCameraToken++;
-  app.classList.remove("scene-morph-settled");
-  app.classList.add("scene-morphing", `scene-morph-${fromView}-to-${toView}`);
-
-  app.append(canvas);
-  canvas.style.position = "fixed";
-  canvas.style.inset = "auto";
-  canvas.style.left = `${startRect.left}px`;
-  canvas.style.top = `${startRect.top}px`;
-  canvas.style.width = `${startRect.width}px`;
-  canvas.style.height = `${startRect.height}px`;
-  canvas.style.zIndex = "60";
-  canvas.style.transform = "none";
-  canvas.style.transformOrigin = "0 0";
-  canvas.style.pointerEvents = "none";
-  canvas.style.filter = "none";
-  canvas.style.opacity = "1";
-  void canvas.getBoundingClientRect();
-
-  applyViewLayerState(toView);
-  if (toView === "artifacts") enterArtifactMiniView({ deferCanvas: true });
-
-  const animation = canvas.animate([
-    {
-      left: `${startRect.left}px`,
-      top: `${startRect.top}px`,
-      width: `${startRect.width}px`,
-      height: `${startRect.height}px`,
-      borderRadius: fromView === "artifacts" ? "2px" : "0px",
-      boxShadow: fromView === "artifacts" ? "0 18px 42px rgba(58,45,33,.09)" : "0 0 0 rgba(58,45,33,0)"
-    },
-    {
-      left: `${targetRect.left}px`,
-      top: `${targetRect.top}px`,
-      width: `${targetRect.width}px`,
-      height: `${targetRect.height}px`,
-      borderRadius: toView === "artifacts" ? "2px" : "0px",
-      boxShadow: toView === "artifacts" ? "0 18px 42px rgba(58,45,33,.09)" : "0 0 0 rgba(58,45,33,0)"
-    }
-  ], {
-    duration,
-    easing: "cubic-bezier(.72,0,.2,1)",
-    fill: "forwards"
-  });
-
-  sceneMorphPromise = animation.finished.catch(() => {}).then(() => {
-    if (toView === "artifacts") {
-      host.append(canvas);
-    } else {
-      exitArtifactMiniView();
-    }
-    animation.cancel();
-    ["position", "inset", "left", "top", "width", "height", "z-index", "transform-origin", "pointer-events", "filter", "opacity", "border-radius", "box-shadow"].forEach(property => canvas.style.removeProperty(property));
-    canvas.style.transform = toView === "artifacts" ? "none" : "";
-    app.classList.remove("scene-morphing", `scene-morph-${fromView}-to-${toView}`);
-    app.classList.add("scene-morph-settled");
-    sceneMorphActive = false;
-    resize();
-    return true;
-  });
-  return sceneMorphPromise;
-}
-
-function setView(view, event, options = {}) {
-  if (!["home", "model", "artifacts"].includes(view)) return Promise.resolve(false);
+function setView(view, event) {
+  if (!["home", "model"].includes(view)) return Promise.resolve(false);
   const app = document.querySelector("#app");
   const currentView = app?.dataset.view;
-  if (view === currentView) return sceneMorphActive ? sceneMorphPromise : Promise.resolve(false);
-  const sharedSceneTransition = (currentView === "model" && view === "artifacts")
-    || (currentView === "artifacts" && view === "model");
-  if (view !== "model") {
+  if (view === currentView) return Promise.resolve(false);
+  if (view === "home") {
+    closeArtifactDetail({ restore: false });
     if (controls.enabled === false) {
       cameraMoveToken++;
       controls.enabled = true;
     }
     closeNarrativeCard();
+    closeEpitaphModal();
   }
-  if (view !== "artifacts") closeEpitaphModal();
-  if (sharedSceneTransition) return animateSharedSceneMorph(currentView, view);
-
   playTransition(event);
-  if (view !== "artifacts") exitArtifactMiniView();
   applyViewLayerState(view);
-  if (view === "artifacts") {
-    enterArtifactMiniView();
-    document.querySelector("#artifacts-page")?.scrollTo({ top: 0, behavior: "auto" });
-  }
-  app?.classList.remove("scene-morph-settled");
   return Promise.resolve(true);
 }
 
@@ -3472,6 +3513,8 @@ function setupInterface() {
   const modelInitiallyActive = app.dataset.view === "model";
   modelInterface.setAttribute("aria-hidden", String(!modelInitiallyActive));
   modelInterface.inert = !modelInitiallyActive;
+  const artifactDetail = document.querySelector("#artifact-detail");
+  if (artifactDetail) artifactDetail.inert = true;
   if (!veil.children.length) {
     for (let i = 0; i < 30; i++) {
       const particle = document.createElement("b");
@@ -3518,32 +3561,37 @@ function setupInterface() {
     image.src = src;
     image.decode?.().catch(() => {});
   });
-  const artifactButtons = [...document.querySelectorAll(".artifact-list button")];
   const artifactProgress = document.querySelector("#artifact-progress");
   const artifactPlaybackStatus = document.querySelector(".artifact-playback-status");
   const artifactDetails = document.querySelector("#artifact-details");
-  artifactTourButtons = artifactButtons;
-  const activateArtifact = (button, options = {}) => {
-    if (!button) return false;
-    const artifactName = button.dataset.artifact;
-    activeArtifactLocationKey = options.locationKey || "";
-    if (artifactMiniState && options.focusCamera !== false) focusArtifactTopDown(artifactName, activeArtifactLocationKey);
-    if (activeArtifactName === artifactName && !options.force) return false;
-    activeArtifactName = artifactName;
+  const activateArtifact = (artifactName, options = {}) => {
     const artifact = artifactCatalog[artifactName];
+    if (!artifact) return false;
+    const previousLocationKey = activeArtifactLocationKey;
+    activeArtifactLocationKey = options.locationKey || "";
+    const unchanged = activeArtifactName === artifactName && previousLocationKey === activeArtifactLocationKey;
+    activeArtifactName = artifactName;
     updateArtifactSpatialLocation(activeArtifactName, activeArtifactLocationKey);
-    const artifactIndex = Math.max(0, artifactButtons.indexOf(button));
-    artifactButtons.forEach(item => {
-      const active = item === button;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-current", active ? "true" : "false");
+    if (artifactMiniState && options.focusCamera !== false) focusArtifactTopDown(artifactName, activeArtifactLocationKey);
+    if (unchanged && !options.force) return false;
+    const entry = narrativeEntryById(options.narrativeId || activeNarrativeId);
+    const links = artifactLinksForEntry(entry);
+    const artifactIndex = Math.max(0, links.findIndex(item => item.name === artifactName && item.locationKey === activeArtifactLocationKey));
+    const artifactTotal = Math.max(1, links.length);
+    document.querySelectorAll(".narrative-artifact-option").forEach(button => {
+      const active = artifactDetailOpen
+        && button.dataset.narrativeId === activeNarrativeId
+        && button.dataset.artifact === artifactName
+        && (button.dataset.locationKey || "") === activeArtifactLocationKey;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-current", active ? "true" : "false");
     });
-    document.querySelector(".artifact-copy h2 span").textContent = button.dataset.artifact;
+    document.querySelector("#artifact-name-cn").textContent = artifactName;
     document.querySelector("#artifact-name-en").textContent = artifact?.en || "SELECTED OBJECT";
-    document.querySelector(".artifact-copy>p:not(.artifact-kicker)").textContent = artifact?.description || `${button.dataset.artifact}的详细考古信息将依据发掘简报继续补充。`;
-    artifactProgress.textContent = `${String(artifactIndex + 1).padStart(2, "0")} / ${String(artifactButtons.length).padStart(2, "0")}`;
-    artifactPlaybackStatus.style.setProperty("--progress", `${(artifactIndex + 1) / artifactButtons.length * 100}%`);
-    artifactDetails.hidden = button.dataset.artifact !== "墓志";
+    document.querySelector("#artifact-description").textContent = artifact?.description || `${artifactName}的详细考古信息将依据发掘简报继续补充。`;
+    artifactProgress.textContent = `${String(artifactIndex + 1).padStart(2, "0")} / ${String(artifactTotal).padStart(2, "0")}`;
+    artifactPlaybackStatus.style.setProperty("--progress", `${(artifactIndex + 1) / artifactTotal * 100}%`);
+    artifactDetails.hidden = artifactName !== "墓志";
     const asset = artifact?.asset;
     const modelId = artifact?.modelId;
     stage.classList.toggle("has-image", Boolean(asset));
@@ -3556,44 +3604,24 @@ function setupInterface() {
     stage.style.setProperty("--artifact-y", display.y || "0%");
     if (asset) {
       artifactImage.src = asset;
-      artifactImage.alt = `${button.dataset.artifact}考古文物图像`;
+      artifactImage.alt = `${artifactName}考古文物图像`;
     }
     stage.classList.remove("swap");
     requestAnimationFrame(() => stage.classList.add("swap"));
-    if (options.auto || options.source === "narrative") {
-      button.scrollIntoView({ block: "nearest", inline: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    }
+    const activeBranchButton = document.querySelector(".narrative-artifact-option.active");
+    if ((options.auto || options.source === "narrative") && activeBranchButton) activeBranchButton.scrollIntoView({ block: "nearest", inline: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     return true;
   };
   activateArtifactByName = (name, options = {}) => {
-    const button = artifactButtons.find(item => item.dataset.artifact === name);
-    return activateArtifact(button, { ...options, source: options.source || "linked" });
+    return activateArtifact(name, { ...options, source: options.source || "linked" });
   };
-  artifactButtons.forEach(button => {
-    button.addEventListener("pointerenter", () => {
-      noteUserActivity();
-      activateArtifact(button);
-    });
-    button.addEventListener("click", () => {
-      noteUserActivity();
-      activateArtifact(button, { force: true });
-    });
-  });
-  activateArtifact(document.querySelector(".artifact-list button.active") || artifactButtons[0], { force: true });
+  activateArtifact(ARTIFACT_SEQUENCE[0], { force: true, focusCamera: false });
 
-  document.querySelector("#start-artifacts-playback").addEventListener("click", event => {
+  document.querySelector("#artifact-detail-close").addEventListener("click", event => {
     event.stopPropagation();
     stopAutoDemo();
-    spatialReturnState = captureSpatialContext();
-    startAutoDemo("artifacts", event);
-  });
-  document.querySelector("#return-space").addEventListener("click", event => {
-    event.stopPropagation();
-    stopAutoDemo();
-    setView("model", event, { source: "manual" }).then(() => {
-      restoreSpatialContext(spatialReturnState, { preserveCamera: true });
-      scheduleAutoDemo();
-    });
+    closeArtifactDetail();
+    scheduleAutoDemo();
   });
   artifactDetails.addEventListener("click", event => {
     event.stopPropagation();
@@ -3607,9 +3635,8 @@ function setupInterface() {
   document.addEventListener("pointermove", event => {
     noteUserActivity();
     if (!canParallax) return;
-    if (sceneMorphActive) return;
     pointer.x = event.clientX / innerWidth - .5; pointer.y = event.clientY / innerHeight - .5;
-    canvas.style.transform = app.dataset.view === "artifacts" ? "none" : `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
+    canvas.style.transform = artifactDetailOpen ? "none" : `translate3d(${pointer.x * 3}px,${pointer.y * 2}px,0)`;
     stage.style.transform = `rotateY(${pointer.x * 5}deg) rotateX(${-pointer.y * 3}deg)`;
   });
   ["pointerdown", "wheel", "touchstart"].forEach(type => document.addEventListener(type, noteUserActivity, { passive: true }));
@@ -3618,18 +3645,17 @@ function setupInterface() {
     noteUserActivity();
     if (event.key === "Escape") {
       if (closeEpitaphModal(true)) { scheduleAutoDemo(); return; }
+      if (closeArtifactDetail()) { scheduleAutoDemo(); return; }
       if (closeNarrativeCard()) return;
-      if (app.dataset.view === "artifacts") {
-        setView("model", event, { source: "keyboard" }).then(() => {
-          restoreSpatialContext(spatialReturnState, { preserveCamera: true });
-          scheduleAutoDemo();
-        });
-        return;
-      }
       if (app.dataset.view === "model") navigateToOverall();
       return;
     }
-    if (app.dataset.view !== "model") return;
+    if (isEpitaphModalOpen() && event.key === "Tab") {
+      event.preventDefault();
+      document.querySelector("#epitaph-modal .epitaph-close")?.focus({ preventScroll: true });
+      return;
+    }
+    if (app.dataset.view !== "model" || artifactDetailOpen) return;
     const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }
     if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
@@ -3696,7 +3722,6 @@ async function init() {
 }
 
 function resize() {
-  if (sceneMorphActive) return;
   const { clientWidth, clientHeight } = canvas;
   if (!clientWidth || !clientHeight) return;
   if (canvas.width !== clientWidth * renderer.getPixelRatio() || canvas.height !== clientHeight * renderer.getPixelRatio()) {

@@ -1,4 +1,12 @@
 import fs from "node:fs";
+import assert from "node:assert/strict";
+import {
+  ARTIFACT_SEQUENCE,
+  DEMO_ROUTE,
+  NARRATIVE_ARTIFACTS,
+  buildNarrativePlaybackSequence,
+  normalizeArtifactLink
+} from "../src/narrative-playback.js";
 
 const html = fs.readFileSync("index.html", "utf8");
 const main = fs.readFileSync("src/main.js", "utf8");
@@ -10,28 +18,33 @@ const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-prese
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
+const narrativeRoute = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
 
-const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
+const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
-const removedIds = ["menu-trigger", "menu-page", "data-page", "artifact-popover"];
+const removedIds = ["menu-trigger", "menu-page", "data-page", "artifact-popover", "artifacts-page", "narrative-artifacts", "start-artifacts-playback", "return-space"];
 for (const id of removedIds) {
   if (html.includes(`id="${id}"`)) throw new Error(`Obsolete interface layer must be removed: #${id}`);
 }
 
-const artifactNav = html.match(/<nav\b[^>]*class="[^"]*\bartifact-list\b[^"]*"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
-if (!artifactNav) throw new Error("Artifact navigation is missing");
-const artifactButtonOrder = [...artifactNav.matchAll(/<button\b[^>]*data-artifact="([^"]+)"[^>]*>/g)].map(match => match[1]);
-if (JSON.stringify(artifactButtonOrder) !== JSON.stringify(artifactSequence)) {
-  throw new Error(`Artifact navigation order mismatch: ${artifactButtonOrder.join(" -> ")}`);
+const hasLegacyArtifactList = [...html.matchAll(/class="([^"]*)"/g)]
+  .some(match => match[1].split(/\s+/).includes("artifact-list"));
+if (hasLegacyArtifactList || html.includes("02 / ARTIFACTS") || html.includes("返回空间")) {
+  throw new Error("The obsolete second-act navigation must not remain in the page");
 }
 
-const artifactSequenceSource = main.match(/const\s+ARTIFACT_SEQUENCE\s*=\s*\[([\s\S]*?)\]\s*;/)?.[1];
-if (!artifactSequenceSource) throw new Error("Explicit ARTIFACT_SEQUENCE is missing");
-const runtimeArtifactSequence = [...artifactSequenceSource.matchAll(/["'`]([^"'`]+)["'`]/g)].map(match => match[1]);
-if (JSON.stringify(runtimeArtifactSequence) !== JSON.stringify(artifactSequence)) {
-  throw new Error(`Runtime artifact sequence mismatch: ${runtimeArtifactSequence.join(" -> ")}`);
+assert.deepEqual(ARTIFACT_SEQUENCE, artifactSequence, "Runtime artifact sequence is out of order");
+
+const branchIndex = html.indexOf('id="narrative-artifact-branch"');
+const narrativeCardStart = html.indexOf('<article id="narrative-card"');
+const narrativeCardEnd = html.indexOf("</article>", narrativeCardStart);
+if (branchIndex < 0 || narrativeCardStart < 0 || (branchIndex > narrativeCardStart && branchIndex < narrativeCardEnd)) {
+  throw new Error("The artifact branch must be outside the narrative summary card");
+}
+if (!/<aside id="report-narrative"[\s\S]*?<div class="narrative-rail">[\s\S]*?<aside id="narrative-artifact-branch"/.test(html)) {
+  throw new Error("The artifact branch must be a sibling of the primary narrative rail");
 }
 
 if (!/<main\b[^>]*id="app"[^>]*data-view="home"/.test(html)) {
@@ -65,12 +78,7 @@ for (const vector of viewVectors.slice(1)) {
 if (JSON.stringify(cameras.route) !== JSON.stringify([8, 6, 4, 3, 11, 1, 0, 9, 10])) {
   throw new Error("Competition camera route is missing or out of sync");
 }
-const narrativeRoute = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
-const narrativeRouteSource = main.match(/const\s+DEMO_ROUTE\s*=\s*\[([\s\S]*?)\]\s*;/)?.[1] || "";
-const runtimeNarrativeRoute = [...narrativeRouteSource.matchAll(/["'`]([^"'`]+)["'`]/g)].map(match => match[1]);
-if (JSON.stringify(runtimeNarrativeRoute) !== JSON.stringify(narrativeRoute)) {
-  throw new Error(`Narrative playback route mismatch: ${runtimeNarrativeRoute.join(" -> ")}`);
-}
+assert.deepEqual(DEMO_ROUTE, narrativeRoute, "Narrative playback route is out of order");
 if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeAxis") || !main.includes("syncNarrativeAxis")) {
   throw new Error("Excavation-brief narrative axis is missing");
 }
@@ -110,39 +118,27 @@ for (const marker of ["NARRATIVE_LAYOUT_STORAGE_KEY", "localStorage.setItem", "s
   if (!main.includes(marker)) throw new Error(`Narrative card layout feature is missing: ${marker}`);
 }
 
-for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState", "activateArtifactByName", '#narrative-artifacts', '#start-artifacts-playback', '#return-space', '#artifact-progress']) {
-  if (!main.includes(marker)) throw new Error(`Missing model/artifact linkage marker: ${marker}`);
+for (const marker of ["artifactDetailOpen", "spatialReturnState", "activateArtifactByName", "showNarrativeArtifact", "closeArtifactDetail", "syncNarrativeArtifactBranch", '#narrative-artifact-branch', '#artifact-progress']) {
+  if (!main.includes(marker)) throw new Error(`Missing merged narrative/artifact marker: ${marker}`);
 }
 for (const marker of ["ARTIFACT_SPATIAL_LOCATIONS", "createArtifactLocationLayer", "updateArtifactSpatialLocation", "focusArtifactTopDown", "enterArtifactMiniView", "exitArtifactMiniView", "artifactLocationRegion"]) {
   if (!main.includes(marker)) throw new Error(`Missing artifact spatial-location feature: ${marker}`);
 }
-for (const marker of ["sceneMorphActive", "animateSharedSceneMorph", "applyViewLayerState", "canvas.animate", "scene-morphing"]) {
-  if (!main.includes(marker) && !style.includes(marker)) throw new Error(`Missing shared-scene morph transition: ${marker}`);
-}
-if (!main.includes("cameraUp: camera.up.toArray()") || !main.includes("camera.up.fromArray(snapshot.cameraUp || [0, 0, 1])")) {
-  throw new Error("Returning from artifacts must restore the complete spatial camera orientation");
-}
-if (!main.includes('restoreSpatialContext(spatialReturnState, { preserveCamera: true })')) {
-  throw new Error("Returning from artifacts must initially preserve the artifact camera");
+if (!main.includes("cameraUp: snapshotUp.toArray()") || !main.includes("camera.up.fromArray(snapshot.cameraUp || [0, 0, 1])")) {
+  throw new Error("Closing an inline artifact detail must restore the complete spatial camera orientation");
 }
 if (!main.includes("const SPATIAL_CAMERA_UP = new THREE.Vector3(0, 0, 1)") || !main.includes("camera.up.lerpVectors(startUp, endUp, t).normalize()") || !main.includes("viewUp = SPATIAL_CAMERA_UP")) {
-  throw new Error("First-act camera navigation must smoothly restore the canonical spatial up axis");
-}
-if (!style.includes("#app.scene-morphing #scene") || !style.includes("will-change:left,top,width,height")) {
-  throw new Error("Shared WebGL canvas has no continuous layout-transition styling");
-}
-if (/scene-morphing #scene\{[^}]*inset:auto!important/.test(style)) {
-  throw new Error("Morph styling must not override the animated left/top coordinates");
-}
-if (!/function resize\(\)\s*\{\s*if \(sceneMorphActive\) return;/.test(main)) {
-  throw new Error("Renderer resizing must stay frozen while the shared scene canvas is moving");
+  throw new Error("Spatial camera navigation must smoothly restore the canonical up axis");
 }
 if (!main.includes("new THREE.Vector3(0, 0, 6.2)") || !main.includes("const endUp = new THREE.Vector3(0, 1, 0)")) {
-  throw new Error("Artifact hover camera must move vertically above the selected burial plane");
+  throw new Error("Artifact detail camera must move vertically above the selected burial plane");
 }
-const artifactHoverWindow = main.match(/button\.addEventListener\(["']pointerenter["'][\s\S]{0,300}/)?.[0] || "";
-if (!artifactHoverWindow.includes("activateArtifact(button)")) {
-  throw new Error("Artifact hover must activate the selected object and its top-down camera");
+const branchBuilderSource = main.match(/function syncNarrativeArtifactBranch\(entry\) \{[\s\S]*?\n\}\n\nfunction renderNarrativeCard/)?.[0] || "";
+if (!branchBuilderSource.includes('button.className = "narrative-artifact-option"')
+  || !branchBuilderSource.includes('button.addEventListener("click", event =>')
+  || !branchBuilderSource.includes("showNarrativeArtifact(entry, { name, locationKey }")
+  || !branchBuilderSource.includes("trigger: event.currentTarget")) {
+  throw new Error("Narrative artifact options must activate the inline object detail");
 }
 if ((main.match(/new THREE\.WebGLRenderer/g) || []).length !== 1) {
   throw new Error("Artifact spatial inset must reuse the existing renderer instead of loading a second WebGL scene");
@@ -155,53 +151,61 @@ for (const artifactName of artifactSequence) {
 if (!main.includes("host.append(canvas)") || !main.includes("sceneHomeParent.insertBefore(canvas, sceneHomeNextSibling)")) {
   throw new Error("The shared scene canvas must move into and out of the artifact spatial inset");
 }
-if (!main.includes('autoDemoPhase = "artifacts"') || !main.includes('autoDemoPhase = "model"')) {
-  throw new Error("Automatic playback must expose explicit model and artifacts phases");
+for (const obsolete of ["autoDemoPhase", "artifactAutoStep", "animateSharedSceneMorph", "#start-artifacts-playback", "#return-space"]) {
+  if (main.includes(obsolete)) throw new Error(`Obsolete two-act logic must be removed: ${obsolete}`);
 }
-if (main.includes("DEMO_ROUTE[autoDemoStep % DEMO_ROUTE.length]")) {
-  throw new Error("Spatial playback must cross into artifacts instead of looping with modulo");
+if (/setView\s*\(\s*["']artifacts["']/.test(main)) {
+  throw new Error("Inline artifact playback must never switch to an artifacts view");
 }
-
-const spatialBoundary = main.match(/autoDemoStep\s*>=\s*DEMO_ROUTE\.length/);
-if (!spatialBoundary) throw new Error("Spatial playback has no explicit end-of-route boundary");
-const spatialBoundaryWindow = main.slice(spatialBoundary.index, spatialBoundary.index + 1100);
-if (!/autoDemoPhase\s*=\s*["']artifacts["']/.test(spatialBoundaryWindow) || !/setView\(["']artifacts["']/.test(spatialBoundaryWindow)) {
-  throw new Error("End of spatial playback must switch the phase and view to artifacts");
-}
-
-const artifactBoundary = main.match(/artifactAutoStep\s*>=\s*ARTIFACT_SEQUENCE\.length/);
-if (!artifactBoundary) throw new Error("Artifact playback has no explicit end-of-sequence boundary");
-const artifactBoundaryWindow = main.slice(artifactBoundary.index, artifactBoundary.index + 1100);
-if (!/autoDemoPhase\s*=\s*["']model["']/.test(artifactBoundaryWindow) || !/setView\(["']model["']/.test(artifactBoundaryWindow)) {
-  throw new Error("End of artifact playback must return to the spatial phase and model view");
-}
-
-const directArtifactControl = main.match(/querySelector\(["']#start-artifacts-playback["']\)([\s\S]{0,700})/);
-if (!directArtifactControl || !/addEventListener\(["']click["']/.test(directArtifactControl[1]) || !/artifact/i.test(directArtifactControl[1])) {
-  throw new Error("The direct artifact-playback control is not wired to the artifact phase");
-}
-const returnSpaceControl = main.match(/querySelector\(["']#return-space["']\)([\s\S]{0,900})/);
-if (!returnSpaceControl || !/addEventListener\(["']click["']/.test(returnSpaceControl[1]) || !/(spatialReturnState|setView\(["']model["'])/.test(returnSpaceControl[1])) {
-  throw new Error("The artifact view has no wired return-to-space control");
+for (const marker of ["function buildAutoDemoSequence()", "buildNarrativePlaybackSequence(NARRATIVE_ENTRIES, DEMO_ROUTE)", 'if (item.type === "narrative")', "showNarrativeArtifact(entry, item"] ) {
+  if (!main.includes(marker)) throw new Error(`Merged in-narrative playback is missing: ${marker}`);
 }
 if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeId") || !main.includes("spatialReturnState = captureSpatialContext()")) {
-  throw new Error("Narrative-to-artifact navigation must preserve the spatial and narrative return context");
+  throw new Error("Inline artifact navigation must preserve the spatial and narrative return context");
 }
-if (!main.includes('artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")') || !main.includes('artifacts: ["墓志"]') || !main.includes("artifacts: NICHE_ARTIFACT_LINKS") || !main.includes('document.querySelector("#narrative-artifacts")')) {
-  throw new Error("Narrative entries must expose linked artifact terms in the narrative card");
+if (!main.includes("artifacts: NARRATIVE_ARTIFACTS.niches")
+  || !main.includes("artifacts: NARRATIVE_ARTIFACTS.chamber")
+  || !main.includes("artifacts: NARRATIVE_ARTIFACTS.epitaph")) {
+  throw new Error("Narrative entries must expose their own ordered artifact branches");
 }
-for (const name of ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"]) {
-  if (!main.includes(`"niches:${name}"`) || !html.includes(`data-artifact="${name}"`)) {
-    throw new Error(`Missing contextual niche artifact navigation for ${name}`);
-  }
+if (main.includes('#narrative-artifacts') || /id="narrative-artifacts"/.test(html)) {
+  throw new Error("Artifact links must not be rendered inside the narrative summary card");
 }
+const expectedNarrativeArtifacts = {
+  hongduyuan: [],
+  ramp: [],
+  "shaft-sequence": [],
+  niches: ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"]
+    .map(name => ({ name, locationKey: `niches:${name}` })),
+  threshold: [],
+  chamber: artifactSequence.filter(name => name !== "墓志").map(name => ({ name, locationKey: "" })),
+  epitaph: [{ name: "墓志", locationKey: "" }],
+  theft: []
+};
+const runtimeNarrativeArtifacts = Object.fromEntries(narrativeRoute.map(id => [
+  id,
+  NARRATIVE_ARTIFACTS[id].map(normalizeArtifactLink)
+]));
+assert.deepEqual(runtimeNarrativeArtifacts, expectedNarrativeArtifacts, "Per-chapter artifact branches are incorrect");
+
+const playbackEntries = narrativeRoute.map(id => ({ id, artifacts: NARRATIVE_ARTIFACTS[id] }));
+const expectedPlayback = narrativeRoute.flatMap(narrativeId => [
+  { type: "narrative", narrativeId },
+  ...expectedNarrativeArtifacts[narrativeId].map(link => ({ type: "artifact", narrativeId, ...link }))
+]);
+const runtimePlayback = buildNarrativePlaybackSequence(playbackEntries);
+assert.deepEqual(runtimePlayback, expectedPlayback, "Playback must show each chapter summary before its ordered artifacts");
+assert.equal(runtimePlayback.length, 26, "Merged playback should contain 8 summaries and 18 artifact steps");
 for (const [name, modelId] of [["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]]) {
   if (!main.includes(`"${name}": { en:`) || !main.includes(`modelId:"${modelId}"`)) {
-    throw new Error(`Second-act GLB preview is missing for ${name}`);
+    throw new Error(`Inline GLB preview is missing for ${name}`);
   }
 }
 if (!main.includes("createArtifactStageViewer") || !main.includes("readRenderTargetPixels")) {
-  throw new Error("Second-act artifact model preview renderer is missing");
+  throw new Error("Inline artifact model preview renderer is missing");
+}
+for (const marker of [".narrative-artifact-branch", ".narrative-artifact-option.active", ".narrative-artifact-detail", "#app.artifact-detail-open #artifact-scene-host #scene"]) {
+  if (!style.includes(marker)) throw new Error(`Merged artifact layout styling is missing: ${marker}`);
 }
 const nicheModelByType = new Map([
   ["骑马俑", "lu_32"], ["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]
@@ -228,8 +232,8 @@ if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
 if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor") || !main.includes("narrativeFactor")) {
   throw new Error("Responsive close-up safe-area compensation is missing");
 }
-if (!main.includes("navigateToNarrativeEntry(narrativeEntryById(narrativeId), { source: \"auto\" })")) {
-  throw new Error("Automatic camera demo must reveal the narrative card");
+if (!main.includes('navigateToNarrativeEntry(entry, { source: "auto" })')) {
+  throw new Error("Automatic playback must reveal each narrative summary before its artifacts");
 }
 if (!main.includes("new THREE.Vector3(-radius * .85, radius * 1.25, radius * .7)")) {
   throw new Error("Overall camera must keep the chamber end on screen-left");
@@ -262,7 +266,7 @@ for (const modelId of overviewModels) {
 if (!main.includes("createWestNicheInterior") || !main.includes("PDF fig.6") || !main.includes("12: { position:")) {
   throw new Error("West niche reconstruction, evidence note or frontal camera is missing");
 }
-if (!main.includes("Only the two true ends are closed") || !main.includes("Internal geometry partitions stay hidden")) {
+if (!main.includes("buildContinuousVolumeLayer") || !main.includes('mesh.name = "single-continuous-npr-depth-body"')) {
   throw new Error("Continuous overall shell invariant is missing");
 }
 for (let index = 0; index < geometry.geometries.length; index++) {
@@ -275,4 +279,4 @@ for (const asset of artifactAssets) {
   if (!fs.existsSync(asset) || fs.statSync(asset).size < 20_000) throw new Error(`Missing or invalid archaeological artifact asset: ${asset}`);
 }
 
-console.log(`VERIFY_OK: ${geometry.geometries.length} geometries, ${vertexCount} vertices, ${edgeCount} edges, ${cameras.presets.length} camera nodes, ${artifactSequence.length} linked artifacts, two-phase playback.`);
+console.log(`VERIFY_OK: ${geometry.geometries.length} geometries, ${vertexCount} vertices, ${edgeCount} edges, ${cameras.presets.length} camera nodes, ${artifactSequence.length} linked artifacts, merged narrative playback.`);

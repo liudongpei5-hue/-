@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "verify": "node --check src/main.js && node scripts/verify.mjs"
+    "verify": "node --check src/main.js && node --check src/narrative-playback.js && node scripts/verify.mjs"
   },
   "dependencies": {
     "three": "^0.178.0"
