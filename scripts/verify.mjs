@@ -2,10 +2,12 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import {
   ARTIFACT_SEQUENCE,
+  CHAMBER_AUTOPLAY_EXCLUSIONS,
   DEMO_ROUTE,
   NARRATIVE_ARTIFACTS,
   buildNarrativePlaybackSequence,
-  normalizeArtifactLink
+  normalizeArtifactLink,
+  playbackResumeIndex
 } from "../src/narrative-playback.js";
 
 const html = fs.readFileSync("index.html", "utf8");
@@ -157,7 +159,7 @@ for (const obsolete of ["autoDemoPhase", "artifactAutoStep", "animateSharedScene
 if (/setView\s*\(\s*["']artifacts["']/.test(main)) {
   throw new Error("Inline artifact playback must never switch to an artifacts view");
 }
-for (const marker of ["function buildAutoDemoSequence()", "buildNarrativePlaybackSequence(NARRATIVE_ENTRIES, DEMO_ROUTE)", 'if (item.type === "narrative")', "showNarrativeArtifact(entry, item"] ) {
+for (const marker of ["function buildAutoDemoSequence()", "buildNarrativePlaybackSequence(NARRATIVE_ENTRIES, DEMO_ROUTE)", "rememberPlaybackPosition", "playbackResumeIndex", "keepCurrentDetail", 'if (item.type === "narrative")', 'item.type === "epitaph-open"', 'item.type === "epitaph-close"', "openEpitaphModal({ auto: true })", "showNarrativeArtifact(entry, item"] ) {
   if (!main.includes(marker)) throw new Error(`Merged in-narrative playback is missing: ${marker}`);
 }
 if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeId") || !main.includes("spatialReturnState = captureSpatialContext()")) {
@@ -189,13 +191,62 @@ const runtimeNarrativeArtifacts = Object.fromEntries(narrativeRoute.map(id => [
 assert.deepEqual(runtimeNarrativeArtifacts, expectedNarrativeArtifacts, "Per-chapter artifact branches are incorrect");
 
 const playbackEntries = narrativeRoute.map(id => ({ id, artifacts: NARRATIVE_ARTIFACTS[id] }));
-const expectedPlayback = narrativeRoute.flatMap(narrativeId => [
-  { type: "narrative", narrativeId },
-  ...expectedNarrativeArtifacts[narrativeId].map(link => ({ type: "artifact", narrativeId, ...link }))
-]);
+const expectedPlayback = narrativeRoute.flatMap(narrativeId => {
+  const steps = [{ type: "narrative", narrativeId }];
+  expectedNarrativeArtifacts[narrativeId]
+    .filter(link => narrativeId !== "chamber" || !CHAMBER_AUTOPLAY_EXCLUSIONS.includes(link.name))
+    .forEach(link => {
+    steps.push({ type: "artifact", narrativeId, ...link });
+    if (narrativeId === "epitaph" && link.name === "墓志") {
+      steps.push(
+        { type: "epitaph-open", narrativeId },
+        { type: "epitaph-close", narrativeId }
+      );
+    }
+    });
+  return steps;
+});
 const runtimePlayback = buildNarrativePlaybackSequence(playbackEntries);
 assert.deepEqual(runtimePlayback, expectedPlayback, "Playback must show each chapter summary before its ordered artifacts");
-assert.equal(runtimePlayback.length, 26, "Merged playback should contain 8 summaries and 18 artifact steps");
+assert.equal(runtimePlayback.length, 23, "Merged playback should contain 8 summaries, 13 non-repeated artifacts and 2 epitaph modal steps");
+
+assert.deepEqual(
+  runtimePlayback.filter(step => step.type === "artifact" && step.narrativeId === "chamber").map(step => step.name),
+  ["镇墓兽", "镇墓武士俑", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵"],
+  "Chamber autoplay must skip artifacts already introduced in the niches"
+);
+
+const stepAtResume = currentStep => runtimePlayback[playbackResumeIndex(runtimePlayback, currentStep)];
+assert.deepEqual(
+  stepAtResume({ type: "narrative", narrativeId: "niches" }),
+  { type: "artifact", narrativeId: "niches", name: "骑马俑", locationKey: "niches:骑马俑" },
+  "Playback must continue with the first artifact after a selected chapter"
+);
+assert.deepEqual(
+  stepAtResume({ type: "artifact", narrativeId: "niches", name: "风帽俑", locationKey: "niches:风帽俑" }),
+  { type: "artifact", narrativeId: "niches", name: "笼冠俑", locationKey: "niches:笼冠俑" },
+  "Playback must continue with the artifact after the manually selected object"
+);
+assert.deepEqual(
+  stepAtResume({ type: "artifact", narrativeId: "chamber", name: "骑马俑", locationKey: "" }),
+  { type: "narrative", narrativeId: "epitaph" },
+  "A manually selected duplicate chamber artifact must resume at the next chapter"
+);
+assert.deepEqual(
+  stepAtResume({ type: "artifact", narrativeId: "epitaph", name: "墓志", locationKey: "" }),
+  { type: "epitaph-open", narrativeId: "epitaph" },
+  "The epitaph artifact must be followed by opening the full inscription"
+);
+assert.deepEqual(
+  stepAtResume({ type: "epitaph-open", narrativeId: "epitaph" }),
+  { type: "epitaph-close", narrativeId: "epitaph" },
+  "The full inscription must close automatically after its dwell"
+);
+assert.deepEqual(
+  stepAtResume({ type: "epitaph-close", narrativeId: "epitaph" }),
+  { type: "narrative", narrativeId: "theft" },
+  "Playback must continue to the next chapter after closing the epitaph"
+);
 for (const [name, modelId] of [["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]]) {
   if (!main.includes(`"${name}": { en:`) || !main.includes(`modelId:"${modelId}"`)) {
     throw new Error(`Inline GLB preview is missing for ${name}`);

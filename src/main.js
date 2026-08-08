@@ -11,7 +11,8 @@ import {
   NARRATIVE_ARTIFACTS,
   artifactLinksForEntry,
   buildNarrativePlaybackSequence,
-  normalizeArtifactLink
+  normalizeArtifactLink,
+  playbackResumeIndex
 } from "./narrative-playback.js";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
@@ -433,6 +434,7 @@ const ARTIFACT_CONTEXT_LOCATIONS = {
 const AUTO_TIMING = {
   model: 8200,
   artifact: 4800,
+  epitaph: 6500,
   transition: 1050,
   restart: 2200,
   idle: 9000
@@ -2762,6 +2764,7 @@ function setupNarrativeCardDragging() {
       || event.target.closest("button,a,input,textarea,select,[contenteditable='true']")) return;
     event.preventDefault();
     event.stopPropagation();
+    rememberPlaybackPosition();
     stopAutoDemo();
     const rect = card.getBoundingClientRect();
     card.style.left = `${rect.left}px`;
@@ -2853,12 +2856,11 @@ function syncNarrativeArtifactBranch(entry) {
       button.setAttribute("aria-label", `${entry.name}相关器物：${name}${locationKey ? "，壁龛点位" : ""}`);
       button.addEventListener("click", event => {
         event.stopPropagation();
-        stopAutoDemo();
         showNarrativeArtifact(entry, { name, locationKey }, {
           source: "narrative",
           trigger: event.currentTarget
         });
-        scheduleAutoDemo();
+        noteUserActivity();
       });
       item.append(button);
       list.append(item);
@@ -2954,8 +2956,8 @@ function setupNarrativeAxis() {
     button.innerHTML = `<em>${entry.no}</em><span><b>${entry.name}</b><small>${entry.title}</small></span>`;
     button.addEventListener("click", event => {
       event.stopPropagation();
-      noteUserActivity();
       navigateToNarrativeEntry(entry, { source: "narrative" });
+      noteUserActivity();
     });
     item.append(button);
     list.append(item);
@@ -3046,7 +3048,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
 function buildControls(data) {
   const hotspots = document.querySelector("#structure-hotspots");
   const overallButton = document.querySelector(".structure-overall");
-  overallButton.addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
+  overallButton.addEventListener("click", () => { navigateToOverall(); noteUserActivity(); });
   STRUCTURE_ORDER.forEach(index => {
     const placement = PLAN_HOTSPOTS.get(index);
     if (!placement) return;
@@ -3082,10 +3084,10 @@ function buildControls(data) {
     const text = document.createElement("span");
     text.textContent = displayLabel;
     button.append(text);
-    button.addEventListener("click", () => { noteUserActivity(); navigateToStructure(index); });
+    button.addEventListener("click", () => { navigateToStructure(index); noteUserActivity(); });
     hotspots.append(button);
   });
-  document.querySelector("#reset-view").addEventListener("click", () => { noteUserActivity(); navigateToOverall(); });
+  document.querySelector("#reset-view").addEventListener("click", () => { navigateToOverall(); noteUserActivity(); });
 }
 
 function easeBreath(t) {
@@ -3349,10 +3351,10 @@ function isEpitaphModalOpen() {
   return document.querySelector("#epitaph-modal")?.getAttribute("aria-hidden") === "false";
 }
 
-function openEpitaphModal() {
+function openEpitaphModal(options = {}) {
   const modal = document.querySelector("#epitaph-modal");
   if (!modal) return;
-  stopAutoDemo();
+  if (!options.auto) stopAutoDemo();
   document.querySelector(".model-interface").inert = true;
   modal.inert = false;
   modal.setAttribute("aria-hidden", "false");
@@ -3404,13 +3406,37 @@ function scheduleAutoDemo(delay = AUTO_TIMING.idle) {
   autoDemoTimer = setTimeout(startAutoDemo, delay);
 }
 
-function noteUserActivity() {
-  stopAutoDemo();
-  scheduleAutoDemo();
-}
-
 function buildAutoDemoSequence() {
   return buildNarrativePlaybackSequence(NARRATIVE_ENTRIES, DEMO_ROUTE);
+}
+
+function setAutoDemoResumeAfter(currentStep) {
+  autoDemoStep = playbackResumeIndex(buildAutoDemoSequence(), currentStep);
+}
+
+function rememberPlaybackPosition() {
+  if (isEpitaphModalOpen()) {
+    setAutoDemoResumeAfter({ type: "epitaph-open", narrativeId: "epitaph" });
+    return;
+  }
+  if (artifactDetailOpen && activeNarrativeId && activeArtifactName) {
+    setAutoDemoResumeAfter({
+      type: "artifact",
+      narrativeId: activeNarrativeId,
+      name: activeArtifactName,
+      locationKey: activeArtifactLocationKey
+    });
+    return;
+  }
+  if (activeNarrativeId) {
+    setAutoDemoResumeAfter({ type: "narrative", narrativeId: activeNarrativeId });
+  }
+}
+
+function noteUserActivity() {
+  rememberPlaybackPosition();
+  stopAutoDemo();
+  scheduleAutoDemo();
 }
 
 function startAutoDemo() {
@@ -3425,9 +3451,12 @@ function startAutoDemo() {
     return;
   }
   clearAutoDemoTimer();
-  if (artifactDetailOpen) closeArtifactDetail({ restore: false });
+  const nextItem = buildAutoDemoSequence()[autoDemoStep];
+  const keepCurrentDetail = artifactDetailOpen && nextItem
+    && (nextItem.type === "artifact" || nextItem.type === "epitaph-open")
+    && nextItem.narrativeId === activeNarrativeId;
+  if (artifactDetailOpen && !keepCurrentDetail) closeArtifactDetail({ restore: false });
   autoDemoActive = true;
-  autoDemoStep = 0;
   syncAutoDemoUi();
   autoDemoTimer = setTimeout(runAutoDemoStep, 0);
 }
@@ -3455,6 +3484,18 @@ function runAutoDemoStep() {
   if (item.type === "narrative") {
     navigateToNarrativeEntry(entry, { source: "auto" });
     autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.model);
+    return;
+  }
+  if (item.type === "epitaph-open") {
+    openEpitaphModal({ auto: true });
+    syncAutoDemoUi();
+    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.epitaph);
+    return;
+  }
+  if (item.type === "epitaph-close") {
+    closeEpitaphModal();
+    syncAutoDemoUi();
+    autoDemoTimer = setTimeout(runAutoDemoStep, AUTO_TIMING.transition);
     return;
   }
   showNarrativeArtifact(entry, item, { source: "auto", auto: true });
@@ -3619,6 +3660,7 @@ function setupInterface() {
 
   document.querySelector("#artifact-detail-close").addEventListener("click", event => {
     event.stopPropagation();
+    rememberPlaybackPosition();
     stopAutoDemo();
     closeArtifactDetail();
     scheduleAutoDemo();
@@ -3629,7 +3671,10 @@ function setupInterface() {
   });
   document.querySelector(".epitaph-close").addEventListener("click", event => {
     event.stopPropagation();
-    if (closeEpitaphModal(true)) scheduleAutoDemo();
+    if (closeEpitaphModal(true)) {
+      setAutoDemoResumeAfter({ type: "epitaph-close", narrativeId: "epitaph" });
+      scheduleAutoDemo();
+    }
   });
   const canParallax = matchMedia("(pointer:fine) and (prefers-reduced-motion:no-preference)").matches;
   document.addEventListener("pointermove", event => {
@@ -3644,7 +3689,11 @@ function setupInterface() {
   document.addEventListener("keydown", event => {
     noteUserActivity();
     if (event.key === "Escape") {
-      if (closeEpitaphModal(true)) { scheduleAutoDemo(); return; }
+      if (closeEpitaphModal(true)) {
+        setAutoDemoResumeAfter({ type: "epitaph-close", narrativeId: "epitaph" });
+        scheduleAutoDemo();
+        return;
+      }
       if (closeArtifactDetail()) { scheduleAutoDemo(); return; }
       if (closeNarrativeCard()) return;
       if (app.dataset.view === "model") navigateToOverall();
@@ -3657,12 +3706,17 @@ function setupInterface() {
     }
     if (app.dataset.view !== "model" || artifactDetailOpen) return;
     const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    if (event.key === "Home" || event.key === "0") { navigateToOverall(); return; }
+    if (event.key === "Home" || event.key === "0") {
+      navigateToOverall();
+      rememberPlaybackPosition();
+      return;
+    }
     if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
     const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
     const current = order.indexOf(selectedIndex);
     const next = current < 0 ? (direction > 0 ? 0 : order.length - 1) : (current + direction + order.length) % order.length;
     navigateToStructure(order[next]);
+    rememberPlaybackPosition();
   });
   scheduleAutoDemo();
 }

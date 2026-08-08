@@ -26,6 +26,8 @@ export const ARTIFACT_SEQUENCE = Object.freeze([
 ]);
 
 const NICHE_ARTIFACT_NAMES = ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
+export const CHAMBER_AUTOPLAY_EXCLUSIONS = Object.freeze([...NICHE_ARTIFACT_NAMES]);
+const chamberAutoplayExclusionSet = new Set(CHAMBER_AUTOPLAY_EXCLUSIONS);
 
 export const NARRATIVE_ARTIFACTS = Object.freeze({
   hongduyuan: Object.freeze([]),
@@ -57,9 +59,37 @@ export function buildNarrativePlaybackSequence(entries, route = DEMO_ROUTE) {
   return route.flatMap(narrativeId => {
     const entry = entriesById.get(narrativeId);
     if (!entry) return [];
-    return [
-      { type: "narrative", narrativeId },
-      ...artifactLinksForEntry(entry).map(link => ({ type: "artifact", narrativeId, ...link }))
-    ];
+    const steps = [{ type: "narrative", narrativeId }];
+    artifactLinksForEntry(entry)
+      .filter(link => narrativeId !== "chamber" || !chamberAutoplayExclusionSet.has(link.name))
+      .forEach(link => {
+        steps.push({ type: "artifact", narrativeId, ...link });
+        if (narrativeId === "epitaph" && link.name === "墓志") {
+          steps.push(
+            { type: "epitaph-open", narrativeId },
+            { type: "epitaph-close", narrativeId }
+          );
+        }
+      });
+    return steps;
   });
+}
+
+export function playbackResumeIndex(sequence, currentStep) {
+  if (!currentStep?.type || !currentStep?.narrativeId) return 0;
+  const index = sequence.findIndex(step => {
+    if (step.type !== currentStep.type || step.narrativeId !== currentStep.narrativeId) return false;
+    if (step.type !== "artifact") return true;
+    return step.name === currentStep.name
+      && (step.locationKey || "") === (currentStep.locationKey || "");
+  });
+  if (index >= 0) return index + 1;
+  if (currentStep.type === "artifact" && currentStep.narrativeId === "chamber"
+    && chamberAutoplayExclusionSet.has(currentStep.name)) {
+    const lastChamberStep = sequence.reduce((last, step, stepIndex) => (
+      step.narrativeId === "chamber" ? stepIndex : last
+    ), -1);
+    return lastChamberStep + 1;
+  }
+  return 0;
 }
