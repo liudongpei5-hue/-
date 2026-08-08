@@ -19,6 +19,39 @@ const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第
 const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb";
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
 const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_39", "lu_45"]);
+const ARTIFACT_IMAGE_ASSETS = [
+  "/assets/artifacts/catalog/tomb-beast-east.png",
+  "/assets/artifacts/guardian-warrior-m2338-1.png",
+  "/assets/artifacts/catalog/epitaph-set.png",
+  "/assets/artifacts/catalog/kaiyuan-coin.png",
+  "/assets/artifacts/catalog/glass-beads.png",
+  "/assets/artifacts/catalog/shell.png",
+  "/assets/artifacts/catalog/silver-ring.png",
+  "/assets/artifacts/catalog/bronze-bowl.png",
+  "/assets/artifacts/catalog/mounted-figurine.png",
+  "/assets/artifacts/catalog/female-mounted-figurine.png"
+];
+const artifactImagePreloads = new Map();
+
+function preloadArtifactImage(src) {
+  if (!src) return Promise.resolve(null);
+  if (!artifactImagePreloads.has(src)) {
+    const image = new Image();
+    const ready = new Promise((resolve, reject) => {
+      image.addEventListener("load", () => {
+        const decoded = image.decode ? image.decode().catch(() => {}) : Promise.resolve();
+        decoded.then(() => resolve(image));
+      }, { once: true });
+      image.addEventListener("error", () => reject(new Error(`Artifact image could not load: ${src}`)), { once: true });
+    });
+    image.src = src;
+    artifactImagePreloads.set(src, ready);
+  }
+  return artifactImagePreloads.get(src);
+}
+
+// Begin warming the complete artifact image set while the landing page is visible.
+ARTIFACT_IMAGE_ASSETS.forEach(src => preloadArtifactImage(src).catch(error => console.error(error)));
 const canvas = document.querySelector("#scene");
 const sceneHomeParent = canvas.parentNode;
 const sceneHomeNextSibling = canvas.nextSibling;
@@ -61,6 +94,9 @@ const Z_UP = new THREE.Vector3(0, 0, 1);
 const scratchSpherical = new THREE.Spherical();
 
 function normalizeGroundedCameraView(position = camera.position, target = controls.target) {
+  // The artifact detail view intentionally uses a top-down Y-up camera. Applying
+  // the grounded Z-up constraint here would fight that transition at the pole.
+  if (artifactMiniState) return;
   const offset = position.clone().sub(target);
   if (offset.lengthSq() === 0) return;
   scratchSpherical.setFromVector3(offset);
@@ -3592,19 +3628,15 @@ function setupInterface() {
     "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银环出自棺内北侧，扁圆环状。简报记载直径 1.8 cm。", facts:[["编号","M2338:54"],["类别","银环"],["直径","1.8 cm"],["材质","银"]], display:{ scale:1.34, x:"0%", y:"0%" } },
     "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"铜钵敛口、深弧腹、圜底，器表饰数周暗弦纹。简报记载口径 13 cm、腹径 13.2 cm、底径 8.5 cm、通高 6 cm。", facts:[["编号","M2338:53"],["口径","13 cm"],["腹径","13.2 cm"],["通高","6 cm"]], display:{ scale:1.26, x:"0%", y:"2%" } },
     "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"泥质红陶，分模制后粘合，骑手跨乘于马上。墓室东南隅与西壁龛均有发现；I 型标本马体长 23.5 厘米、通高 32 厘米。", facts:[["墓室","M2338:29-32 等"],["西壁龛","WK12"],["I 型","长 23.5 cm / 通高 32 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } },
-    "风帽俑": { en:"HOODED FIGURINE", modelId:"lu_7", description:"泥质红陶，模制。头戴风帽，身着交领长袍，腰系带，左臂下垂，右臂弯曲。标本 M2338:7 通高 21.5 厘米，帽、袍残留红彩，面部施粉彩。", facts:[["代表器号","M2338:7"],["通高","21.5 cm"],["材质","泥质红陶"]] },
-    "笼冠俑": { en:"CAGE-CROWN FIGURINE", modelId:"lu_28", description:"泥质红陶，模制。头戴黑色笼冠，身着交领广袖袍，腰束宽带，双手捧于胸前。标本 M2338:28 通高 21.2 厘米，衣袍残留橘红色彩。", facts:[["代表器号","M2338:28"],["通高","21.2 cm"],["材质","泥质红陶"]] },
-    "女侍俑": { en:"FEMALE ATTENDANT", modelId:"lu_45", description:"泥质红陶，模制。高髻，面庞清瘦，身着交领窄袖衫与高束长裙，双手合拢置于腹部。标本 M2338:45 通高 28 厘米。", facts:[["代表器号","M2338:45"],["通高","28 cm"],["材质","泥质红陶"]] },
-    "陶羊": { en:"POTTERY SHEEP", modelId:"lu_39", description:"泥质红陶，模制。昂首盘角，小尖耳，身躯肥壮，四蹄盘卧于地，体表残留白色粉底。标本 M2338:39 体长 11.2 厘米、通高 9 厘米。", facts:[["代表器号","M2338:39"],["体长","11.2 cm"],["通高","9 cm"],["材质","泥质红陶"]] }
+    "风帽俑": { en:"HOODED FIGURINE", asset:"/assets/artifacts/catalog/fengmao-figurine.png", description:"泥质红陶，模制。头戴风帽，身着交领长袍，腰系带，左臂下垂，右臂弯曲。标本 M2338:7 通高 21.5 厘米，帽、袍残留红彩，面部施粉彩。", facts:[["代表器号","M2338:7"],["通高","21.5 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
+    "笼冠俑": { en:"CAGE-CROWN FIGURINE", asset:"/assets/artifacts/catalog/longguan-figurine.png", description:"泥质红陶，模制。头戴黑色笼冠，身着交领广袖袍，腰束宽带，双手捧于胸前。标本 M2338:28 通高 21.2 厘米，衣袍残留橘红色彩。", facts:[["代表器号","M2338:28"],["通高","21.2 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
+    "女侍俑": { en:"FEMALE ATTENDANT", asset:"/assets/artifacts/catalog/female-mounted-figurine.png", description:"泥质红陶，模制。高髻，面庞清瘦，身着交领窄袖衫与高束长裙，双手合拢置于腹部。标本 M2338:45 通高 28 厘米。", facts:[["代表器号","M2338:45"],["通高","28 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
+    "陶羊": { en:"POTTERY SHEEP", asset:"/assets/artifacts/catalog/sheep.png", description:"泥质红陶，模制。昂首盘角，小尖耳，身躯肥壮，四蹄盘卧于地，体表残留白色粉底。标本 M2338:39 体长 11.2 厘米、通高 9 厘米。", facts:[["代表器号","M2338:39"],["体长","11.2 cm"],["通高","9 cm"],["材质","泥质红陶"]], display:{ scale:1.18, x:"0%", y:"0%" } }
   };
-  [...new Set(Object.values(artifactCatalog).map(({ asset }) => asset).filter(Boolean))].forEach(src => {
-    const image = new Image();
-    image.src = src;
-    image.decode?.().catch(() => {});
-  });
   const artifactProgress = document.querySelector("#artifact-progress");
   const artifactPlaybackStatus = document.querySelector(".artifact-playback-status");
   const artifactDetails = document.querySelector("#artifact-details");
+  let artifactImageRequestToken = 0;
   const activateArtifact = (artifactName, options = {}) => {
     const artifact = artifactCatalog[artifactName];
     if (!artifact) return false;
@@ -3644,11 +3676,23 @@ function setupInterface() {
     stage.style.setProperty("--artifact-x", display.x || "0%");
     stage.style.setProperty("--artifact-y", display.y || "0%");
     if (asset) {
-      artifactImage.src = asset;
-      artifactImage.alt = `${artifactName}考古文物图像`;
+      const imageRequestToken = ++artifactImageRequestToken;
+      stage.classList.add("image-loading");
+      preloadArtifactImage(asset).then(() => {
+        if (imageRequestToken !== artifactImageRequestToken) return;
+        artifactImage.src = asset;
+        artifactImage.alt = `${artifactName}考古文物图像`;
+        stage.classList.remove("image-loading");
+        stage.classList.remove("swap");
+        requestAnimationFrame(() => stage.classList.add("swap"));
+      }).catch(error => {
+        if (imageRequestToken === artifactImageRequestToken) stage.classList.remove("image-loading");
+        console.error(error);
+      });
+    } else {
+      artifactImageRequestToken++;
+      stage.classList.remove("image-loading");
     }
-    stage.classList.remove("swap");
-    requestAnimationFrame(() => stage.classList.add("swap"));
     const activeBranchButton = document.querySelector(".narrative-artifact-option.active");
     if ((options.auto || options.source === "narrative") && activeBranchButton) activeBranchButton.scrollIntoView({ block: "nearest", inline: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     return true;

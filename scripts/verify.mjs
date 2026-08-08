@@ -247,10 +247,13 @@ assert.deepEqual(
   { type: "narrative", narrativeId: "theft" },
   "Playback must continue to the next chapter after closing the epitaph"
 );
-for (const [name, modelId] of [["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]]) {
-  if (!main.includes(`"${name}": { en:`) || !main.includes(`modelId:"${modelId}"`)) {
-    throw new Error(`Inline GLB preview is missing for ${name}`);
+for (const [name, asset] of [["风帽俑", "fengmao-figurine.png"], ["笼冠俑", "longguan-figurine.png"], ["陶羊", "sheep.png"]]) {
+  if (!main.includes(`"${name}": { en:`) || !main.includes(`asset:"/assets/artifacts/catalog/${asset}"`)) {
+    throw new Error(`Inline catalog image is missing for ${name}`);
   }
+}
+if (!main.includes('"女侍俑": { en:"FEMALE ATTENDANT", asset:"/assets/artifacts/catalog/female-mounted-figurine.png"')) {
+  throw new Error("Female attendant catalog image is missing");
 }
 if (!main.includes("createArtifactStageViewer") || !main.includes("readRenderTargetPixels")) {
   throw new Error("Inline artifact model preview renderer is missing");
