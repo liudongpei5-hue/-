@@ -286,6 +286,9 @@ if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
 if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor") || !main.includes("narrativeFactor")) {
   throw new Error("Responsive close-up safe-area compensation is missing");
 }
+if (!main.includes("if (narrativeEntry && anchorIndex >= 0) applyResponsiveShotOffset(endPosition, endTarget)")) {
+  throw new Error("The opening narrative must reuse the unshifted overall navigator camera");
+}
 if (!main.includes('navigateToNarrativeEntry(entry, { source: "auto" })')) {
   throw new Error("Automatic playback must reveal each narrative summary before its artifacts");
 }

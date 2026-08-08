@@ -3219,7 +3219,6 @@ function navigateToStructure(index, options = {}) {
   target.z += THREE.MathUtils.clamp(focusSizeVector.z * .05, .04, .22);
   const size = focusBounds.isEmpty() ? new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3()).length() : focusSizeVector.length();
   const endPosition = target.clone().add(cameraOffsetForStructure(index, size));
-  if (options.source === "narrative") applyResponsiveShotOffset(endPosition, target);
   selectStructure(index, focusIndices, options.narrativeId);
   logVisualProcess(`镜头切换：${group.userData.name}，同侧连续观察`);
   animateCamera(endPosition, target, STRUCTURE_SHOT_FOV[index] || preset?.fov || 42, () => {
@@ -3237,7 +3236,7 @@ function navigateToOverall(options = {}) {
   selectStructure(anchorIndex, focusIndices, options.narrativeId);
   const endPosition = overallView.position.clone();
   const endTarget = overallView.target.clone();
-  if (narrativeEntry) applyResponsiveShotOffset(endPosition, endTarget);
+  if (narrativeEntry && anchorIndex >= 0) applyResponsiveShotOffset(endPosition, endTarget);
   logVisualProcess("镜头切换：整体总览，同侧轴线视角");
   animateCamera(endPosition, endTarget, overallView.fov, () => {
     document.querySelector("#status").textContent = narrativeEntry
@@ -3609,6 +3608,7 @@ function setupInterface() {
     if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     stopAutoDemo();
+    autoDemoStep = 0;
     setView("model", event);
     scheduleAutoDemo();
   };
