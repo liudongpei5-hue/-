@@ -9,7 +9,7 @@ import defaultNarrativeCardLayout from "./narrative-card-layout.json";
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
 const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb";
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
-const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7"]);
+const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_39", "lu_45"]);
 const canvas = document.querySelector("#scene");
 const sceneHomeParent = canvas.parentNode;
 const sceneHomeNextSibling = canvas.nextSibling;
@@ -290,6 +290,7 @@ let artifactLocationHalo;
 let artifactLocationRegion;
 let artifactMiniState = null;
 let artifactMiniCameraToken = 0;
+let artifactStageViewer;
 let sceneMorphActive = false;
 let sceneMorphPromise = Promise.resolve(true);
 let groundCompass;
@@ -303,6 +304,7 @@ let artifactAutoStep = 0;
 let artifactTourButtons = [];
 let activateArtifactByName = () => false;
 let activeArtifactName = "";
+let activeArtifactLocationKey = "";
 let spatialReturnState = null;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
@@ -329,7 +331,7 @@ const PLAN_HOTSPOTS = new Map([
   [10, { x: 33.54, y: 44.82, secondary: true }]
 ]);
 const DEMO_ROUTE = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
-const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
+const ARTIFACT_SEQUENCE = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
 const ARTIFACT_SPATIAL_LOCATIONS = {
   "镇墓兽": {
     anchor: [6.660727, -.147213, -4.12], markerLift: .48, certainty: "exact",
@@ -372,8 +374,60 @@ const ARTIFACT_SPATIAL_LOCATIONS = {
       max: [7.761191, .736571, -4.12],
       count: 11
     }
+  },
+  "风帽俑": {
+    anchor: [6.446369, -.523154, -4.12], markerLift: .32, certainty: "exact-representative",
+    objectId: "M2338:7", label: "墓室东南隅"
+  },
+  "笼冠俑": {
+    anchor: [7.452989, -.321002, -4.12], markerLift: .32, certainty: "exact-representative",
+    objectId: "M2338:19", label: "墓室东南隅"
+  },
+  "女侍俑": {
+    anchor: [7.495089, .534270, -4.12], markerLift: .38, certainty: "exact-representative",
+    objectId: "M2338:45", label: "墓室中部"
+  },
+  "陶羊": {
+    anchor: [7.288550, .065395, -4.12], markerLift: .20, certainty: "exact",
+    objectId: "M2338:39", label: "墓室中部偏东"
   }
 };
+const ARTIFACT_CONTEXT_LOCATIONS = {
+  "niches:骑马俑": {
+    anchor: [2.387010, 1.854025, -2.35], markerLift: .44, certainty: "exact",
+    objectId: "WK12", label: "西壁龛 · WK12"
+  },
+  "niches:风帽俑": {
+    anchor: [1.513310, 1.690346, -2.35], markerLift: .32, certainty: "exact-group",
+    objectId: "WK6 等", label: "西壁龛",
+    region: {
+      center: [1.515752, 1.727839, -2.35],
+      min: [1.133048, 1.349145, -2.35],
+      max: [1.898456, 2.106532, -2.35],
+      count: 6
+    }
+  },
+  "niches:笼冠俑": {
+    anchor: [1.306479, 1.462135, -2.35], markerLift: .32, certainty: "exact-group",
+    objectId: "WK7 等", label: "西壁龛",
+    region: {
+      center: [1.889147, 2.032896, -2.35],
+      min: [1.306479, 1.462135, -2.35],
+      max: [2.471814, 2.603656, -2.35],
+      count: 4
+    }
+  },
+  "niches:女侍俑": {
+    anchor: [2.215077, 2.179755, -2.35], markerLift: .38, certainty: "exact",
+    objectId: "WK8", label: "西壁龛 · WK8"
+  },
+  "niches:陶羊": {
+    anchor: [2.794790, 1.639739, -2.35], markerLift: .20, certainty: "exact",
+    objectId: "WK11", label: "西壁龛 · WK11"
+  }
+};
+const NICHE_ARTIFACT_LINKS = ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"]
+  .map(name => ({ name, locationKey: `niches:${name}` }));
 const AUTO_TIMING = {
   model: 8200,
   artifact: 4800,
@@ -408,7 +462,7 @@ const NARRATIVE_ENTRIES = [
     cameraIndex: 11, focusIndices: [3, 11, 12], triggerIndices: [11, 12],
     summary: "最后一段过洞向两侧展开壁龛：东龛为拱顶平底，西龛则口部小、内部大。两种尺度不同的侧向空间共同容纳随葬品，其中东龛后来受到盗洞D1的严重扰动。",
     quote: "壁龛2个，均位于第三过洞内……东一号龛为拱顶平底土洞结构；西一号龛为平顶底土洞结构，口部小，内部大。",
-    artifacts: ["骑马俑"]
+    artifacts: NICHE_ARTIFACT_LINKS
   },
   {
     id: "threshold", no: "05", name: "甬道与封门", title: "斜坡终止后的最后边界",
@@ -865,6 +919,136 @@ function normalizeArtifactModel(model, targetHeight) {
   model.scale.multiplyScalar(scale);
 }
 
+function createArtifactStageViewer(canvas) {
+  const previewWidth = 640;
+  const previewHeight = 880;
+  const context = canvas.getContext("2d");
+  canvas.width = previewWidth;
+  canvas.height = previewHeight;
+  const previewScene = new THREE.Scene();
+  const previewCamera = new THREE.PerspectiveCamera(28, previewWidth / previewHeight, .01, 100);
+  const pivot = new THREE.Group();
+  previewScene.add(pivot);
+  previewScene.add(new THREE.HemisphereLight(0xfff8ec, 0x6d6258, 2.6));
+  const key = new THREE.DirectionalLight(0xffecd6, 3.4);
+  key.position.set(4, 6, 7);
+  previewScene.add(key);
+  const fill = new THREE.DirectionalLight(0xdbe8f2, 1.5);
+  fill.position.set(-5, 2, 4);
+  previewScene.add(fill);
+  const rim = new THREE.DirectionalLight(0xe7b89a, 1.2);
+  rim.position.set(2, 3, -5);
+  previewScene.add(rim);
+
+  const loader = new GLTFLoader();
+  const modelPromises = new Map();
+  const previewCache = new Map();
+  const renderTarget = new THREE.WebGLRenderTarget(previewWidth, previewHeight, {
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
+    depthBuffer: true
+  });
+  renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
+  let requestToken = 0;
+
+  function frameModel(model) {
+    model.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(model);
+    if (box.isEmpty()) return false;
+    const initialSize = box.getSize(new THREE.Vector3());
+    model.scale.multiplyScalar(3.2 / Math.max(initialSize.y, .001));
+    model.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.x -= center.x;
+    model.position.y -= box.min.y;
+    model.position.z -= center.z;
+    model.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(model);
+    box.getSize(size);
+
+    const target = new THREE.Vector3(0, size.y * .48, 0);
+    const verticalFov = THREE.MathUtils.degToRad(previewCamera.fov);
+    const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * previewCamera.aspect);
+    const fitHeight = size.y / (2 * Math.tan(verticalFov / 2));
+    const fitWidth = Math.max(size.x, size.z) / (2 * Math.tan(horizontalFov / 2));
+    const distance = Math.max(fitHeight, fitWidth) * 1.56;
+    const direction = new THREE.Vector3(.72, .12, 1).normalize();
+    previewCamera.position.copy(target).addScaledVector(direction, distance);
+    previewCamera.near = Math.max(.01, distance / 100);
+    previewCamera.far = distance * 10;
+    previewCamera.lookAt(target);
+    previewCamera.updateProjectionMatrix();
+    return true;
+  }
+
+  function paintPreview(imageData) {
+    context.clearRect(0, 0, previewWidth, previewHeight);
+    context.putImageData(imageData, 0, 0);
+  }
+
+  function renderPreview(modelId, model) {
+    pivot.rotation.y = modelId === "lu_39" ? .68 : 1.12;
+    const previousTarget = renderer.getRenderTarget();
+    const previousClearColor = renderer.getClearColor(new THREE.Color());
+    const previousClearAlpha = renderer.getClearAlpha();
+    renderer.setRenderTarget(renderTarget);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear(true, true, true);
+    renderer.render(previewScene, previewCamera);
+    const pixels = new Uint8Array(previewWidth * previewHeight * 4);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, previewWidth, previewHeight, pixels);
+    renderer.setRenderTarget(previousTarget);
+    renderer.setClearColor(previousClearColor, previousClearAlpha);
+
+    const flipped = new Uint8ClampedArray(pixels.length);
+    const rowLength = previewWidth * 4;
+    for (let y = 0; y < previewHeight; y++) {
+      const sourceStart = (previewHeight - 1 - y) * rowLength;
+      flipped.set(pixels.subarray(sourceStart, sourceStart + rowLength), y * rowLength);
+    }
+    const imageData = new ImageData(flipped, previewWidth, previewHeight);
+    previewCache.set(modelId, imageData);
+    return imageData;
+  }
+
+  async function show(modelId) {
+    const token = ++requestToken;
+    pivot.clear();
+    if (!modelId) return false;
+    if (previewCache.has(modelId)) {
+      paintPreview(previewCache.get(modelId));
+      return true;
+    }
+    if (!modelPromises.has(modelId)) {
+      modelPromises.set(modelId, loader.loadAsync(`${BURIAL_GOODS_OVERVIEW_PATH}/${modelId}.glb`).then(gltf => gltf.scene));
+    }
+    const source = await modelPromises.get(modelId);
+    if (token !== requestToken) return false;
+    const model = source.clone(true);
+    model.traverse(child => {
+      if (!child.isMesh || !child.material) return;
+      child.material = Array.isArray(child.material)
+        ? child.material.map(material => material.clone())
+        : child.material.clone();
+    });
+    pivot.add(model);
+    if (!frameModel(model)) return false;
+    paintPreview(renderPreview(modelId, model));
+    return true;
+  }
+
+  return {
+    show,
+    clear() {
+      requestToken++;
+      pivot.clear();
+      context.clearRect(0, 0, previewWidth, previewHeight);
+    }
+  };
+}
+
 function tuneArtifactMaterials(model, opacityMaterials) {
   model.traverse(child => {
     if (!child.isMesh) return;
@@ -1204,8 +1388,12 @@ function createArtifactLocationLayer() {
   return layer;
 }
 
-function updateArtifactSpatialLocation(name) {
-  const location = ARTIFACT_SPATIAL_LOCATIONS[name];
+function resolveArtifactSpatialLocation(name, locationKey = "") {
+  return ARTIFACT_CONTEXT_LOCATIONS[locationKey] || ARTIFACT_SPATIAL_LOCATIONS[name];
+}
+
+function updateArtifactSpatialLocation(name, locationKey = activeArtifactLocationKey) {
+  const location = resolveArtifactSpatialLocation(name, locationKey);
   if (!location) return;
   createArtifactLocationLayer();
   artifactLocationMarker.position.fromArray(location.anchor);
@@ -1235,14 +1423,16 @@ function updateArtifactSpatialLocation(name) {
     certainty.textContent = location.certainty === "exact-group"
       ? "简报同类器物组点，并非单枚独立坐标"
       : location.certainty === "exact-representative"
-        ? `代表器号定位 · 同类聚集区 ${region?.count || 0} 件`
+        ? region
+          ? `代表器号定位 · 同类聚集区 ${region.count} 件`
+          : "代表器号定位 · 同类器物复用模型"
         : "简报平面图明确点位";
   }
   host?.setAttribute("aria-label", `${name}，${location.objectId}，出土于${location.label}`);
 }
 
-function focusArtifactTopDown(name) {
-  const location = ARTIFACT_SPATIAL_LOCATIONS[name];
+function focusArtifactTopDown(name, locationKey = activeArtifactLocationKey) {
+  const location = resolveArtifactSpatialLocation(name, locationKey);
   if (!location || !artifactMiniState || document.querySelector("#app")?.dataset.view !== "artifacts") return false;
   const token = ++artifactMiniCameraToken;
   artifactMiniState.focusedArtifact = name;
@@ -1311,7 +1501,7 @@ function enterArtifactMiniView(options = {}) {
   }
   if (groundCompass) groundCompass.visible = false;
   artifactLocationLayer.visible = true;
-  updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0]);
+  updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0], activeArtifactLocationKey);
   artifactMiniState.focusedArtifact = "";
 }
 
@@ -2627,18 +2817,20 @@ function renderNarrativeCard(entry) {
     label.textContent = "相关文物 · OBJECTS";
     related.append(label);
   }
-  artifactNames.forEach(name => {
+  artifactNames.forEach(item => {
+    const { name, locationKey = "" } = typeof item === "string" ? { name: item } : item;
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.artifact = name;
+    if (locationKey) button.dataset.locationKey = locationKey;
     button.textContent = name;
-    button.setAttribute("aria-label", `前往文物详情：${name}`);
+    button.setAttribute("aria-label", `前往文物详情：${name}${locationKey ? "（壁龛点位）" : ""}`);
     button.addEventListener("click", event => {
       event.stopPropagation();
       stopAutoDemo();
       spatialReturnState = captureSpatialContext();
       setView("artifacts", event, { source: "narrative" }).then(() => {
-        activateArtifactByName(name, { force: true });
+        activateArtifactByName(name, { force: true, source: "narrative", locationKey });
         scheduleAutoDemo();
       });
     });
@@ -3305,16 +3497,21 @@ function setupInterface() {
   setupNarrativeAxis();
   const stage = document.querySelector(".artifact-stage");
   const artifactImage = document.querySelector("#artifact-image");
+  artifactStageViewer = createArtifactStageViewer(document.querySelector("#artifact-model-canvas"));
   const artifactCatalog = {
-    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹。PDF 简报记载通高 36 cm，尺寸标注保留在此处，展示图按版面统一放大。", facts:[["编号","M2338:4"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
-    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑身着明光铠甲，残留红、白彩及少量金箔痕迹，置于墓室入口附近。PDF 图版列为 M2338:1，当前简报页未列单件尺寸。", facts:[["编号","M2338:1"],["类别","镇墓武士俑"],["位置","墓室入口附近"],["尺寸","简报未列单件尺寸"]], display:{ scale:1.02, x:"0%", y:"0%" } },
+    "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹，通高 36 厘米。", facts:[["编号","M2338:4"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
+    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑 M2338:1 出自墓室入口处东侧，身着明光铠，体表施白、红彩，胸甲与护肩残留金箔痕迹。踏板厚 7 厘米、长 17 厘米、宽 19 厘米，通高 65 厘米。", facts:[["编号","M2338:1"],["位置","墓室入口处东侧"],["踏板","厚 7 cm / 长 17 cm / 宽 19 cm"],["通高","65 cm"]], display:{ scale:1.02, x:"0%", y:"0%" } },
     "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质。志盖边长 30 cm、厚 8 cm；志石边长 37 cm、厚 8 cm，正文 23 行、满行 23 字，共 516 字。", facts:[["编号","M2338:52"],["志盖","边长 30 cm / 厚 8 cm"],["志石","边长 37 cm / 厚 8 cm"],["字数","516 字"]], display:{ scale:1.16, x:"0%", y:"0%" } },
-    "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”。PDF 简报记载钱径 2.4 cm、穿径 0.8 cm，是墓葬断代的重要参照。", facts:[["编号","M2338:57-4"],["钱径","2.4 cm"],["穿径","0.8 cm"],["材质","铜"]], display:{ scale:1.42, x:"0%", y:"0%" } },
-    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"玻璃串珠共 3 枚，绿色。PDF 简报记载直径 0.4-0.5 cm、孔径 0.3 cm，出自棺内北侧。", facts:[["编号","M2338:56"],["数量","3 枚"],["直径","0.4-0.5 cm"],["孔径","0.3 cm"]], display:{ scale:1.44, x:"0%", y:"0%" } },
-    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", location:"/assets/artifacts/location-shell.jpg", description:"天然贝壳随葬品，出自棺内北侧。PDF 简报记载最宽 4.5 cm、长 5.5 cm。", facts:[["编号","M2338:55"],["最宽","4.5 cm"],["长","5.5 cm"],["材质","贝壳"]], display:{ scale:1.44, x:"0%", y:"0%" } },
-    "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银环出自棺内北侧，扁圆环状。PDF 简报记载直径 1.8 cm。", facts:[["编号","M2338:54"],["类别","银环"],["直径","1.8 cm"],["材质","银"]], display:{ scale:1.34, x:"0%", y:"0%" } },
-    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"铜钵敛口、深弧腹、圜底，器表饰数周暗弦纹。PDF 简报记载口径 13 cm、腹径 13.2 cm、底径 8.5 cm、通高 6 cm。", facts:[["编号","M2338:53"],["口径","13 cm"],["腹径","13.2 cm"],["通高","6 cm"]], display:{ scale:1.26, x:"0%", y:"2%" } },
-    "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"骑马俑主要出土于墓室东南隅。PDF 简报中 I 型标本 M2338:32 马体长 23.5 cm、通高 32 cm；II 型标本 M2338:44 马体长 24 cm、通高 32.5 cm。", facts:[["编号","M2338:29-32 等"],["I 型","长 23.5 cm / 通高 32 cm"],["II 型","长 24 cm / 通高 32.5 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } }
+    "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”。简报记载钱径 2.4 cm、穿径 0.8 cm，是墓葬断代的重要参照。", facts:[["编号","M2338:57-4"],["钱径","2.4 cm"],["穿径","0.8 cm"],["材质","铜"]], display:{ scale:1.42, x:"0%", y:"0%" } },
+    "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"玻璃串珠共 3 枚，绿色。简报记载直径 0.4-0.5 cm、孔径 0.3 cm，出自棺内北侧。", facts:[["编号","M2338:56"],["数量","3 枚"],["直径","0.4-0.5 cm"],["孔径","0.3 cm"]], display:{ scale:1.44, x:"0%", y:"0%" } },
+    "贝壳": { en:"SHELL", asset:"/assets/artifacts/catalog/shell.png", location:"/assets/artifacts/location-shell.jpg", description:"天然贝壳随葬品，出自棺内北侧。简报记载最宽 4.5 cm、长 5.5 cm。", facts:[["编号","M2338:55"],["最宽","4.5 cm"],["长","5.5 cm"],["材质","贝壳"]], display:{ scale:1.44, x:"0%", y:"0%" } },
+    "银环": { en:"SILVER RING", asset:"/assets/artifacts/catalog/silver-ring.png", location:"/assets/artifacts/location-silver-cup.jpg", description:"银环出自棺内北侧，扁圆环状。简报记载直径 1.8 cm。", facts:[["编号","M2338:54"],["类别","银环"],["直径","1.8 cm"],["材质","银"]], display:{ scale:1.34, x:"0%", y:"0%" } },
+    "铜钵": { en:"BRONZE BOWL", asset:"/assets/artifacts/catalog/bronze-bowl.png", location:"/assets/artifacts/location-bronze-bowl.jpg", description:"铜钵敛口、深弧腹、圜底，器表饰数周暗弦纹。简报记载口径 13 cm、腹径 13.2 cm、底径 8.5 cm、通高 6 cm。", facts:[["编号","M2338:53"],["口径","13 cm"],["腹径","13.2 cm"],["通高","6 cm"]], display:{ scale:1.26, x:"0%", y:"2%" } },
+    "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"泥质红陶，分模制后粘合，骑手跨乘于马上。墓室东南隅与西壁龛均有发现；I 型标本马体长 23.5 厘米、通高 32 厘米。", facts:[["墓室","M2338:29-32 等"],["西壁龛","WK12"],["I 型","长 23.5 cm / 通高 32 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } },
+    "风帽俑": { en:"HOODED FIGURINE", modelId:"lu_7", description:"泥质红陶，模制。头戴风帽，身着交领长袍，腰系带，左臂下垂，右臂弯曲。标本 M2338:7 通高 21.5 厘米，帽、袍残留红彩，面部施粉彩。", facts:[["代表器号","M2338:7"],["通高","21.5 cm"],["材质","泥质红陶"]] },
+    "笼冠俑": { en:"CAGE-CROWN FIGURINE", modelId:"lu_28", description:"泥质红陶，模制。头戴黑色笼冠，身着交领广袖袍，腰束宽带，双手捧于胸前。标本 M2338:28 通高 21.2 厘米，衣袍残留橘红色彩。", facts:[["代表器号","M2338:28"],["通高","21.2 cm"],["材质","泥质红陶"]] },
+    "女侍俑": { en:"FEMALE ATTENDANT", modelId:"lu_45", description:"泥质红陶，模制。高髻，面庞清瘦，身着交领窄袖衫与高束长裙，双手合拢置于腹部。标本 M2338:45 通高 28 厘米。", facts:[["代表器号","M2338:45"],["通高","28 cm"],["材质","泥质红陶"]] },
+    "陶羊": { en:"POTTERY SHEEP", modelId:"lu_39", description:"泥质红陶，模制。昂首盘角，小尖耳，身躯肥壮，四蹄盘卧于地，体表残留白色粉底。标本 M2338:39 体长 11.2 厘米、通高 9 厘米。", facts:[["代表器号","M2338:39"],["体长","11.2 cm"],["通高","9 cm"],["材质","泥质红陶"]] }
   };
   [...new Set(Object.values(artifactCatalog).map(({ asset }) => asset).filter(Boolean))].forEach(src => {
     const image = new Image();
@@ -3329,11 +3526,12 @@ function setupInterface() {
   const activateArtifact = (button, options = {}) => {
     if (!button) return false;
     const artifactName = button.dataset.artifact;
-    if (artifactMiniState && options.focusCamera !== false) focusArtifactTopDown(artifactName);
+    activeArtifactLocationKey = options.locationKey || "";
+    if (artifactMiniState && options.focusCamera !== false) focusArtifactTopDown(artifactName, activeArtifactLocationKey);
     if (activeArtifactName === artifactName && !options.force) return false;
     activeArtifactName = artifactName;
     const artifact = artifactCatalog[artifactName];
-    updateArtifactSpatialLocation(activeArtifactName);
+    updateArtifactSpatialLocation(activeArtifactName, activeArtifactLocationKey);
     const artifactIndex = Math.max(0, artifactButtons.indexOf(button));
     artifactButtons.forEach(item => {
       const active = item === button;
@@ -3347,7 +3545,11 @@ function setupInterface() {
     artifactPlaybackStatus.style.setProperty("--progress", `${(artifactIndex + 1) / artifactButtons.length * 100}%`);
     artifactDetails.hidden = button.dataset.artifact !== "墓志";
     const asset = artifact?.asset;
+    const modelId = artifact?.modelId;
     stage.classList.toggle("has-image", Boolean(asset));
+    stage.classList.toggle("has-model", Boolean(modelId));
+    if (modelId) artifactStageViewer.show(modelId).catch(error => console.error(`Artifact preview could not load: ${modelId}`, error));
+    else artifactStageViewer.clear();
     const display = artifact?.display || {};
     stage.style.setProperty("--artifact-scale", display.scale ?? 1);
     stage.style.setProperty("--artifact-x", display.x || "0%");

@@ -86,7 +86,7 @@
       <section id="artifacts-page" class="page-layer artifacts-page" aria-hidden="true">
         <div class="artifact-no">02 <span>ARTIFACTS</span></div>
         <button id="return-space" class="section-switch section-switch-space" type="button"><i>←</i><span>返回空间</span><small>01 / MODEL</small></button>
-        <div class="artifact-playback-status" aria-live="polite"><i></i><span id="artifact-progress">01 / 09</span></div>
+        <div class="artifact-playback-status" aria-live="polite"><i></i><span id="artifact-progress">01 / 13</span></div>
         <nav class="artifact-list" aria-label="文物类别">
           <button class="active" data-artifact="镇墓兽">镇墓兽</button>
           <button data-artifact="镇墓武士俑">镇墓武士俑</button>
@@ -97,10 +97,15 @@
           <button data-artifact="银环">银环</button>
           <button data-artifact="铜钵">铜钵</button>
           <button data-artifact="骑马俑">骑马俑</button>
+          <button data-artifact="风帽俑">风帽俑</button>
+          <button data-artifact="笼冠俑">笼冠俑</button>
+          <button data-artifact="女侍俑">女侍俑</button>
+          <button data-artifact="陶羊">陶羊</button>
         </nav>
         <div class="artifact-stage has-image" aria-hidden="true">
           <div class="artifact-halo"></div>
           <img id="artifact-image" class="artifact-image" src="/assets/artifacts/catalog/tomb-beast-east.png" alt="" />
+          <canvas id="artifact-model-canvas" class="artifact-model-canvas"></canvas>
           <div class="artifact-figure fallback"><i></i><i></i><i></i><i></i><i></i></div>
           <span class="artifact-shadow"></span>
         </div>

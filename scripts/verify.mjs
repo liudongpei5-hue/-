@@ -5,12 +5,13 @@ const main = fs.readFileSync("src/main.js", "utf8");
 const style = fs.readFileSync("src/style.css", "utf8");
 const narrativeCardLayout = JSON.parse(fs.readFileSync("src/narrative-card-layout.json", "utf8"));
 const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8"));
+const burialGoods = JSON.parse(fs.readFileSync("public/data/burial-goods-points.json", "utf8"));
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
-const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
+const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
 
-const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
+const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -186,8 +187,31 @@ if (!returnSpaceControl || !/addEventListener\(["']click["']/.test(returnSpaceCo
 if (!main.includes("function captureSpatialContext()") || !main.includes("cameraPosition: snapshotPosition.toArray()") || !main.includes("activeNarrativeId") || !main.includes("spatialReturnState = captureSpatialContext()")) {
   throw new Error("Narrative-to-artifact navigation must preserve the spatial and narrative return context");
 }
-if (!main.includes('artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")') || !main.includes('artifacts: ["墓志"]') || !main.includes('artifacts: ["骑马俑"]') || !main.includes('document.querySelector("#narrative-artifacts")')) {
+if (!main.includes('artifacts: ARTIFACT_SEQUENCE.filter(name => name !== "墓志")') || !main.includes('artifacts: ["墓志"]') || !main.includes("artifacts: NICHE_ARTIFACT_LINKS") || !main.includes('document.querySelector("#narrative-artifacts")')) {
   throw new Error("Narrative entries must expose linked artifact terms in the narrative card");
+}
+for (const name of ["骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"]) {
+  if (!main.includes(`"niches:${name}"`) || !html.includes(`data-artifact="${name}"`)) {
+    throw new Error(`Missing contextual niche artifact navigation for ${name}`);
+  }
+}
+for (const [name, modelId] of [["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]]) {
+  if (!main.includes(`"${name}": { en:`) || !main.includes(`modelId:"${modelId}"`)) {
+    throw new Error(`Second-act GLB preview is missing for ${name}`);
+  }
+}
+if (!main.includes("createArtifactStageViewer") || !main.includes("readRenderTargetPixels")) {
+  throw new Error("Second-act artifact model preview renderer is missing");
+}
+const nicheModelByType = new Map([
+  ["骑马俑", "lu_32"], ["风帽俑", "lu_7"], ["笼冠俑", "lu_28"], ["女侍俑", "lu_45"], ["陶羊", "lu_39"]
+]);
+for (const point of burialGoods.points.filter(item => String(item.name).startsWith("WK"))) {
+  const type = point.properties?.["平面图器物类型"];
+  const expectedModel = nicheModelByType.get(type);
+  if (expectedModel && point.properties?.["三维模型"] !== expectedModel) {
+    throw new Error(`${point.name} must reuse ${expectedModel} for ${type}`);
+  }
 }
 
 const vertexCount = geometry.geometries.reduce((sum, item) => sum + item.vertices.length, 0);
