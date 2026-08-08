@@ -3,13 +3,14 @@ import fs from "node:fs";
 const html = fs.readFileSync("index.html", "utf8");
 const main = fs.readFileSync("src/main.js", "utf8");
 const style = fs.readFileSync("src/style.css", "utf8");
+const narrativeCardLayout = JSON.parse(fs.readFileSync("src/narrative-card-layout.json", "utf8"));
 const geometry = JSON.parse(fs.readFileSync("public/geometry-export.json", "utf8"));
 const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-presets.json", "utf8"));
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑"];
 
-const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
+const requiredIds = ["app", "home-page", "scene", "artifacts-page", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifacts", "start-artifacts-playback", "return-space", "artifact-progress", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -88,8 +89,24 @@ if (!narrativeHeader.includes("EXCAVATION BRIEF") || !narrativeHeader.includes("
 if (/<article\b[^>]*id="narrative-card"[\s\S]*?<cite>/.test(html)) {
   throw new Error("Narrative cards must not repeat the shared report citation");
 }
-if (!style.includes(".narrative-card{position:relative;align-self:start") || !style.includes(".narrative-head cite{")) {
-  throw new Error("Narrative card and shared source heading are not top-aligned");
+if (html.includes("narrative-card-drag-handle") || html.includes("DRAG · 拖动")) {
+  throw new Error("Narrative cards must be directly draggable without a dedicated drag header");
+}
+if (!style.includes(".narrative-card{position:fixed") || !style.includes(".narrative-head cite{")) {
+  throw new Error("Narrative card must be independently positioned beside the shared source heading");
+}
+if (narrativeCardLayout.version !== 1 || narrativeCardLayout.coordinateSpace !== "viewport-ratio") {
+  throw new Error("Narrative card layout config has an unsupported format");
+}
+for (const id of narrativeRoute) {
+  const position = narrativeCardLayout.positions?.[id];
+  if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)
+    || position.x < 0 || position.x > 1 || position.y < 0 || position.y > 1) {
+    throw new Error(`Narrative card layout is missing a position for ${id}`);
+  }
+}
+for (const marker of ["NARRATIVE_LAYOUT_STORAGE_KEY", "localStorage.setItem", "setupNarrativeCardDragging", "exportNarrativeCardLayout", "new Blob", 'link.download = "narrative-card-layout.json"']) {
+  if (!main.includes(marker)) throw new Error(`Narrative card layout feature is missing: ${marker}`);
 }
 
 for (const marker of ["autoDemoPhase", "artifactAutoStep", "spatialReturnState", "activateArtifactByName", '#narrative-artifacts', '#start-artifacts-playback', '#return-space', '#artifact-progress']) {

@@ -6,11 +6,11 @@
     <title>唐代卢夫人墓｜数字考古档案</title>
     <link rel="preload" as="image" href="/assets/home/landing.png" />
     <link rel="preload" as="image" href="/assets/report/tomb-plan.png" />
-    <link rel="preload" as="fetch" href="/geometry-export.json?v=20260711-new-13" crossorigin="anonymous" />
+    <link rel="preload" as="fetch" href="/geometry-export.json" crossorigin="anonymous" />
     <link rel="preload" as="image" href="/assets/artifacts/guardian-warrior-m2338-1.png" />
     <link rel="preload" as="image" href="/assets/artifacts/tomb-beast-m2338-2.png" />
     <link rel="preload" as="image" href="/assets/artifacts/location-tomb-beast.jpg" />
-    <link rel="stylesheet" href="/src/style.css?v=20260718-narrative-structure-v2" />
+    <link rel="stylesheet" href="/src/style.css" />
     <script type="importmap">
       {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
     </script>
@@ -34,6 +34,7 @@
       <section class="model-interface" aria-label="墓葬结构导航">
         <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
         <button id="start-artifacts-playback" class="section-switch section-switch-artifacts" type="button"><small>02 / ARTIFACTS</small><span>播放文物</span><i>→</i></button>
+        <button id="export-narrative-layout" class="narrative-layout-export" type="button">导出卡片布局</button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
             <header class="narrative-head">
@@ -43,16 +44,16 @@
             </header>
             <ol id="narrative-list" class="narrative-list"></ol>
           </div>
-          <article id="narrative-card" class="narrative-card" role="region" aria-live="polite" aria-hidden="true">
-            <button id="narrative-close" class="narrative-close" type="button" aria-label="收起简报叙事">×</button>
-            <p id="narrative-card-index" class="narrative-card-index"></p>
-            <h2 id="narrative-card-title"></h2>
-            <p id="narrative-card-subtitle" class="narrative-card-subtitle"></p>
-            <p id="narrative-card-summary" class="narrative-card-summary"></p>
-            <blockquote id="narrative-card-quote"></blockquote>
-            <div id="narrative-artifacts" class="narrative-artifacts" aria-label="相关文物"></div>
-          </article>
         </aside>
+        <article id="narrative-card" class="narrative-card" role="region" aria-live="polite" aria-hidden="true">
+          <button id="narrative-close" class="narrative-close" type="button" aria-label="收起简报叙事">×</button>
+          <p id="narrative-card-index" class="narrative-card-index"></p>
+          <h2 id="narrative-card-title"></h2>
+          <p id="narrative-card-subtitle" class="narrative-card-subtitle"></p>
+          <p id="narrative-card-summary" class="narrative-card-summary"></p>
+          <blockquote id="narrative-card-quote"></blockquote>
+          <div id="narrative-artifacts" class="narrative-artifacts" aria-label="相关文物"></div>
+        </article>
         <aside class="controls">
           <div class="control-head">
             <div><small>STRUCTURE INDEX</small><span>结构索引</span></div>
@@ -144,6 +145,6 @@
 
       <footer class="model-footer"><span id="status">正在读取几何数据…</span><span id="geometry-summary">读取数据中</span></footer>
     </main>
-    <script type="module" src="/src/main.js?v=20260718-narrative-structure-v2"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

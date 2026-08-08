@@ -4,9 +4,10 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import defaultNarrativeCardLayout from "./narrative-card-layout.json";
 
 const FALLBACK_NAMES = ["墓室", "甬道", "第三天井", "第三过洞", "第二天井", "第二过洞", "第一天井", "第一过洞", "墓道", "D2", "D1", "东壁龛", "西壁龛"];
-const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb?v=20260720-sketch";
+const MAIN_VISUAL_MODEL_PATH = "/models/lady-lu-tomb-sketch.glb";
 const BURIAL_GOODS_OVERVIEW_PATH = "/models/burial-goods-overview";
 const PRIORITY_VISUAL_MODEL_IDS = new Set(["lu_1", "lu_2", "lu_3", "lu_4", "lu_7"]);
 const canvas = document.querySelector("#scene");
@@ -306,6 +307,9 @@ let spatialReturnState = null;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeId = "";
+let narrativeCardLayout = null;
+const NARRATIVE_LAYOUT_STORAGE_KEY = "tang-tomb:narrative-card-layout:v1";
+const NARRATIVE_CARD_VIEWPORT_GAP = 12;
 const structureTargets = new Map();
 const pointer = { x: 0, y: 0 };
 const STRUCTURE_ORDER = [0, 1, 2, 3, 11, 12, 4, 5, 6, 7, 8, 9, 10];
@@ -940,7 +944,7 @@ async function loadMainVisualModel() {
 
 async function loadBurialGoods() {
   const [pointsResponse] = await Promise.all([
-    fetch("/data/burial-goods-points.json?v=20260713-models")
+    fetch("/data/burial-goods-points.json")
   ]);
   if (!pointsResponse.ok) throw new Error("无法读取随葬品点位数据");
   const pointData = await pointsResponse.json();
@@ -952,7 +956,7 @@ async function loadBurialGoods() {
   const loader = new GLTFLoader();
   const library = new Map();
   await Promise.all(modelIds.map(async modelId => {
-    const gltf = await loader.loadAsync(`${BURIAL_GOODS_OVERVIEW_PATH}/${modelId}.glb?v=20260717-overview`);
+    const gltf = await loader.loadAsync(`${BURIAL_GOODS_OVERVIEW_PATH}/${modelId}.glb`);
     library.set(modelId, gltf.scene);
   }));
 
@@ -2467,8 +2471,148 @@ function narrativeEntryById(id) {
   return NARRATIVE_ENTRIES.find(entry => entry.id === id) || null;
 }
 
+function normalizedNarrativeCardLayout(candidate) {
+  const source = candidate?.version === defaultNarrativeCardLayout.version
+    && candidate?.coordinateSpace === defaultNarrativeCardLayout.coordinateSpace
+    ? candidate
+    : defaultNarrativeCardLayout;
+  const positions = Object.fromEntries(NARRATIVE_ENTRIES.map(entry => {
+    const fallback = defaultNarrativeCardLayout.positions?.[entry.id] || { x: .16, y: .18 };
+    const position = source.positions?.[entry.id] || fallback;
+    const x = Number.isFinite(position.x) ? THREE.MathUtils.clamp(position.x, 0, 1) : fallback.x;
+    const y = Number.isFinite(position.y) ? THREE.MathUtils.clamp(position.y, 0, 1) : fallback.y;
+    return [entry.id, { x, y }];
+  }));
+  return {
+    version: defaultNarrativeCardLayout.version,
+    coordinateSpace: defaultNarrativeCardLayout.coordinateSpace,
+    positions
+  };
+}
+
+function loadNarrativeCardLayout() {
+  let savedLayout = null;
+  try {
+    savedLayout = JSON.parse(localStorage.getItem(NARRATIVE_LAYOUT_STORAGE_KEY) || "null");
+  } catch (error) {
+    console.warn("Saved narrative card layout could not be read", error);
+  }
+  narrativeCardLayout = normalizedNarrativeCardLayout(savedLayout);
+}
+
+function saveNarrativeCardLayout() {
+  try {
+    localStorage.setItem(NARRATIVE_LAYOUT_STORAGE_KEY, JSON.stringify(narrativeCardLayout));
+  } catch (error) {
+    console.warn("Narrative card layout could not be saved", error);
+  }
+}
+
+function clampNarrativeCardPixels(left, top, card) {
+  const rect = card.getBoundingClientRect();
+  const maxLeft = Math.max(NARRATIVE_CARD_VIEWPORT_GAP, innerWidth - rect.width - NARRATIVE_CARD_VIEWPORT_GAP);
+  const maxTop = Math.max(NARRATIVE_CARD_VIEWPORT_GAP, innerHeight - rect.height - NARRATIVE_CARD_VIEWPORT_GAP);
+  return {
+    left: THREE.MathUtils.clamp(left, NARRATIVE_CARD_VIEWPORT_GAP, maxLeft),
+    top: THREE.MathUtils.clamp(top, NARRATIVE_CARD_VIEWPORT_GAP, maxTop)
+  };
+}
+
+function applyNarrativeCardPosition(narrativeId) {
+  const card = document.querySelector("#narrative-card");
+  const position = narrativeCardLayout?.positions?.[narrativeId]
+    || defaultNarrativeCardLayout.positions?.[narrativeId]
+    || { x: .16, y: .18 };
+  if (!card) return;
+  const pixels = clampNarrativeCardPixels(position.x * innerWidth, position.y * innerHeight, card);
+  card.style.left = `${pixels.left}px`;
+  card.style.top = `${pixels.top}px`;
+}
+
+function exportNarrativeCardLayout() {
+  const layout = normalizedNarrativeCardLayout(narrativeCardLayout);
+  const blob = new Blob([`${JSON.stringify(layout, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "narrative-card-layout.json";
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function setupNarrativeCardDragging() {
+  const card = document.querySelector("#narrative-card");
+  let drag = null;
+
+  const finishDrag = event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const pointerId = drag.pointerId;
+    const rect = card.getBoundingClientRect();
+    const narrativeId = card.dataset.narrativeId;
+    if (narrativeId && narrativeCardLayout?.positions?.[narrativeId]) {
+      narrativeCardLayout.positions[narrativeId] = {
+        x: Number((rect.left / innerWidth).toFixed(6)),
+        y: Number((rect.top / innerHeight).toFixed(6))
+      };
+      saveNarrativeCardLayout();
+    }
+    card.classList.remove("dragging");
+    drag = null;
+    if (card.hasPointerCapture(pointerId)) card.releasePointerCapture(pointerId);
+    scheduleAutoDemo();
+  };
+
+  card.addEventListener("pointerdown", event => {
+    if (!narrativeCardOpen || event.button !== 0
+      || event.target.closest("button,a,input,textarea,select,[contenteditable='true']")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stopAutoDemo();
+    const rect = card.getBoundingClientRect();
+    card.style.left = `${rect.left}px`;
+    card.style.top = `${rect.top}px`;
+    drag = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startLeft: rect.left,
+      startTop: rect.top
+    };
+    card.setPointerCapture(event.pointerId);
+    card.classList.add("dragging");
+  });
+  card.addEventListener("pointermove", event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const pixels = clampNarrativeCardPixels(
+      drag.startLeft + event.clientX - drag.startClientX,
+      drag.startTop + event.clientY - drag.startClientY,
+      card
+    );
+    card.style.left = `${pixels.left}px`;
+    card.style.top = `${pixels.top}px`;
+  });
+  card.addEventListener("pointerup", finishDrag);
+  card.addEventListener("pointercancel", finishDrag);
+  card.addEventListener("lostpointercapture", finishDrag);
+
+  document.querySelector("#export-narrative-layout").addEventListener("click", event => {
+    event.stopPropagation();
+    exportNarrativeCardLayout();
+  });
+  window.addEventListener("resize", () => {
+    if (narrativeCardOpen) applyNarrativeCardPosition(activeNarrativeId);
+  });
+}
+
 function renderNarrativeCard(entry) {
   if (!entry) return;
+  const card = document.querySelector("#narrative-card");
+  card.dataset.narrativeId = entry.id;
   document.querySelector("#narrative-card-index").textContent = `${entry.no} / ${String(NARRATIVE_ENTRIES.length).padStart(2, "0")} · EXCAVATION BRIEF`;
   document.querySelector("#narrative-card-title").textContent = entry.name;
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
@@ -2500,6 +2644,7 @@ function renderNarrativeCard(entry) {
     });
     related.append(button);
   });
+  applyNarrativeCardPosition(entry.id);
 }
 
 function syncNarrativeAxis(index, preferredNarrativeId = "") {
@@ -2543,6 +2688,8 @@ function closeNarrativeCard() {
 }
 
 function setupNarrativeAxis() {
+  loadNarrativeCardLayout();
+  setupNarrativeCardDragging();
   const list = document.querySelector("#narrative-list");
   NARRATIVE_ENTRIES.forEach(entry => {
     const item = document.createElement("li");
@@ -3302,7 +3449,7 @@ bindSlider("jitter", value => objects.forEach(group => [group.userData.lines.mai
 bindSlider("grain", value => document.querySelector(".paper-grain").style.opacity = value / 100);
 
 async function init() {
-  const response = await fetch("/geometry-export.json?v=20260711-new-13");
+  const response = await fetch("/geometry-export.json");
   if (!response.ok) throw new Error("无法读取 geometry-export.json");
   const data = await response.json();
   data.geometries.forEach(addStructure);
