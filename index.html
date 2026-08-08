@@ -33,6 +33,14 @@
 
       <section class="model-interface" aria-label="墓葬结构导航">
         <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
+        <nav class="model-actions" aria-label="模型浏览模式">
+          <button id="overall-view" class="model-action active" type="button" aria-pressed="true">
+            <span>整体</span><small>OVERVIEW</small>
+          </button>
+          <button id="auto-play" class="model-action" type="button" aria-pressed="false">
+            <span>自动播放</span><small>AUTO PLAY</small>
+          </button>
+        </nav>
         <button id="export-narrative-layout" class="narrative-layout-export" type="button">导出卡片布局</button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
@@ -55,6 +63,10 @@
           <p id="narrative-card-subtitle" class="narrative-card-subtitle"></p>
           <p id="narrative-card-summary" class="narrative-card-summary"></p>
           <blockquote id="narrative-card-quote"></blockquote>
+          <section class="narrative-photo-strip" aria-label="相关考古图像">
+            <figure><img id="narrative-photo-primary" src="" alt="" /><figcaption id="narrative-photo-primary-caption"></figcaption></figure>
+            <figure><img id="narrative-photo-secondary" src="" alt="" /><figcaption id="narrative-photo-secondary-caption"></figcaption></figure>
+          </section>
         </article>
         <section id="artifact-detail" class="narrative-artifact-detail" aria-hidden="true" aria-label="当前器物详情">
           <button id="artifact-detail-close" class="artifact-detail-close" type="button" aria-label="返回当前环节总览">×</button>
@@ -90,17 +102,13 @@
             <div><small>STRUCTURE INDEX</small><span>结构索引</span></div>
             <button id="reset-view" type="button">返回整体 ↗</button>
           </div>
-          <figure id="structure-list" class="structure-plan" aria-label="M2338墓葬俯视图结构导航，北在左、南在右">
+          <figure id="structure-list" class="structure-plan" aria-label="M2338墓葬俯视定位示意，北在左、南在右">
             <div class="structure-plan-viewport">
               <div class="structure-plan-canvas">
                 <img class="structure-plan-image" src="/assets/report/tomb-plan.png" width="984" height="222" alt="M2338墓葬俯视图，墓室位于左侧，墓道入口位于右侧" draggable="false" />
-                <div id="structure-hotspots" class="structure-hotspots"></div>
+                <div id="structure-hotspots" class="structure-hotspots" aria-hidden="true"></div>
               </div>
             </div>
-            <figcaption>
-              <button class="structure-overall overall active" type="button" aria-pressed="true">整体</button>
-              <small>点击图中节点切换三维特写</small>
-            </figcaption>
           </figure>
           <details class="sliders">
             <summary>线稿参数 <small>STYLE</small></summary>

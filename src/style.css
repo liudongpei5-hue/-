@@ -359,5 +359,73 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .narrative-artifact-detail .artifact-copy{display:block;width:100%;max-width:none;padding:0 0 36px}
   .narrative-artifact-detail .artifact-copy h2 span{font-size:clamp(38px,14vw,60px)}
   .narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){font-size:12px;line-height:1.75}
-  #app.artifact-detail-open .site-brand{opacity:0}
+#app.artifact-detail-open .site-brand{opacity:0}
+}
+
+/* Scroll-led structure guide and quiet model controls. */
+.model-actions{position:absolute;z-index:14;left:calc(3.1vw + 24px);top:max(104px,12.4vh);display:flex;align-items:center;gap:18px}
+.model-action{display:grid;grid-template-columns:auto auto;align-items:baseline;gap:7px;min-height:0;padding:4px 0 6px;border:0;border-bottom:1px solid rgba(70,64,54,.2);background:transparent;color:#746d64;font:10px/1.2 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.08em;cursor:pointer;transition:color .3s,border-color .3s,transform .4s cubic-bezier(.16,1,.3,1)}
+.model-action small{color:#9a3f30;font:5px/1 Arial,sans-serif;letter-spacing:.16em}
+.model-action:hover,.model-action:focus-visible,.model-action.active{border-bottom-color:#9a3f30;color:#2f2b26;transform:translateY(-2px)}
+.model-action.active:before{content:"";width:6px;height:6px;margin-right:1px;border-radius:50%;background:#9a3f30;box-shadow:0 0 0 4px rgba(154,63,48,.1)}
+#auto-play.active:before{animation:axisAutoPulse 1.6s ease-in-out infinite}
+
+.narrative-axis{top:max(166px,19.8vh);bottom:max(142px,15.5vh)}
+.narrative-rail{overflow:hidden}
+.narrative-list{justify-content:flex-start;gap:2px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scroll-padding-block:42%;scrollbar-width:none;padding-top:38%;padding-bottom:38%;mask-image:linear-gradient(180deg,transparent,#000 13%,#000 87%,transparent)}
+.narrative-list::-webkit-scrollbar{display:none}
+.narrative-item{flex:0 0 auto;scroll-snap-align:center;scroll-snap-stop:always}
+.narrative-node{min-height:58px;opacity:.52;transform-origin:left center;transition:opacity .3s,color .3s,transform .48s cubic-bezier(.16,1,.3,1)}
+.narrative-node b{font-size:11px}
+.narrative-node small{font-size:7px}
+.narrative-node:hover,.narrative-node:focus-visible{opacity:.82}
+.narrative-node.active{z-index:2;opacity:1;transform:translateX(7px) scale(1.12)}
+.narrative-node.active b{font-size:13px;letter-spacing:.08em}
+.narrative-node.active small{color:#786e64}
+
+/* The report plan is a passive locator: no frame, labels or click targets. */
+#app[data-view="model"] .model-interface .controls{bottom:2.2vh!important;width:min(500px,82vw)!important;pointer-events:none}
+.structure-plan{margin:0;padding:0;border:0!important;background:none!important;box-shadow:none!important;backdrop-filter:none!important}
+.structure-plan-viewport{overflow:hidden}
+.structure-plan-canvas{width:100%;min-width:0;margin:0 auto}
+.structure-plan-image{opacity:.36;filter:invert(1) grayscale(1) contrast(1.06)}
+.structure-hotspot{pointer-events:none!important;cursor:default!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important}
+.structure-hotspot:after,.structure-hotspot>span{display:none!important}
+.structure-hotspot:before,.structure-hotspot.secondary:before{left:50%;top:50%;width:7px;height:7px;border:1px solid rgba(145,58,44,.68);border-radius:50%;background:rgba(246,242,232,.84);box-shadow:0 0 0 4px rgba(246,242,232,.24);transform:translate(-50%,-50%)}
+.structure-hotspot.secondary{z-index:2;min-width:20px;min-height:20px;transform:translate(-50%,-50%)}
+.structure-hotspot.active:before,.structure-hotspot.context-active:before{width:11px;height:11px;border-color:#9a3f30;background:#9a3f30;box-shadow:0 0 0 7px rgba(246,242,232,.58),0 0 0 10px rgba(154,63,48,.07),0 0 20px rgba(154,63,48,.22)}
+.structure-hotspot.context-active:before{width:8px;height:8px;box-shadow:0 0 0 5px rgba(246,242,232,.48)}
+
+/* Unboxed, image-rich excavation notes. */
+.narrative-card{width:min(310px,calc(100vw - 32px));max-height:min(72vh,660px);padding:20px 21px 18px}
+.narrative-photo-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid rgba(70,64,54,.13)}
+.narrative-photo-strip figure{min-width:0;margin:0}
+.narrative-photo-strip img{display:block;width:100%;height:76px;object-fit:cover;filter:grayscale(.3) sepia(.08) contrast(.94);mix-blend-mode:multiply}
+.narrative-photo-strip figcaption{margin-top:5px;color:#847b71;font:6px/1.35 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.06em}
+.narrative-artifact-list{scrollbar-width:none}
+.narrative-artifact-list::-webkit-scrollbar{display:none}
+
+#scene{cursor:grab}
+#scene:active{cursor:grabbing}
+
+@media(max-width:800px){
+  .model-actions{left:72px;top:110px;gap:12px}
+  .model-action{font-size:9px}
+  .model-action small{display:none}
+  .narrative-axis{left:14px;top:150px;bottom:118px;width:150px;grid-template-columns:150px;pointer-events:none}
+  .narrative-head{height:auto;margin-bottom:5px;padding-left:10px}
+  .narrative-head small{writing-mode:horizontal-tb}
+  .narrative-list{padding:42% 0 42% 10px;pointer-events:auto}
+  .narrative-node{grid-template-columns:19px minmax(0,1fr);width:136px;min-height:52px;text-align:left}
+  .narrative-node span{display:grid}
+  .narrative-node b{font-size:10px}
+  .narrative-node small{display:none}
+  .narrative-node.active{transform:translateX(5px) scale(1.06)}
+  .narrative-artifact-branch{left:164px;right:10px;top:150px;padding:8px 0 4px}
+  .narrative-artifact-list{display:flex;flex-wrap:wrap;gap:5px;max-height:126px;padding:0;overflow:visible}
+  .narrative-artifact-list li{flex:0 0 auto}
+  .narrative-artifact-option{min-height:30px;padding:6px 9px}
+  .narrative-card{width:min(310px,calc(100vw - 178px));max-height:calc(100dvh - 24px)}
+  .narrative-photo-strip{grid-template-columns:1fr}
+  .narrative-photo-strip img{height:92px}
 }

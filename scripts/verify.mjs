@@ -22,7 +22,7 @@ const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32"
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
 const narrativeRoute = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
 
-const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
+const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "overall-view", "auto-play", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-photo-primary", "narrative-photo-secondary", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }
@@ -84,6 +84,13 @@ assert.deepEqual(DEMO_ROUTE, narrativeRoute, "Narrative playback route is out of
 if (!main.includes("const NARRATIVE_ENTRIES") || !main.includes("setupNarrativeAxis") || !main.includes("syncNarrativeAxis")) {
   throw new Error("Excavation-brief narrative axis is missing");
 }
+if (!main.includes('const GUIDE_ORDER = ["epitaph", "chamber", "niches", "threshold", "shaft-sequence", "ramp", "theft"]')
+  || !main.includes('name: "墓主与墓志"') || !main.includes('name: "甬道", title: "封门')) {
+  throw new Error("The scrolling guide must use the requested north-to-south structure order");
+}
+for (const marker of ['button.scrollIntoView({ block: "center"', 'list.addEventListener("scroll"', 'source: "scroll"', 'document.querySelector("#overall-view")', 'document.querySelector("#auto-play")']) {
+  if (!main.includes(marker)) throw new Error(`Missing scroll-led guide behavior: ${marker}`);
+}
 for (const id of narrativeRoute) {
   if (!main.includes(`id: "${id}"`)) throw new Error(`Missing narrative node: ${id}`);
 }
@@ -135,7 +142,7 @@ if (!main.includes("const SPATIAL_CAMERA_UP = new THREE.Vector3(0, 0, 1)") || !m
 if (!main.includes("new THREE.Vector3(0, 0, 6.2)") || !main.includes("const endUp = new THREE.Vector3(0, 1, 0)")) {
   throw new Error("Artifact detail camera must move vertically above the selected burial plane");
 }
-const branchBuilderSource = main.match(/function syncNarrativeArtifactBranch\(entry\) \{[\s\S]*?\n\}\n\nfunction renderNarrativeCard/)?.[0] || "";
+const branchBuilderSource = main.match(/function syncNarrativeArtifactBranch\(entry\) \{[\s\S]*?function renderNarrativeCard/)?.[0] || "";
 if (!branchBuilderSource.includes('button.className = "narrative-artifact-option"')
   || !branchBuilderSource.includes('button.addEventListener("click", event =>')
   || !branchBuilderSource.includes("showNarrativeArtifact(entry, { name, locationKey }")
@@ -299,14 +306,17 @@ for (const niche of ["东壁龛", "西壁龛"]) {
   if (!geometry.geometries.some(item => item.name === niche)) throw new Error(`Missing niche geometry: ${niche}`);
   if (!main.includes(`"${niche}"`)) throw new Error(`Missing niche dimension or navigation data: ${niche}`);
 }
-if (!main.includes("STRUCTURE_ORDER") || !main.includes("controls.touches.TWO = THREE.TOUCH.DOLLY_PAN")) {
-  throw new Error("Spatial axis order or two-finger pan is missing");
+if (!main.includes("STRUCTURE_ORDER") || !main.includes("controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE")
+  || !main.includes("controls.enablePan = false") || !main.includes("controls.zoomToCursor = false")) {
+  throw new Error("Centered Blender-like orbit controls are missing");
 }
 if (!html.includes("/assets/report/tomb-plan.png") || !main.includes("PLAN_HOTSPOTS")) {
-  throw new Error("Report-plan structure navigation is missing");
+  throw new Error("Report-plan structure locator is missing");
 }
-if (!main.includes('placement.secondary ? `盗洞${label.slice(1)}` : label')) {
-  throw new Error("Theft-shaft plan labels must use 盗洞1 / 盗洞2");
+const planBuilderSource = main.match(/function buildControls\(data\) \{[\s\S]*?function easeBreath/)?.[0] || "";
+if (!planBuilderSource.includes('document.createElement("span")')
+  || !html.includes('id="structure-hotspots" class="structure-hotspots" aria-hidden="true"')) {
+  throw new Error("The report plan must remain a passive dot locator without click navigation");
 }
 if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
   throw new Error("Burial-goods models must load without blocking the spatial interface");
@@ -331,6 +341,12 @@ for (let index = 0; index < geometry.geometries.length; index++) {
 }
 if (!main.includes("addMeasurement") || !main.includes("dimensionLabel") || html.includes('id="dimension-callout"')) {
   throw new Error("Edge-aligned 3D dimension lines are missing or obsolete page callout remains");
+}
+const dimensionSource = main.match(/function dimensionLabel\(text\) \{[\s\S]*?function showMeasurements/)?.[0] || "";
+if (dimensionSource.includes("fillRect") || dimensionSource.includes("strokeRect")
+  || !dimensionSource.includes("addLineLayer([anchorA,a,anchorB,b]")
+  || !dimensionSource.includes("tickA0.clone().add(handOffset)")) {
+  throw new Error("Dimension labels must be unboxed and use differentiated hand-drawn line weights");
 }
 for (const asset of artifactAssets) {
   if (!fs.existsSync(asset) || fs.statSync(asset).size < 20_000) throw new Error(`Missing or invalid archaeological artifact asset: ${asset}`);
