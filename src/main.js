@@ -53,6 +53,7 @@ function preloadArtifactImage(src) {
 // Begin warming the complete artifact image set while the landing page is visible.
 ARTIFACT_IMAGE_ASSETS.forEach(src => preloadArtifactImage(src).catch(error => console.error(error)));
 const canvas = document.querySelector("#scene");
+const structurePlanElement = document.querySelector(".structure-plan");
 const sceneHomeParent = canvas.parentNode;
 const sceneHomeNextSibling = canvas.nextSibling;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -314,6 +315,7 @@ scene.add(measurementGroup);
 const objects = [];
 const wideMaterials = [];
 let selectedIndex = -1;
+let structurePlanContrast = -1;
 let perspectiveGuides;
 let naturalShell;
 let structuralSkeletonLayer;
@@ -3932,6 +3934,20 @@ function resize() {
     sketchPipeline.setSize(clientWidth, clientHeight);
   }
 }
+
+function updateStructurePlanContrast() {
+  if (!structurePlanElement || !overallView || artifactMiniState) return;
+  const overallDistance = overallView.position.distanceTo(overallView.target);
+  const currentDistance = camera.position.distanceTo(controls.target);
+  const zoomProximity = THREE.MathUtils.clamp((1.04 - currentDistance / Math.max(overallDistance, .001)) / .66, 0, 1);
+  const focusBoost = selectedIndex >= 0 ? .18 : 0;
+  const contrast = THREE.MathUtils.clamp(zoomProximity + focusBoost, 0, 1);
+  if (Math.abs(contrast - structurePlanContrast) < .012) return;
+  structurePlanContrast = contrast;
+  structurePlanElement.style.setProperty("--plan-boost", contrast.toFixed(3));
+  structurePlanElement.classList.toggle("contrast-boosted", contrast > .16);
+}
+
 function animate(now = 0) {
   resize();
   if (artifactLocationHalo?.visible && artifactLocationLayer?.visible) {
@@ -3941,6 +3957,7 @@ function animate(now = 0) {
   }
   controls.update();
   normalizeGroundedCameraView();
+  updateStructurePlanContrast();
   applyDepthAwareLineOpacity();
   sketchPipeline.render(now);
   requestAnimationFrame(animate);

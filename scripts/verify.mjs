@@ -318,6 +318,12 @@ if (!planBuilderSource.includes('document.createElement("span")')
   || !html.includes('id="structure-hotspots" class="structure-hotspots" aria-hidden="true"')) {
   throw new Error("The report plan must remain a passive dot locator without click navigation");
 }
+for (const marker of ["function updateStructurePlanContrast()", '"--plan-boost"', 'classList.toggle("contrast-boosted"', "updateStructurePlanContrast();"]) {
+  if (!main.includes(marker)) throw new Error(`Adaptive plan contrast is missing: ${marker}`);
+}
+for (const marker of [".structure-plan:before", "mix-blend-mode:screen", "backdrop-filter:blur(calc(", ".structure-plan.contrast-boosted", "@keyframes planAdaptiveGlow"]) {
+  if (!style.includes(marker)) throw new Error(`Adaptive plan glow styling is missing: ${marker}`);
+}
 if (main.includes("await loadBurialGoods()") || !main.includes("loadBurialGoods().then")) {
   throw new Error("Burial-goods models must load without blocking the spatial interface");
 }
