@@ -26,28 +26,31 @@
       <div id="transition-veil" class="transition-veil" aria-hidden="true"></div>
 
       <header class="site-brand">
-        <p class="eyebrow">3D VISUALIZATION OF THE SPACE-TIME ARCHAEOLOGY</p>
         <h1>唐代卢夫人墓</h1>
+        <p class="brand-title-en">Tomb of Lady Lu of the Tang Dynasty</p>
         <p class="brand-sub">陕西咸阳 · 麟德元年（664）</p>
+        <p class="brand-sub-en">Xianyang, Shaanxi · First Year of Linde (664)</p>
       </header>
 
       <section class="model-interface" aria-label="墓葬结构导航">
-        <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
+        <div class="section-marker" aria-hidden="true"><i></i><small>MODEL</small></div>
         <button id="export-narrative-layout" class="narrative-layout-export" type="button">导出卡片布局</button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
             <header class="narrative-head">
-              <span>EXCAVATION BRIEF</span>
-              <cite>《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》</cite>
-              <small>考古简报空间叙事</small>
-              <button id="overall-view" class="model-action overall-action active" type="button" aria-pressed="true">
-                <i aria-hidden="true"></i><span>整体</span><b>OVERVIEW</b>
-              </button>
+              <cite>《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》空间叙事</cite>
+              <span class="narrative-head-en">Excavation report space storytelling</span>
             </header>
-            <ol id="narrative-list" class="narrative-list"></ol>
+            <ol id="narrative-list" class="narrative-list">
+              <li class="narrative-item" data-narrative-id="hongduyuan">
+                <button id="overall-view" class="narrative-node overall-action active" data-narrative-id="hongduyuan" type="button" aria-pressed="true" aria-controls="narrative-card" aria-expanded="false" aria-current="step">
+                  <em>01</em><span><b>洪渎原纪年墓</b><small>664年 · 一条19.88米的地下轴线</small></span>
+                </button>
+              </li>
+            </ol>
           </div>
           <aside id="narrative-artifact-branch" class="narrative-artifact-branch" aria-label="本环节器物" aria-hidden="true">
-            <span class="narrative-artifact-label">OBJECTS</span>
+            <span class="narrative-artifact-label">器物 / OBJECTS</span>
             <ol id="narrative-artifact-list" class="narrative-artifact-list"></ol>
           </aside>
         </aside>
@@ -78,8 +81,8 @@
           </div>
           <aside id="artifact-spatial-inset" class="artifact-spatial-inset" aria-label="当前文物在墓葬空间中的位置">
             <header class="artifact-spatial-head">
-              <span>SPATIAL LOCATION</span>
-              <small>文物空间定位</small>
+              <span>文物空间定位</span>
+              <small>SPATIAL LOCATION</small>
             </header>
             <div id="artifact-scene-host" class="artifact-scene-host" role="img" aria-label="墓室三维线稿与当前文物出土位置"></div>
             <div class="artifact-location-meta">
@@ -89,7 +92,7 @@
             </div>
           </aside>
           <article class="artifact-copy">
-            <p class="artifact-kicker">M2338 / SELECTED OBJECT</p>
+            <p class="artifact-kicker">M2338 / 代表器物 / SELECTED OBJECT</p>
             <h2><b id="artifact-name-en">TOMB BEAST</b><span id="artifact-name-cn">镇墓兽</span></h2>
             <p id="artifact-description">泥质红陶模制，人面短柱冠，白地施红彩。出土于墓室入口东侧，通高36厘米，胸前残留金箔痕迹。</p>
             <button id="artifact-details" type="button" hidden>阅读全文　→</button>
