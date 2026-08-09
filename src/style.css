@@ -362,13 +362,19 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 #app.artifact-detail-open .site-brand{opacity:0}
 }
 
-/* Scroll-led structure guide and quiet model controls. */
-.model-actions{position:absolute;z-index:14;left:calc(3.1vw + 24px);top:max(104px,12.4vh);display:flex;align-items:center;gap:18px}
-.model-action{display:grid;grid-template-columns:auto auto;align-items:baseline;gap:7px;min-height:0;padding:4px 0 6px;border:0;border-bottom:1px solid rgba(70,64,54,.2);background:transparent;color:#746d64;font:10px/1.2 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.08em;cursor:pointer;transition:color .3s,border-color .3s,transform .4s cubic-bezier(.16,1,.3,1)}
-.model-action small{color:#9a3f30;font:5px/1 Arial,sans-serif;letter-spacing:.16em}
-.model-action:hover,.model-action:focus-visible,.model-action.active{border-bottom-color:#9a3f30;color:#2f2b26;transform:translateY(-2px)}
-.model-action.active:before{content:"";width:6px;height:6px;margin-right:1px;border-radius:50%;background:#9a3f30;box-shadow:0 0 0 4px rgba(154,63,48,.1)}
-#auto-play.active:before{animation:axisAutoPulse 1.6s ease-in-out infinite}
+/* Scroll-led structure guide and archaeological label controls. */
+.model-action{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:40px;box-sizing:border-box;padding:7px 10px;border:1px solid rgba(123,78,62,.34);background:linear-gradient(105deg,rgba(246,242,232,.9),rgba(237,230,216,.7));box-shadow:0 8px 22px rgba(63,48,34,.055),inset 0 0 0 1px rgba(255,255,255,.36);color:#4d4740;font:11px/1.15 "STKaiti","KaiTi",serif;letter-spacing:.1em;text-align:left;cursor:pointer;transition:color .3s,border-color .3s,background .3s,box-shadow .3s,transform .4s cubic-bezier(.16,1,.3,1)}
+.model-action span{white-space:nowrap}
+.model-action b{color:#9a3f30;font:5px/1 Arial,sans-serif;font-weight:400;letter-spacing:.16em;white-space:nowrap}
+.model-action i{position:relative;display:block;width:12px;height:12px;box-sizing:border-box;border:1px solid rgba(154,63,48,.72);border-radius:50%}
+.model-action:hover,.model-action:focus-visible{border-color:rgba(154,63,48,.72);background:linear-gradient(105deg,rgba(249,246,238,.97),rgba(235,224,207,.8));box-shadow:0 10px 28px rgba(63,48,34,.09),inset 0 0 0 1px rgba(255,255,255,.46);color:#292622;transform:translateY(-2px)}
+.model-action.active{border-color:rgba(154,63,48,.58);background:linear-gradient(105deg,rgba(154,63,48,.12),rgba(245,239,226,.88));color:#292622}
+.overall-action{width:138px;margin-top:10px;pointer-events:auto}
+.overall-action i:after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:#9a3f30;transform:translate(-50%,-50%)}
+.auto-action{position:fixed;z-index:14;left:calc(3.1vw + 24px);bottom:max(52px,7.2vh);width:154px}
+.auto-action i:after{content:"";position:absolute;left:4px;top:3px;width:0;height:0;border-top:3px solid transparent;border-bottom:3px solid transparent;border-left:5px solid #9a3f30}
+#auto-play.active i{border-color:#9a3f30;animation:axisAutoPulse 1.6s ease-in-out infinite}
+#auto-play.active i:after{left:3px;top:3px;width:4px;height:4px;border:0;background:#9a3f30}
 
 .narrative-axis{top:max(166px,19.8vh);bottom:max(142px,15.5vh)}
 .narrative-rail{overflow:hidden}
@@ -409,9 +415,11 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 #scene:active{cursor:grabbing}
 
 @media(max-width:800px){
-  .model-actions{left:72px;top:110px;gap:12px}
-  .model-action{font-size:9px}
-  .model-action small{display:none}
+  .model-action{min-height:36px;padding:6px 8px;font-size:10px}
+  .model-action b{display:none}
+  .narrative-head .overall-action span{display:block}
+  .overall-action{width:122px;margin-top:8px}
+  .auto-action{left:18px;bottom:48px;width:132px}
   .narrative-axis{left:14px;top:150px;bottom:118px;width:150px;grid-template-columns:150px;pointer-events:none}
   .narrative-head{height:auto;margin-bottom:5px;padding-left:10px}
   .narrative-head small{writing-mode:horizontal-tb}

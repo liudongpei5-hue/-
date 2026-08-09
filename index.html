@@ -33,14 +33,6 @@
 
       <section class="model-interface" aria-label="墓葬结构导航">
         <div class="section-marker"><span>01</span><i></i><small>MODEL</small></div>
-        <nav class="model-actions" aria-label="模型浏览模式">
-          <button id="overall-view" class="model-action active" type="button" aria-pressed="true">
-            <span>整体</span><small>OVERVIEW</small>
-          </button>
-          <button id="auto-play" class="model-action" type="button" aria-pressed="false">
-            <span>自动播放</span><small>AUTO PLAY</small>
-          </button>
-        </nav>
         <button id="export-narrative-layout" class="narrative-layout-export" type="button">导出卡片布局</button>
         <aside id="report-narrative" class="narrative-axis" aria-label="考古简报空间叙事">
           <div class="narrative-rail">
@@ -48,6 +40,9 @@
               <span>EXCAVATION BRIEF</span>
               <cite>《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》</cite>
               <small>考古简报空间叙事</small>
+              <button id="overall-view" class="model-action overall-action active" type="button" aria-pressed="true">
+                <i aria-hidden="true"></i><span>整体</span><b>OVERVIEW</b>
+              </button>
             </header>
             <ol id="narrative-list" class="narrative-list"></ol>
           </div>
@@ -56,6 +51,9 @@
             <ol id="narrative-artifact-list" class="narrative-artifact-list"></ol>
           </aside>
         </aside>
+        <button id="auto-play" class="model-action auto-action" type="button" aria-pressed="false">
+          <i aria-hidden="true"></i><span>自动播放</span><b>AUTO PLAY</b>
+        </button>
         <article id="narrative-card" class="narrative-card" role="region" aria-live="polite" aria-hidden="true">
           <button id="narrative-close" class="narrative-close" type="button" aria-label="收起简报叙事">×</button>
           <p id="narrative-card-index" class="narrative-card-index"></p>
