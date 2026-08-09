@@ -53,6 +53,7 @@ function preloadArtifactImage(src) {
 // Begin warming the complete artifact image set while the landing page is visible.
 ARTIFACT_IMAGE_ASSETS.forEach(src => preloadArtifactImage(src).catch(error => console.error(error)));
 const canvas = document.querySelector("#scene");
+const appElement = document.querySelector("#app");
 const structurePlanElement = document.querySelector(".structure-plan");
 const sceneHomeParent = canvas.parentNode;
 const sceneHomeNextSibling = canvas.nextSibling;
@@ -74,6 +75,7 @@ const artifactFillLight = new THREE.DirectionalLight(0xd7e8ff, .9);
 artifactFillLight.position.set(-5.5, 4.5, 3.2);
 scene.add(artifactFillLight);
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 500);
+camera.layers.enable(1);
 const SPATIAL_CAMERA_UP = new THREE.Vector3(0, 0, 1);
 camera.up.copy(SPATIAL_CAMERA_UP);
 camera.position.set(20, -25, 18);
@@ -294,10 +296,13 @@ function createSketchPipeline() {
       renderer.clear();
       renderer.render(scene, camera);
       const previousOverride = scene.overrideMaterial;
+      const previousCameraLayerMask = camera.layers.mask;
       scene.overrideMaterial = normalMaterial;
+      camera.layers.disable(1);
       renderer.setRenderTarget(normalTarget);
       renderer.clear();
       renderer.render(scene, camera);
+      camera.layers.mask = previousCameraLayerMask;
       scene.overrideMaterial = previousOverride;
       renderer.setRenderTarget(null);
       renderer.render(postScene, postCamera);
@@ -320,6 +325,7 @@ let perspectiveGuides;
 let naturalShell;
 let structuralSkeletonLayer;
 let mainVisualModel;
+const mainVisualFocusMaterials = new Set();
 let continuousVolumeLayer;
 let groundLayer;
 let sketchVolumeLayer;
@@ -1149,38 +1155,90 @@ function tuneArtifactMaterials(model, opacityMaterials) {
   });
 }
 
+function mainVisualStructureIndex(child) {
+  const indexedName = child.name.match(/^(?:exact_original_surface_|edge_)(\d{2})(?:_|$)/);
+  if (indexedName) return Number(indexedName[1]);
+  if (child.name.startsWith("ramp_edge_")) return 8;
+  const bounds = new THREE.Box3().setFromObject(child);
+  if (bounds.isEmpty()) return -1;
+  const center = bounds.getCenter(new THREE.Vector3());
+  let closestIndex = -1;
+  let closestDistance = Infinity;
+  structureTargets.forEach((target, structureIndex) => {
+    const distance = center.distanceToSquared(target);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = structureIndex;
+    }
+  });
+  return closestIndex;
+}
+
+function mainVisualFadeScale(material) {
+  const name = material.name.toLowerCase();
+  if (name.includes("fill")) return .22;
+  if (name.includes("orange")) return .14;
+  return .1;
+}
+
 function tuneMainVisualModel(model) {
   model.name = "lady-lu-tomb-sketch-main-visual";
+  model.updateMatrixWorld(true);
+  const indexedMaterials = new Map();
   model.traverse(child => {
     child.frustumCulled = false;
     child.renderOrder = Math.max(child.renderOrder || 0, 120);
     if (!child.material) return;
-    const materials = Array.isArray(child.material) ? child.material : [child.material];
-    materials.forEach(source => {
-      source.userData.baseOpacity = source.opacity ?? 1;
-      source.transparent = source.transparent || source.opacity < 1;
-      source.depthWrite = false;
-      source.depthTest = false;
-      source.toneMapped = false;
-      if ("linewidth" in source && !source.linewidth) source.linewidth = 1;
-      source.needsUpdate = true;
+    const structureIndex = mainVisualStructureIndex(child);
+    child.userData.mainVisualStructureIndex = structureIndex;
+    const sourceMaterials = Array.isArray(child.material) ? child.material : [child.material];
+    const materials = sourceMaterials.map(source => {
+      const key = `${source.uuid}:${structureIndex}`;
+      if (indexedMaterials.has(key)) return indexedMaterials.get(key);
+      const material = source.clone();
+      material.userData.baseOpacity = source.opacity ?? 1;
+      material.userData.focusTargetOpacity = material.userData.baseOpacity;
+      material.userData.structureIndex = structureIndex;
+      material.userData.fadeScale = mainVisualFadeScale(material);
+      material.transparent = true;
+      material.depthWrite = false;
+      material.depthTest = false;
+      material.toneMapped = false;
+      if ("linewidth" in material && !material.linewidth) material.linewidth = 1;
+      material.needsUpdate = true;
+      indexedMaterials.set(key, material);
+      mainVisualFocusMaterials.add(material);
+      return material;
     });
+    child.material = Array.isArray(child.material) ? materials : materials[0];
   });
   model.updateMatrixWorld(true);
 }
 
 function setMainVisualModelFocus(index) {
   if (!mainVisualModel) return;
-  const opacityScale = index < 0 ? 1 : .46;
   mainVisualModel.traverse(child => {
     if (!child.material) return;
-    const materials = Array.isArray(child.material) ? child.material : [child.material];
-    materials.forEach(material => {
-      const baseOpacity = material.userData.baseOpacity ?? material.opacity ?? 1;
-      material.opacity = baseOpacity * opacityScale;
-      material.transparent = true;
-      material.needsUpdate = true;
-    });
+    const structureIndex = child.userData.mainVisualStructureIndex ?? -1;
+    const active = index < 0 || structureIndex < 0 || selectedFocusIndices.includes(structureIndex);
+    child.layers.set(active ? 0 : 1);
+  });
+  mainVisualFocusMaterials.forEach(material => {
+    const baseOpacity = material.userData.baseOpacity ?? 1;
+    const structureIndex = material.userData.structureIndex;
+    const active = index < 0 || structureIndex < 0 || selectedFocusIndices.includes(structureIndex);
+    material.userData.focusTargetOpacity = baseOpacity * (active ? 1 : material.userData.fadeScale);
+  });
+}
+
+function updateMainVisualModelFocus() {
+  mainVisualFocusMaterials.forEach(material => {
+    const target = material.userData.focusTargetOpacity ?? material.userData.baseOpacity ?? 1;
+    if (Math.abs(material.opacity - target) < .001) {
+      material.opacity = target;
+      return;
+    }
+    material.opacity = THREE.MathUtils.lerp(material.opacity, target, .12);
   });
 }
 
@@ -2854,7 +2912,7 @@ function setupNarrativeCardDragging() {
   };
 
   card.addEventListener("pointerdown", event => {
-    if (!narrativeCardOpen || event.button !== 0
+    if (!matchMedia("(max-width: 800px)").matches || !narrativeCardOpen || event.button !== 0
       || event.target.closest("button,a,input,textarea,select,[contenteditable='true']")) return;
     event.preventDefault();
     event.stopPropagation();
@@ -3006,6 +3064,9 @@ function renderNarrativeCard(entry) {
       caption.textContent = photo[1];
     }
   });
+  card.classList.remove("note-burst");
+  void card.offsetWidth;
+  card.classList.add("note-burst");
   applyNarrativeCardPosition(entry.id);
 }
 
@@ -3059,6 +3120,29 @@ function setupNarrativeAxis() {
   loadNarrativeCardLayout();
   setupNarrativeCardDragging();
   const list = document.querySelector("#narrative-list");
+  let settleTimer = 0;
+  let branchPositionFrame = 0;
+  const scheduleBranchPosition = () => {
+    cancelAnimationFrame(branchPositionFrame);
+    branchPositionFrame = requestAnimationFrame(positionNarrativeArtifactBranch);
+  };
+  const activateCenteredEntry = () => {
+    const listRect = list.getBoundingClientRect();
+    const center = listRect.top + listRect.height / 2;
+    const closest = [...list.querySelectorAll(".narrative-node")].sort((a, b) => (
+      Math.abs(a.getBoundingClientRect().top + a.offsetHeight / 2 - center)
+      - Math.abs(b.getBoundingClientRect().top + b.offsetHeight / 2 - center)
+    ))[0];
+    const entry = narrativeEntryById(closest?.dataset.narrativeId);
+    if (entry && entry.id !== activeNarrativeId) {
+      navigateToNarrativeEntry(entry, { source: "scroll" });
+      noteUserActivity();
+    }
+  };
+  const settleOnCenteredEntry = (delay = 130) => {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(activateCenteredEntry, delay);
+  };
   GUIDE_ORDER.map(narrativeEntryById).filter(Boolean).forEach((entry, guideIndex) => {
     const item = document.createElement("li");
     item.className = "narrative-item";
@@ -3078,39 +3162,15 @@ function setupNarrativeAxis() {
     button.addEventListener("click", event => {
       event.stopPropagation();
       button.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      navigateToNarrativeEntry(entry, { source: "narrative" });
+      settleOnCenteredEntry(matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
       noteUserActivity();
     });
     item.append(button);
     list.append(item);
   });
-  let scrollIntentUntil = 0;
-  let settleTimer = 0;
-  let branchPositionFrame = 0;
-  const scheduleBranchPosition = () => {
-    cancelAnimationFrame(branchPositionFrame);
-    branchPositionFrame = requestAnimationFrame(positionNarrativeArtifactBranch);
-  };
-  const markScrollIntent = () => { scrollIntentUntil = performance.now() + 900; };
-  list.addEventListener("wheel", markScrollIntent, { passive: true });
-  list.addEventListener("touchstart", markScrollIntent, { passive: true });
   list.addEventListener("scroll", () => {
     scheduleBranchPosition();
-    if (performance.now() > scrollIntentUntil) return;
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => {
-      const listRect = list.getBoundingClientRect();
-      const center = listRect.top + listRect.height / 2;
-      const closest = [...list.querySelectorAll(".narrative-node")].sort((a, b) => (
-        Math.abs(a.getBoundingClientRect().top + a.offsetHeight / 2 - center)
-        - Math.abs(b.getBoundingClientRect().top + b.offsetHeight / 2 - center)
-      ))[0];
-      const entry = narrativeEntryById(closest?.dataset.narrativeId);
-      if (entry && entry.id !== activeNarrativeId) {
-        navigateToNarrativeEntry(entry, { source: "scroll" });
-        noteUserActivity();
-      }
-    }, 120);
+    settleOnCenteredEntry();
   }, { passive: true });
   document.querySelector("#overall-view").addEventListener("click", event => {
     event.stopPropagation();
@@ -3730,6 +3790,12 @@ function setupInterface() {
     stopAutoDemo();
     autoDemoStep = 0;
     setView("model", event);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const firstEntry = narrativeEntryById(GUIDE_ORDER[0]);
+      const firstButton = document.querySelector(`.narrative-node[data-narrative-id="${GUIDE_ORDER[0]}"]`);
+      firstButton?.scrollIntoView({ block: "center", behavior: "auto" });
+      if (firstEntry) navigateToNarrativeEntry(firstEntry, { source: "initial" });
+    }));
     scheduleAutoDemo();
   };
   homePage.addEventListener("click", enterModel);
@@ -3917,7 +3983,6 @@ async function init() {
     if (structuralSkeletonLayer) structuralSkeletonLayer.visible = true;
   });
   addConstructionGuides();
-  addGroundCompass();
   buildControls(data);
   fitView();
   overallView = { position: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
@@ -3958,6 +4023,8 @@ function updateStructurePlanContrast() {
   const zoomProximity = THREE.MathUtils.clamp((1.04 - currentDistance / Math.max(overallDistance, .001)) / .66, 0, 1);
   const focusBoost = selectedIndex >= 0 ? .18 : 0;
   const contrast = THREE.MathUtils.clamp(zoomProximity + focusBoost, 0, 1);
+  const interfaceContrast = THREE.MathUtils.clamp(zoomProximity * 1.32 + focusBoost * 1.18, 0, 1);
+  appElement?.style.setProperty("--ui-boost", interfaceContrast.toFixed(3));
   if (Math.abs(contrast - structurePlanContrast) < .012) return;
   structurePlanContrast = contrast;
   structurePlanElement.style.setProperty("--plan-boost", contrast.toFixed(3));
@@ -3973,6 +4040,7 @@ function animate(now = 0) {
   }
   controls.update();
   normalizeGroundedCameraView();
+  updateMainVisualModelFocus();
   updateStructurePlanContrast();
   applyDepthAwareLineOpacity();
   sketchPipeline.render(now);
