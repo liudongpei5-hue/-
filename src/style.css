@@ -307,35 +307,49 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-artifact-option.active{color:#282521;font-weight:600;background:linear-gradient(90deg,rgba(154,63,48,.1),rgba(246,242,232,.38) 72%,transparent);transform:translateX(4px)}
 .narrative-artifact-option.active:before{content:"";display:inline-block;width:9px;height:1px;margin:0 7px 3px -4px;background:#9a3f30}
 
-.narrative-artifact-detail{position:absolute;z-index:6;inset:0 0 0 clamp(300px,24vw,420px);display:grid;grid-template-columns:minmax(300px,1fr) minmax(292px,min(31vw,440px));grid-template-rows:minmax(220px,42vh) minmax(0,1fr);gap:clamp(18px,3vw,48px);padding:clamp(34px,5.4vh,62px) clamp(28px,4vw,68px) clamp(34px,5vh,58px) clamp(24px,3vw,50px);overflow:hidden;isolation:isolate;background:linear-gradient(90deg,rgba(246,244,236,.1),rgba(246,244,236,.93) 8%,rgba(246,244,236,.985) 25%,rgba(246,244,236,.98));opacity:0;visibility:hidden;pointer-events:none;transform:translateX(14px);transition:opacity .5s ease,transform .7s cubic-bezier(.16,1,.3,1),visibility .5s}
+.narrative-artifact-detail{position:absolute;z-index:6;inset:0 0 0 clamp(300px,24vw,420px);display:grid;grid-template-columns:minmax(260px,1fr) minmax(389px,min(41.33vw,587px));grid-template-rows:minmax(294px,52vh) minmax(0,1fr);gap:clamp(24px,4vw,64px);padding:clamp(34px,5.4vh,62px) clamp(28px,4vw,68px) clamp(34px,5vh,58px) clamp(24px,3vw,50px);overflow:hidden;isolation:isolate;background:linear-gradient(90deg,rgba(246,244,236,.1),rgba(246,244,236,.93) 8%,rgba(246,244,236,.985) 25%,rgba(246,244,236,.98));opacity:0;visibility:hidden;pointer-events:none;transform:translateX(14px);transition:opacity .5s ease,transform .7s cubic-bezier(.16,1,.3,1),visibility .5s}
 .narrative-artifact-detail:before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:repeating-linear-gradient(14deg,rgba(100,90,75,.03) 0 1px,transparent 1px 8px);mask-image:radial-gradient(ellipse,#000 0,transparent 72%)}
 .narrative-artifact-detail.open{opacity:1;visibility:visible;pointer-events:auto;transform:none}
 .artifact-detail-close{position:absolute;z-index:8;right:clamp(20px,3vw,48px);top:clamp(18px,3vh,34px);width:30px;height:30px;min-height:0;padding:0;border:0;background:transparent;color:#8b8177;font:19px/1 Arial,sans-serif;cursor:pointer;transition:color .25s,transform .35s}
 .artifact-detail-close:hover,.artifact-detail-close:focus-visible{color:#9a3f30;outline:0;transform:rotate(90deg)}
-.narrative-artifact-detail .artifact-playback-status{position:absolute;z-index:7;left:auto;right:clamp(62px,6.6vw,112px);top:clamp(26px,3.7vh,44px);width:clamp(110px,10vw,146px);opacity:.75}
-.narrative-artifact-detail .artifact-playback-status:before{content:"IN THIS CHAPTER"}
+.narrative-artifact-detail .artifact-playback-status{position:absolute;z-index:7;left:auto;right:clamp(62px,6.6vw,112px);top:clamp(26px,3.7vh,44px);width:clamp(260px,20vw,320px);white-space:nowrap;opacity:.75}
+.narrative-artifact-detail .artifact-playback-status:before{content:"本环节 · IN THIS CHAPTER";white-space:nowrap}
 .narrative-artifact-detail .artifact-stage{position:relative;left:auto;right:auto;top:auto;bottom:auto;grid-column:1;grid-row:1 / 3;align-self:stretch;justify-self:stretch;width:100%;height:100%;min-width:0;min-height:0;contain:layout paint;isolation:isolate;--artifact-scale:1;--artifact-x:0%;--artifact-y:0%}
 .narrative-artifact-detail .artifact-image{width:78%;height:88%}
-.narrative-artifact-detail .artifact-spatial-inset{position:relative;left:auto;right:auto;top:auto;bottom:auto;grid-column:2;grid-row:1;align-self:start;justify-self:stretch;width:100%;max-width:none;height:min(31vh,282px);min-height:210px;margin:34px 0 0}
-.narrative-artifact-detail .artifact-copy{position:relative;left:auto;right:auto;top:auto;bottom:auto;grid-column:2;grid-row:2;align-self:center;width:100%;max-width:440px;min-width:0;padding:10px 0 0}
-.narrative-artifact-detail .artifact-copy h2{margin:10px 0 clamp(14px,2.6vh,26px);white-space:normal}
-.narrative-artifact-detail .artifact-copy h2 span{font-size:clamp(40px,5.2vw,78px)}
-.narrative-artifact-detail .artifact-copy h2 b{font-size:clamp(12px,1.25vw,18px)}
-.narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){font-size:clamp(10px,.88vw,13px);line-height:1.9}
+.narrative-artifact-detail .artifact-spatial-inset{position:relative;left:auto;right:auto;top:auto;bottom:auto;grid-column:2;grid-row:1;align-self:start;justify-self:stretch;width:100%;max-width:none;height:min(41.33vh,376px);min-height:280px;margin:45px 0 0;padding:12px 15px 11px}
+.narrative-artifact-detail .artifact-copy{position:relative;left:auto;right:auto;top:auto;bottom:auto;grid-column:2;grid-row:2;align-self:center;width:100%;max-width:587px;min-width:0;padding:13px 0 0}
+.narrative-artifact-detail .artifact-copy h2{align-items:flex-end;flex-wrap:nowrap;min-width:0;margin:10px 0 clamp(14px,2.6vh,26px);white-space:normal}
+.narrative-artifact-detail .artifact-copy h2 span{flex:0 0 auto;white-space:nowrap;font-size:clamp(40px,5.2vw,78px);line-height:1}
+.narrative-artifact-detail .artifact-copy h2 b{flex:1 1 140px;min-width:0;font-size:clamp(15px,1.25vw,20px);line-height:1.15}
+.narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){font-size:clamp(15px,1vw,17px);line-height:1.9}
+.narrative-artifact-detail #artifact-details{min-height:48px;margin-top:10px;padding:12px 0 10px;border-bottom-width:2px;font-size:18px;line-height:1.2;letter-spacing:.08em}
+
+/* The location caption is intentionally the only text beneath the mini map. */
+.narrative-artifact-detail #artifact-location-index,.narrative-artifact-detail #artifact-location-certainty{display:none}
+.narrative-artifact-detail .artifact-location-meta{display:block;padding-top:8px}
+.narrative-artifact-detail .artifact-location-meta strong{display:block;color:#39342e;font:400 15px/1.35 "Noto Serif SC","Songti SC",serif;letter-spacing:.08em}
+
+/* Keep every visible detail-page label at or above 15px. */
+.narrative-artifact-detail .artifact-playback-status{font:15px/1 Arial,sans-serif}
+.narrative-artifact-detail .artifact-playback-status:before{font-size:15px}
+.narrative-artifact-detail .artifact-kicker{font-size:15px}
+.narrative-artifact-detail .artifact-spatial-head{font:15px/1.2 Arial,sans-serif}
+.narrative-artifact-detail .artifact-spatial-head small{font:15px/1.2 "DengXian","Microsoft YaHei",sans-serif}
+.narrative-artifact-detail .artifact-location-meta p,.narrative-artifact-detail .artifact-location-meta small{font-size:15px}
 #app.artifact-detail-open #artifact-scene-host #scene{position:absolute;inset:0;z-index:1;width:100%;height:100%;filter:none;opacity:1;transform:none!important;transition:opacity .45s}
 #app.artifact-detail-open .controls,#app.artifact-detail-open .north-axis,#app.artifact-detail-open .narrative-layout-export,#app.artifact-detail-open .model-footer{opacity:0;visibility:hidden;pointer-events:none}
 #app.artifact-detail-open .site-brand{opacity:.28;transition:opacity .45s}
 
 @media(max-width:1180px) and (min-width:801px){
   .narrative-artifact-branch{left:clamp(150px,16vw,182px);width:clamp(120px,13vw,148px);--branch-link:clamp(40px,5vw,60px)}
-  .narrative-artifact-detail{left:clamp(274px,27vw,332px);grid-template-columns:minmax(0,1fr) minmax(230px,min(32vw,320px));gap:clamp(18px,2.5vw,32px);padding-left:clamp(20px,2.5vw,32px);padding-right:clamp(22px,3vw,42px)}
-  .narrative-artifact-detail .artifact-spatial-inset{height:min(30vh,246px);min-height:190px}
+  .narrative-artifact-detail{left:clamp(274px,27vw,332px);grid-template-columns:minmax(0,1fr) minmax(307px,min(42.66vw,427px));gap:clamp(24px,3.33vw,43px);padding-left:clamp(20px,2.5vw,32px);padding-right:clamp(22px,3vw,42px)}
+  .narrative-artifact-detail .artifact-spatial-inset{height:min(40vh,328px);min-height:253px}
   .narrative-artifact-detail .artifact-copy h2 span{font-size:clamp(36px,5vw,60px)}
 }
 
 @media(max-height:700px) and (min-width:801px){
-  .narrative-artifact-detail{grid-template-rows:minmax(190px,39vh) minmax(0,1fr);padding-top:30px;padding-bottom:28px}
-  .narrative-artifact-detail .artifact-spatial-inset{height:min(31vh,200px);min-height:166px;margin-top:28px}
+  .narrative-artifact-detail{grid-template-rows:minmax(304px,44vh) minmax(0,1fr);padding-top:30px;padding-bottom:28px}
+  .narrative-artifact-detail .artifact-spatial-inset{height:min(41.33vh,267px);min-height:221px;margin-top:37px}
   .narrative-artifact-detail .artifact-copy h2{margin:6px 0 12px}
   .narrative-artifact-detail .artifact-copy h2 span{font-size:clamp(34px,4.6vw,58px)}
   .narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){line-height:1.65}
@@ -353,12 +367,12 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .narrative-artifact-option.active:before{display:none}
   .narrative-artifact-detail{inset:0 0 0 54px;display:block;padding:188px 16px 42px;overflow-x:hidden;overflow-y:auto;background:rgba(246,244,236,.985);transform:translateX(10px)}
   .artifact-detail-close{position:fixed;right:12px;top:14px}
-  .narrative-artifact-detail .artifact-playback-status{position:fixed;left:70px;right:auto;top:25px;width:132px;justify-content:flex-start}
+  .narrative-artifact-detail .artifact-playback-status{position:fixed;left:70px;right:auto;top:25px;width:264px;justify-content:flex-start}
   .narrative-artifact-detail .artifact-stage{display:block;width:100%;height:clamp(300px,43vh,410px);min-height:300px;margin:0 auto 18px}
-  .narrative-artifact-detail .artifact-spatial-inset{display:grid;width:100%;height:clamp(190px,28vh,240px);min-height:190px;margin:0 0 24px}
+  .narrative-artifact-detail .artifact-spatial-inset{display:grid;width:100%;height:clamp(253px,37.33vh,320px);min-height:253px;margin:0 0 24px}
   .narrative-artifact-detail .artifact-copy{display:block;width:100%;max-width:none;padding:0 0 36px}
   .narrative-artifact-detail .artifact-copy h2 span{font-size:clamp(38px,14vw,60px)}
-  .narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){font-size:12px;line-height:1.75}
+  .narrative-artifact-detail .artifact-copy>p:not(.artifact-kicker){font-size:15px;line-height:1.75}
 #app.artifact-detail-open .site-brand{opacity:0}
 }
 
@@ -429,6 +443,60 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 #scene{cursor:grab}
 #scene:active{cursor:grabbing}
 
+/* Homepage title and narrative-axis hierarchy. */
+.site-brand{left:calc(3.1vw + 24px);display:grid;gap:4px}
+.site-brand h1{margin:0}
+.site-brand .brand-title-en,.site-brand .brand-sub,.site-brand .brand-sub-en{margin:0;color:var(--muted);font:12px/1.35 Arial,sans-serif;letter-spacing:.1em}
+.site-brand .brand-title-en{color:#785d50}
+.site-brand .brand-sub-en{color:#8b8176}
+.section-marker{font-size:12px}
+.section-marker small{font-size:12px}
+.narrative-head{gap:4px;font-size:12px;letter-spacing:.08em}
+.narrative-head cite{font-size:12px;line-height:1.4;white-space:normal}
+.narrative-head small,.narrative-head .narrative-head-en{font:12px/1.35 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.06em}
+.narrative-head .narrative-head-en{color:#8d857b}
+
+/* Every visible homepage utility label is at least 12px. */
+.model-interface .narrative-layout-export,
+.model-interface .narrative-node em,
+.model-interface .narrative-node b,
+.model-interface .narrative-node small,
+.model-interface .narrative-card-index,
+.model-interface .narrative-card-subtitle,
+.model-interface .narrative-card-summary,
+.model-interface .narrative-card blockquote,
+.model-interface .narrative-photo-strip figcaption,
+.model-interface .narrative-artifact-label,
+.model-interface .narrative-artifact-option,
+.model-interface .artifact-playback-status,
+.model-interface .artifact-playback-status:before,
+.model-interface .model-action,
+.model-interface .model-action b,
+.model-interface .structure-plan figcaption,
+.model-interface .structure-overall,
+.model-interface .structure-hotspot span,
+.model-interface .structure-hotspot.secondary span,
+.model-interface .control-head small,
+.model-interface .control-head button,
+.model-interface .structure-list button,
+.model-interface .sliders summary,
+.model-interface .sliders label,
+.model-interface .artifact-spatial-head,
+.model-interface .artifact-spatial-head small,
+.model-interface .artifact-location-meta p,
+.model-interface .artifact-location-meta strong,
+.model-interface .artifact-location-meta small,
+.model-interface .artifact-kicker,
+.model-interface .artifact-copy button,
+.model-footer{font-size:12px}
+
+@media(max-width:800px){
+  .site-brand{left:14px}
+  .narrative-head{height:auto;padding-left:10px}
+  .narrative-head cite,.narrative-head small,.narrative-head .narrative-head-en{display:block;writing-mode:horizontal-tb;font-size:12px}
+  .model-interface .narrative-node b,.model-interface .narrative-node small,.model-interface .model-action{font-size:12px}
+}
+
 /* Center-led chapter rail and floating field-note presentation. */
 .narrative-list{padding-block:0!important;scroll-padding-block:50%!important}
 .narrative-list:before,.narrative-list:after{content:"";display:block;flex:0 0 calc(50% - 29px)}
@@ -443,7 +511,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-photo-strip figure:first-child{left:clamp(-154px,-10vw,-112px);top:18%;transform:translate(88px,18px) scale(.35) rotate(7deg)}
 .narrative-photo-strip figure:nth-child(2){right:4px;bottom:clamp(-118px,-10vh,-82px);transform:translate(-35px,-72px) scale(.35) rotate(-6deg)}
 .narrative-photo-strip img{width:100%!important;height:clamp(62px,6.3vw,88px)!important;border-radius:10px!important;object-fit:cover;filter:grayscale(.08) sepia(.04) contrast(.98)!important;mix-blend-mode:normal!important;background:#eee7d9;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
-.narrative-photo-strip figcaption{max-width:100%;margin:5px 2px 0!important;color:#6f675f!important;font-size:6px!important;line-height:1.45!important;text-shadow:0 1px 5px rgba(250,247,238,.98)}
+.narrative-photo-strip figcaption{max-width:100%;margin:5px 2px 0!important;color:#6f675f!important;font-size:10px!important;line-height:1.45!important;text-shadow:0 1px 5px rgba(250,247,238,.98)}
 .narrative-card.note-burst .narrative-photo-strip figure{animation:fieldPhotoSpring .82s cubic-bezier(.18,1.32,.32,1) forwards}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(2){animation-delay:.11s}
 .narrative-card[data-narrative-id="chamber"] .narrative-photo-strip figure:first-child{top:6%;left:clamp(-166px,-11vw,-118px)}
@@ -451,7 +519,6 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 @keyframes fieldPhotoSpring{0%{opacity:0}68%{opacity:1;transform:translate(0,0) scale(1.045) rotate(0)}100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.narrative-card.note-burst .narrative-photo-strip figure{animation:none;opacity:1;transform:none}}
 @media(max-width:800px){.narrative-card{left:70px!important;right:12px!important;top:96px!important;width:auto!important;max-height:46vh!important;padding:12px 10px!important}.narrative-photo-strip{position:relative;display:flex!important;gap:8px;margin-top:12px!important}.narrative-photo-strip figure{position:relative;inset:auto!important;width:min(120px,42%);opacity:1;transform:none!important}.narrative-photo-strip figure:nth-child(2){margin-left:auto!important}}
-
 @media(max-width:800px){
   .model-action{min-height:36px;padding:6px 8px;font-size:10px}
   .model-action b{display:none}
@@ -474,4 +541,47 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .narrative-card{width:min(310px,calc(100vw - 178px));max-height:calc(100dvh - 24px)}
   .narrative-photo-strip{grid-template-columns:1fr}
   .narrative-photo-strip img{height:92px}
+}
+
+/* Final responsive guard: keep homepage labels at 12px even in compact layouts. */
+#app[data-view="model"] .model-interface .structure-list:before,
+#app[data-view="model"] .model-interface .structure-list:after,
+#app[data-view="model"] .model-interface .structure-list button{font-size:12px!important}
+@media(max-width:800px){
+  .model-interface .model-action,
+  .model-interface .narrative-node b,
+  .model-interface .narrative-node small,
+  .model-interface .narrative-artifact-option{font-size:12px}
+}
+
+/* Wider narrative rail: full labels remain legible without ellipses. */
+@media(min-width:801px){
+  .narrative-axis{width:min(640px,50vw);grid-template-columns:minmax(320px,360px) minmax(0,260px);gap:20px}
+  .narrative-head{width:max-content}
+  .narrative-head cite,.narrative-head small,.narrative-head .narrative-head-en{white-space:nowrap}
+  .narrative-node{grid-template-columns:32px minmax(0,1fr);min-height:64px}
+  .narrative-node b,.narrative-node small{overflow:visible;white-space:normal;text-overflow:clip}
+  .narrative-artifact-branch{left:clamp(340px,29vw,390px);width:clamp(180px,16vw,230px);--branch-link:clamp(56px,5vw,82px)}
+}
+
+/* The overview is the first narrative node, followed by the spatial chapters. */
+.narrative-node.overall-action{width:100%;margin:0;padding:4px 0;border:0;background:transparent;box-shadow:none;font:inherit;pointer-events:auto}
+.narrative-node.overall-action span{display:grid}
+.narrative-node.overall-action b{color:inherit;font:12px/1.2 "DengXian","Microsoft YaHei",sans-serif;font-weight:400;letter-spacing:.04em}
+.narrative-node.overall-action small{color:#938a80;font:12px/1.2 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.04em}
+.narrative-node.overall-action.active b{font-size:13px;letter-spacing:.08em}
+.narrative-node.overall-action.active small{color:#786e64}
+@media(max-width:800px){
+  .narrative-node.overall-action{width:136px;margin:0;padding:0}
+}
+
+/* Keep the playback control's bilingual labels on separate, readable rows. */
+.auto-action{grid-template-columns:18px minmax(0,1fr);grid-template-rows:auto auto;row-gap:3px;min-height:56px}
+.auto-action i{grid-column:1;grid-row:1 / 3;align-self:center}
+.auto-action span,.auto-action b{grid-column:2;min-width:0}
+.auto-action span{grid-row:1}
+.auto-action b{display:block;grid-row:2;font-size:12px;line-height:1.1;letter-spacing:.1em}
+@media(max-width:800px){
+  .auto-action{min-height:54px}
+  .auto-action b{display:block}
 }

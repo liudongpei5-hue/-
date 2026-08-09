@@ -31,6 +31,25 @@ const ARTIFACT_IMAGE_ASSETS = [
   "/assets/artifacts/catalog/mounted-figurine.png",
   "/assets/artifacts/catalog/female-mounted-figurine.png"
 ];
+
+// Per-image presentation controls for the artifact detail view. Adjust these
+// values directly when an image needs a different crop or visual weight:
+// `scale` enlarges/reduces the image, while `x` and `y` nudge its focal point.
+const ARTIFACT_IMAGE_DISPLAY = Object.freeze({
+  "镇墓兽": Object.freeze({ scale: 1.35, x: "0%", y: "1%" }),
+  "镇墓武士俑": Object.freeze({ scale: 1.0, x: "0%", y: "0%" }),
+  "墓志": Object.freeze({ scale: 1.16, x: "0%", y: "0%" }),
+  "铜钱": Object.freeze({ scale: 1.02, x: "0%", y: "0%" }),
+  "玻璃串珠": Object.freeze({ scale: 1.44, x: "0%", y: "0%" }),
+  "贝壳": Object.freeze({ scale: 1.44, x: "0%", y: "0%" }),
+  "银环": Object.freeze({ scale: 1.34, x: "0%", y: "0%" }),
+  "铜钵": Object.freeze({ scale: 1.2, x: "0%", y: "2%" }),
+  "骑马俑": Object.freeze({ scale: 1.2, x: "0%", y: "0%" }),
+  "风帽俑": Object.freeze({ scale: 1.08, x: "0%", y: "0%" }),
+  "笼冠俑": Object.freeze({ scale: 1.08, x: "0%", y: "0%" }),
+  "女侍俑": Object.freeze({ scale: 1.08, x: "0%", y: "0%" }),
+  "陶羊": Object.freeze({ scale: 0.95, x: "0%", y: "0%" })
+});
 const artifactImagePreloads = new Map();
 
 function preloadArtifactImage(src) {
@@ -536,6 +555,7 @@ const NARRATIVE_ENTRIES = [
   }
 ];
 const GUIDE_ORDER = ["epitaph", "chamber", "niches", "threshold", "shaft-sequence", "ramp", "theft"];
+const NARRATIVE_AXIS_ORDER = ["hongduyuan", ...GUIDE_ORDER];
 const NARRATIVE_PHOTOS = {
   hongduyuan: [
     ["/assets/report/site-orthophoto.png", "发掘区正射影像"],
@@ -3043,9 +3063,9 @@ function renderNarrativeCard(entry) {
   if (!entry) return;
   const card = document.querySelector("#narrative-card");
   card.dataset.narrativeId = entry.id;
-  const guideIndex = GUIDE_ORDER.indexOf(entry.id);
+  const guideIndex = NARRATIVE_AXIS_ORDER.indexOf(entry.id);
   const cardIndex = guideIndex < 0 ? "00" : String(guideIndex + 1).padStart(2, "0");
-  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(GUIDE_ORDER.length).padStart(2, "0")} · EXCAVATION BRIEF`;
+  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(NARRATIVE_AXIS_ORDER.length).padStart(2, "0")} · EXCAVATION BRIEF`;
   document.querySelector("#narrative-card-title").textContent = entry.name;
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
@@ -3082,6 +3102,10 @@ function syncNarrativeAxis(index, preferredNarrativeId = "") {
     button.setAttribute("aria-current", active ? "step" : "false");
     button.setAttribute("aria-expanded", String(active && (narrativeCardOpen || artifactLinksForEntry(entry).length > 0)));
   });
+  if (autoDemoActive && entry) {
+    document.querySelector(`.narrative-node[data-narrative-id="${entry.id}"]`)
+      ?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
   if (!entry) {
     closeNarrativeCard();
     syncNarrativeArtifactBranch(null);
@@ -3154,7 +3178,7 @@ function setupNarrativeAxis() {
     button.setAttribute("aria-controls", artifactLinksForEntry(entry).length
       ? "narrative-card narrative-artifact-branch"
       : "narrative-card");
-    const guideNo = String(guideIndex + 1).padStart(2, "0");
+    const guideNo = String(guideIndex + 2).padStart(2, "0");
     button.setAttribute("aria-label", `${guideNo} ${entry.name} ${entry.title}`);
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-current", "false");
@@ -3806,7 +3830,7 @@ function setupInterface() {
   artifactStageViewer = createArtifactStageViewer(document.querySelector("#artifact-model-canvas"));
   const artifactCatalog = {
     "镇墓兽": { en:"TOMB BEAST", asset:"/assets/artifacts/catalog/tomb-beast-east.png", location:"/assets/artifacts/location-tomb-beast.jpg", description:"泥质红陶模制，人面短柱冠，白地施红彩，胸前残留金箔痕迹，通高 36 厘米。", facts:[["编号","M2338:4"],["位置","墓室入口东侧"],["通高","36 cm"],["材质","泥质红陶"]], display:{ scale:1.12, x:"0%", y:"1%" } },
-    "镇墓武士俑": { en:"GUARDIAN WARRIOR", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑 M2338:1 出自墓室入口处东侧，身着明光铠，体表施白、红彩，胸甲与护肩残留金箔痕迹。踏板厚 7 厘米、长 17 厘米、宽 19 厘米，通高 65 厘米。", facts:[["编号","M2338:1"],["位置","墓室入口处东侧"],["踏板","厚 7 cm / 长 17 cm / 宽 19 cm"],["通高","65 cm"]], display:{ scale:1.02, x:"0%", y:"0%" } },
+    "镇墓武士俑": { en:"GUARDIAN WARRIOR FIGURINE", asset:"/assets/artifacts/guardian-warrior-m2338-1.png", location:"/assets/artifacts/location-guardian-warrior.jpg", description:"镇墓武士俑 M2338:1 出自墓室入口处东侧，身着明光铠，体表施白、红彩，胸甲与护肩残留金箔痕迹。踏板厚 7 厘米、长 17 厘米、宽 19 厘米，通高 65 厘米。", facts:[["编号","M2338:1"],["位置","墓室入口处东侧"],["踏板","厚 7 cm / 长 17 cm / 宽 19 cm"],["通高","65 cm"]], display:{ scale:1.02, x:"0%", y:"0%" } },
     "墓志": { en:"EPITAPH", asset:"/assets/artifacts/catalog/epitaph-set.png", location:"/assets/artifacts/location-epitaph.jpg", description:"墓志由志盖与志石组成，青石质。志盖边长 30 cm、厚 8 cm；志石边长 37 cm、厚 8 cm，正文 23 行、满行 23 字，共 516 字。", facts:[["编号","M2338:52"],["志盖","边长 30 cm / 厚 8 cm"],["志石","边长 37 cm / 厚 8 cm"],["字数","516 字"]], display:{ scale:1.16, x:"0%", y:"0%" } },
     "铜钱": { en:"KAIYUAN COIN", asset:"/assets/artifacts/catalog/kaiyuan-coin.png", location:"/assets/artifacts/location-kaiyuan-coin.jpg", description:"圆形方孔钱，钱文为“开元通宝”。简报记载钱径 2.4 cm、穿径 0.8 cm，是墓葬断代的重要参照。", facts:[["编号","M2338:57-4"],["钱径","2.4 cm"],["穿径","0.8 cm"],["材质","铜"]], display:{ scale:1.42, x:"0%", y:"0%" } },
     "玻璃串珠": { en:"GLASS BEADS", asset:"/assets/artifacts/catalog/glass-beads.png", location:"/assets/artifacts/location-glass-beads.jpg", description:"玻璃串珠共 3 枚，绿色。简报记载直径 0.4-0.5 cm、孔径 0.3 cm，出自棺内北侧。", facts:[["编号","M2338:56"],["数量","3 枚"],["直径","0.4-0.5 cm"],["孔径","0.3 cm"]], display:{ scale:1.44, x:"0%", y:"0%" } },
@@ -3816,13 +3840,31 @@ function setupInterface() {
     "骑马俑": { en:"MOUNTED FIGURINE", asset:"/assets/artifacts/catalog/mounted-figurine.png", location:"/assets/artifacts/location-mounted-figurine.jpg", description:"泥质红陶，分模制后粘合，骑手跨乘于马上。墓室东南隅与西壁龛均有发现；I 型标本马体长 23.5 厘米、通高 32 厘米。", facts:[["墓室","M2338:29-32 等"],["西壁龛","WK12"],["I 型","长 23.5 cm / 通高 32 cm"],["类别","陶骑马俑"]], display:{ scale:1.12, x:"0%", y:"0%" } },
     "风帽俑": { en:"HOODED FIGURINE", asset:"/assets/artifacts/catalog/fengmao-figurine.png", description:"泥质红陶，模制。头戴风帽，身着交领长袍，腰系带，左臂下垂，右臂弯曲。标本 M2338:7 通高 21.5 厘米，帽、袍残留红彩，面部施粉彩。", facts:[["代表器号","M2338:7"],["通高","21.5 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
     "笼冠俑": { en:"CAGE-CROWN FIGURINE", asset:"/assets/artifacts/catalog/longguan-figurine.png", description:"泥质红陶，模制。头戴黑色笼冠，身着交领广袖袍，腰束宽带，双手捧于胸前。标本 M2338:28 通高 21.2 厘米，衣袍残留橘红色彩。", facts:[["代表器号","M2338:28"],["通高","21.2 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
-    "女侍俑": { en:"FEMALE ATTENDANT", asset:"/assets/artifacts/catalog/female-mounted-figurine.png", description:"泥质红陶，模制。高髻，面庞清瘦，身着交领窄袖衫与高束长裙，双手合拢置于腹部。标本 M2338:45 通高 28 厘米。", facts:[["代表器号","M2338:45"],["通高","28 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
+    "女侍俑": { en:"FEMALE ATTENDANT FIGURINE", asset:"/assets/artifacts/catalog/female-mounted-figurine.png", description:"泥质红陶，模制。高髻，面庞清瘦，身着交领窄袖衫与高束长裙，双手合拢置于腹部。标本 M2338:45 通高 28 厘米。", facts:[["代表器号","M2338:45"],["通高","28 cm"],["材质","泥质红陶"]], display:{ scale:1.08, x:"0%", y:"0%" } },
     "陶羊": { en:"POTTERY SHEEP", asset:"/assets/artifacts/catalog/sheep.png", description:"泥质红陶，模制。昂首盘角，小尖耳，身躯肥壮，四蹄盘卧于地，体表残留白色粉底。标本 M2338:39 体长 11.2 厘米、通高 9 厘米。", facts:[["代表器号","M2338:39"],["体长","11.2 cm"],["通高","9 cm"],["材质","泥质红陶"]], display:{ scale:1.18, x:"0%", y:"0%" } }
   };
   const artifactProgress = document.querySelector("#artifact-progress");
   const artifactPlaybackStatus = document.querySelector(".artifact-playback-status");
   const artifactDetails = document.querySelector("#artifact-details");
   let artifactImageRequestToken = 0;
+  const fitArtifactTitle = () => {
+    const title = document.querySelector("#artifact-detail .artifact-copy h2");
+    const chineseName = document.querySelector("#artifact-name-cn");
+    if (!title || !chineseName || !title.clientWidth) return;
+
+    chineseName.style.removeProperty("font-size");
+    const naturalChineseSize = Number.parseFloat(getComputedStyle(chineseName).fontSize);
+    const requiredWidth = chineseName.scrollWidth;
+    const scale = requiredWidth > title.clientWidth
+      ? Math.max(15 / naturalChineseSize, Math.min(1, title.clientWidth / requiredWidth * .99))
+      : 1;
+    if (scale < 1) {
+      chineseName.style.fontSize = `${naturalChineseSize * scale}px`;
+    }
+  };
+  window.addEventListener("resize", () => {
+    if (artifactDetailOpen) requestAnimationFrame(fitArtifactTitle);
+  });
   const activateArtifact = (artifactName, options = {}) => {
     const artifact = artifactCatalog[artifactName];
     if (!artifact) return false;
@@ -3847,6 +3889,7 @@ function setupInterface() {
     });
     document.querySelector("#artifact-name-cn").textContent = artifactName;
     document.querySelector("#artifact-name-en").textContent = artifact?.en || "SELECTED OBJECT";
+    requestAnimationFrame(fitArtifactTitle);
     document.querySelector("#artifact-description").textContent = artifact?.description || `${artifactName}的详细考古信息将依据发掘简报继续补充。`;
     artifactProgress.textContent = `${String(artifactIndex + 1).padStart(2, "0")} / ${String(artifactTotal).padStart(2, "0")}`;
     artifactPlaybackStatus.style.setProperty("--progress", `${(artifactIndex + 1) / artifactTotal * 100}%`);
@@ -3857,7 +3900,10 @@ function setupInterface() {
     stage.classList.toggle("has-model", Boolean(modelId));
     if (modelId) artifactStageViewer.show(modelId).catch(error => console.error(`Artifact preview could not load: ${modelId}`, error));
     else artifactStageViewer.clear();
-    const display = artifact?.display || {};
+    const display = {
+      ...(artifact?.display || {}),
+      ...(ARTIFACT_IMAGE_DISPLAY[artifactName] || {})
+    };
     stage.style.setProperty("--artifact-scale", display.scale ?? 1);
     stage.style.setProperty("--artifact-x", display.x || "0%");
     stage.style.setProperty("--artifact-y", display.y || "0%");
