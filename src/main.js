@@ -340,6 +340,7 @@ const objects = [];
 const wideMaterials = [];
 let selectedIndex = -1;
 let structurePlanContrast = -1;
+let narrativeBranchTrackToken = 0;
 let perspectiveGuides;
 let naturalShell;
 let structuralSkeletonLayer;
@@ -2978,34 +2979,49 @@ function setupNarrativeCardDragging() {
 
 function positionNarrativeArtifactBranch() {
   const branch = document.querySelector("#narrative-artifact-branch");
-  const axis = document.querySelector("#report-narrative");
-  if (!branch || !axis || branch.getAttribute("aria-hidden") === "true") return;
-  if (matchMedia("(max-width: 800px)").matches) {
-    branch.style.removeProperty("left");
-    branch.style.removeProperty("top");
-    branch.style.removeProperty("--branch-link");
-    branch.style.removeProperty("--connector-y");
-    return;
-  }
+  if (!branch || branch.getAttribute("aria-hidden") === "true") return;
   const node = [...document.querySelectorAll(".narrative-node")]
     .find(item => item.dataset.narrativeId === branch.dataset.narrativeId);
   if (!node) return;
   const title = node.querySelector("b");
-  const axisRect = axis.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
   const titleRect = title?.getBoundingClientRect() || nodeRect;
   const branchRect = branch.getBoundingClientRect();
-  const nodeCenter = nodeRect.top + nodeRect.height / 2 - axisRect.top;
-  const maxTop = Math.max(0, axisRect.height - branchRect.height);
-  const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 0, maxTop);
-  const anchorX = titleRect.right - axisRect.left + 10;
-  const preferredLink = THREE.MathUtils.clamp(innerWidth * .05, 48, 76);
-  const maxLeft = Math.max(anchorX + 28, innerWidth - axisRect.left - branchRect.width - 14);
-  const left = THREE.MathUtils.clamp(anchorX + preferredLink, anchorX + 28, maxLeft);
+  branch.style.position = "fixed";
+  if (matchMedia("(max-width: 800px)").matches) {
+    branch.classList.remove("open-left");
+    branch.style.left = `${THREE.MathUtils.clamp(nodeRect.left, 12, innerWidth - 180)}px`;
+    branch.style.top = `${THREE.MathUtils.clamp(nodeRect.bottom + 12, 12, innerHeight - branchRect.height - 12)}px`;
+    branch.style.removeProperty("--branch-link");
+    branch.style.removeProperty("--connector-y");
+    return;
+  }
+  const linkLength = THREE.MathUtils.clamp(innerWidth * .042, 48, 68);
+  const nodeCenter = nodeRect.top + nodeRect.height / 2;
+  const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 14, innerHeight - branchRect.height - 14);
+  const rightAnchor = titleRect.right + 10;
+  const rightLeft = rightAnchor + linkLength;
+  const openLeft = rightLeft + branchRect.width > innerWidth - 18;
+  const leftAnchor = titleRect.left - 10;
+  const left = openLeft
+    ? leftAnchor - linkLength - branchRect.width
+    : rightLeft;
+  branch.classList.toggle("open-left", openLeft);
   branch.style.left = `${left}px`;
   branch.style.top = `${top}px`;
-  branch.style.setProperty("--branch-link", `${left - anchorX}px`);
+  branch.style.setProperty("--branch-link", `${linkLength}px`);
   branch.style.setProperty("--connector-y", `${THREE.MathUtils.clamp(nodeCenter - top, 10, Math.max(10, branchRect.height - 10))}px`);
+}
+
+function trackNarrativeArtifactBranch(duration = 620) {
+  const token = ++narrativeBranchTrackToken;
+  const started = performance.now();
+  const follow = now => {
+    if (token !== narrativeBranchTrackToken) return;
+    positionNarrativeArtifactBranch();
+    if (now - started < duration) requestAnimationFrame(follow);
+  };
+  requestAnimationFrame(follow);
 }
 
 function syncNarrativeArtifactBranch(entry) {
@@ -3056,7 +3072,7 @@ function syncNarrativeArtifactBranch(entry) {
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "true" : "false");
   });
-  requestAnimationFrame(positionNarrativeArtifactBranch);
+  trackNarrativeArtifactBranch();
 }
 
 function renderNarrativeCard(entry) {
@@ -3216,6 +3232,7 @@ function setupNarrativeAxis() {
     closeNarrativeCard();
   });
   window.addEventListener("resize", positionNarrativeArtifactBranch);
+  document.fonts?.ready.then(() => trackNarrativeArtifactBranch(300));
   syncNarrativeAxis(selectedIndex);
 }
 

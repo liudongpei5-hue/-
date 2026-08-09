@@ -563,3 +563,19 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .auto-action{min-height:54px}
   .auto-action b{display:block}
 }
+
+/* Keep each artifact branch visually attached to its active chapter. */
+@media(min-width:801px){
+  .narrative-artifact-branch{position:fixed;width:clamp(156px,14vw,204px);max-height:min(46vh,344px);padding:5px 0 5px 14px;background:transparent}
+  .narrative-artifact-list{background:linear-gradient(90deg,rgba(249,246,237,.58),rgba(246,241,229,.16) 82%,transparent)!important;box-shadow:0 10px 30px rgba(63,48,34,.035)}
+  .narrative-artifact-option{min-height:30px;padding:6px 9px;background:linear-gradient(90deg,rgba(246,242,232,.56),rgba(246,242,232,.08) 82%,transparent)}
+  .narrative-artifact-branch.open-left{padding:5px 14px 5px 0;border-left:0;border-right:1px solid rgba(166,63,46,.82)}
+  .narrative-artifact-branch.open-left:before{left:100%;background:linear-gradient(90deg,rgba(154,63,48,.9),rgba(154,63,48,.55))}
+  .narrative-artifact-branch.open-left:after{left:calc(100% + var(--branch-link) - 5px)}
+  .narrative-artifact-branch.open-left .narrative-artifact-label{left:auto;right:14px;text-align:right}
+}
+@media(max-width:800px){
+  .narrative-artifact-branch{position:fixed;right:12px;width:auto;max-height:min(34vh,240px);padding:16px 0 5px;border-left:0;border-top:1px solid rgba(154,63,48,.72);background:linear-gradient(180deg,rgba(246,242,232,.9),rgba(246,242,232,.6) 76%,transparent)}
+  .narrative-artifact-branch:before,.narrative-artifact-branch:after{display:none}
+  .narrative-artifact-list{display:flex;flex-wrap:wrap;gap:5px;max-height:min(30vh,200px);overflow-y:auto}
+}
