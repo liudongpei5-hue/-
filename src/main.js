@@ -2933,7 +2933,7 @@ function setupNarrativeCardDragging() {
   };
 
   card.addEventListener("pointerdown", event => {
-    if (!narrativeCardOpen || event.button !== 0
+    if (!matchMedia("(max-width: 800px)").matches || !narrativeCardOpen || event.button !== 0
       || event.target.closest("button,a,input,textarea,select,[contenteditable='true']")) return;
     event.preventDefault();
     event.stopPropagation();
@@ -3100,6 +3100,9 @@ function renderNarrativeCard(entry) {
       caption.textContent = photo[1];
     }
   });
+  card.classList.remove("note-burst");
+  void card.offsetWidth;
+  card.classList.add("note-burst");
   applyNarrativeCardPosition(entry.id);
 }
 
@@ -3157,6 +3160,29 @@ function setupNarrativeAxis() {
   loadNarrativeCardLayout();
   setupNarrativeCardDragging();
   const list = document.querySelector("#narrative-list");
+  let settleTimer = 0;
+  let branchPositionFrame = 0;
+  const scheduleBranchPosition = () => {
+    cancelAnimationFrame(branchPositionFrame);
+    branchPositionFrame = requestAnimationFrame(positionNarrativeArtifactBranch);
+  };
+  const activateCenteredEntry = () => {
+    const listRect = list.getBoundingClientRect();
+    const center = listRect.top + listRect.height / 2;
+    const closest = [...list.querySelectorAll(".narrative-node")].sort((a, b) => (
+      Math.abs(a.getBoundingClientRect().top + a.offsetHeight / 2 - center)
+      - Math.abs(b.getBoundingClientRect().top + b.offsetHeight / 2 - center)
+    ))[0];
+    const entry = narrativeEntryById(closest?.dataset.narrativeId);
+    if (entry && entry.id !== activeNarrativeId) {
+      navigateToNarrativeEntry(entry, { source: "scroll" });
+      noteUserActivity();
+    }
+  };
+  const settleOnCenteredEntry = (delay = 130) => {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(activateCenteredEntry, delay);
+  };
   GUIDE_ORDER.map(narrativeEntryById).filter(Boolean).forEach((entry, guideIndex) => {
     const item = document.createElement("li");
     item.className = "narrative-item";
@@ -3176,39 +3202,15 @@ function setupNarrativeAxis() {
     button.addEventListener("click", event => {
       event.stopPropagation();
       button.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      navigateToNarrativeEntry(entry, { source: "narrative" });
+      settleOnCenteredEntry(matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
       noteUserActivity();
     });
     item.append(button);
     list.append(item);
   });
-  let scrollIntentUntil = 0;
-  let settleTimer = 0;
-  let branchPositionFrame = 0;
-  const scheduleBranchPosition = () => {
-    cancelAnimationFrame(branchPositionFrame);
-    branchPositionFrame = requestAnimationFrame(positionNarrativeArtifactBranch);
-  };
-  const markScrollIntent = () => { scrollIntentUntil = performance.now() + 900; };
-  list.addEventListener("wheel", markScrollIntent, { passive: true });
-  list.addEventListener("touchstart", markScrollIntent, { passive: true });
   list.addEventListener("scroll", () => {
     scheduleBranchPosition();
-    if (performance.now() > scrollIntentUntil) return;
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => {
-      const listRect = list.getBoundingClientRect();
-      const center = listRect.top + listRect.height / 2;
-      const closest = [...list.querySelectorAll(".narrative-node")].sort((a, b) => (
-        Math.abs(a.getBoundingClientRect().top + a.offsetHeight / 2 - center)
-        - Math.abs(b.getBoundingClientRect().top + b.offsetHeight / 2 - center)
-      ))[0];
-      const entry = narrativeEntryById(closest?.dataset.narrativeId);
-      if (entry && entry.id !== activeNarrativeId) {
-        navigateToNarrativeEntry(entry, { source: "scroll" });
-        noteUserActivity();
-      }
-    }, 120);
+    settleOnCenteredEntry();
   }, { passive: true });
   document.querySelector("#overall-view").addEventListener("click", event => {
     event.stopPropagation();
@@ -3829,6 +3831,12 @@ function setupInterface() {
     stopAutoDemo();
     autoDemoStep = 0;
     setView("model", event);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const firstEntry = narrativeEntryById(GUIDE_ORDER[0]);
+      const firstButton = document.querySelector(`.narrative-node[data-narrative-id="${GUIDE_ORDER[0]}"]`);
+      firstButton?.scrollIntoView({ block: "center", behavior: "auto" });
+      if (firstEntry) navigateToNarrativeEntry(firstEntry, { source: "initial" });
+    }));
     scheduleAutoDemo();
   };
   homePage.addEventListener("click", enterModel);
