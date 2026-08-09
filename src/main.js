@@ -2903,20 +2903,30 @@ function positionNarrativeArtifactBranch() {
   const axis = document.querySelector("#report-narrative");
   if (!branch || !axis || branch.getAttribute("aria-hidden") === "true") return;
   if (matchMedia("(max-width: 800px)").matches) {
+    branch.style.removeProperty("left");
     branch.style.removeProperty("top");
+    branch.style.removeProperty("--branch-link");
     branch.style.removeProperty("--connector-y");
     return;
   }
   const node = [...document.querySelectorAll(".narrative-node")]
     .find(item => item.dataset.narrativeId === branch.dataset.narrativeId);
   if (!node) return;
+  const title = node.querySelector("b");
   const axisRect = axis.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
+  const titleRect = title?.getBoundingClientRect() || nodeRect;
   const branchRect = branch.getBoundingClientRect();
   const nodeCenter = nodeRect.top + nodeRect.height / 2 - axisRect.top;
   const maxTop = Math.max(0, axisRect.height - branchRect.height);
   const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 0, maxTop);
+  const anchorX = titleRect.right - axisRect.left + 10;
+  const preferredLink = THREE.MathUtils.clamp(innerWidth * .05, 48, 76);
+  const maxLeft = Math.max(anchorX + 28, innerWidth - axisRect.left - branchRect.width - 14);
+  const left = THREE.MathUtils.clamp(anchorX + preferredLink, anchorX + 28, maxLeft);
+  branch.style.left = `${left}px`;
   branch.style.top = `${top}px`;
+  branch.style.setProperty("--branch-link", `${left - anchorX}px`);
   branch.style.setProperty("--connector-y", `${THREE.MathUtils.clamp(nodeCenter - top, 10, Math.max(10, branchRect.height - 10))}px`);
 }
 
@@ -3076,10 +3086,16 @@ function setupNarrativeAxis() {
   });
   let scrollIntentUntil = 0;
   let settleTimer = 0;
+  let branchPositionFrame = 0;
+  const scheduleBranchPosition = () => {
+    cancelAnimationFrame(branchPositionFrame);
+    branchPositionFrame = requestAnimationFrame(positionNarrativeArtifactBranch);
+  };
   const markScrollIntent = () => { scrollIntentUntil = performance.now() + 900; };
   list.addEventListener("wheel", markScrollIntent, { passive: true });
   list.addEventListener("touchstart", markScrollIntent, { passive: true });
   list.addEventListener("scroll", () => {
+    scheduleBranchPosition();
     if (performance.now() > scrollIntentUntil) return;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => {
