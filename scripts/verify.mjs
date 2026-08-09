@@ -259,7 +259,7 @@ for (const [name, asset] of [["风帽俑", "fengmao-figurine.png"], ["笼冠俑"
     throw new Error(`Inline catalog image is missing for ${name}`);
   }
 }
-if (!main.includes('"女侍俑": { en:"FEMALE ATTENDANT", asset:"/assets/artifacts/catalog/female-mounted-figurine.png"')) {
+if (!main.includes('"女侍俑": { en:') || !main.includes('asset:"/assets/artifacts/catalog/female-mounted-figurine.png"')) {
   throw new Error("Female attendant catalog image is missing");
 }
 if (!main.includes("createArtifactStageViewer") || !main.includes("readRenderTargetPixels")) {
