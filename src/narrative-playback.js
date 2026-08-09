@@ -1,11 +1,11 @@
 export const DEMO_ROUTE = Object.freeze([
   "hongduyuan",
-  "ramp",
-  "shaft-sequence",
+  "epitaph",
+  "chamber",
   "niches",
   "threshold",
-  "chamber",
-  "epitaph",
+  "shaft-sequence",
+  "ramp",
   "theft"
 ]);
 

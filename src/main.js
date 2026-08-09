@@ -549,6 +549,7 @@ const NARRATIVE_ENTRIES = [
   }
 ];
 const GUIDE_ORDER = ["epitaph", "chamber", "niches", "threshold", "shaft-sequence", "ramp", "theft"];
+const NARRATIVE_AXIS_ORDER = ["hongduyuan", ...GUIDE_ORDER];
 const NARRATIVE_PHOTOS = {
   hongduyuan: [
     ["/assets/report/site-orthophoto.png", "发掘区正射影像"],
@@ -2994,9 +2995,9 @@ function renderNarrativeCard(entry) {
   if (!entry) return;
   const card = document.querySelector("#narrative-card");
   card.dataset.narrativeId = entry.id;
-  const guideIndex = GUIDE_ORDER.indexOf(entry.id);
+  const guideIndex = NARRATIVE_AXIS_ORDER.indexOf(entry.id);
   const cardIndex = guideIndex < 0 ? "00" : String(guideIndex + 1).padStart(2, "0");
-  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(GUIDE_ORDER.length).padStart(2, "0")} · EXCAVATION BRIEF`;
+  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(NARRATIVE_AXIS_ORDER.length).padStart(2, "0")} · EXCAVATION BRIEF`;
   document.querySelector("#narrative-card-title").textContent = entry.name;
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
@@ -3030,6 +3031,10 @@ function syncNarrativeAxis(index, preferredNarrativeId = "") {
     button.setAttribute("aria-current", active ? "step" : "false");
     button.setAttribute("aria-expanded", String(active && (narrativeCardOpen || artifactLinksForEntry(entry).length > 0)));
   });
+  if (autoDemoActive && entry) {
+    document.querySelector(`.narrative-node[data-narrative-id="${entry.id}"]`)
+      ?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
   if (!entry) {
     closeNarrativeCard();
     syncNarrativeArtifactBranch(null);
@@ -3079,7 +3084,7 @@ function setupNarrativeAxis() {
     button.setAttribute("aria-controls", artifactLinksForEntry(entry).length
       ? "narrative-card narrative-artifact-branch"
       : "narrative-card");
-    const guideNo = String(guideIndex + 1).padStart(2, "0");
+    const guideNo = String(guideIndex + 2).padStart(2, "0");
     button.setAttribute("aria-label", `${guideNo} ${entry.name} ${entry.title}`);
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-current", "false");

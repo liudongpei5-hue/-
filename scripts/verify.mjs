@@ -20,11 +20,14 @@ const cameras = JSON.parse(fs.readFileSync("references/几何数据/camera-prese
 const artifactAssets = ["public/assets/artifacts/guardian-warrior-m2338-1.png", "public/assets/artifacts/tomb-beast-m2338-2.png"];
 const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32", "lu_37", "lu_38", "lu_39", "lu_44", "lu_45"];
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
-const narrativeRoute = ["hongduyuan", "ramp", "shaft-sequence", "niches", "threshold", "chamber", "epitaph", "theft"];
+const narrativeRoute = ["hongduyuan", "epitaph", "chamber", "niches", "threshold", "shaft-sequence", "ramp", "theft"];
 
 const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "overall-view", "auto-play", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-photo-primary", "narrative-photo-secondary", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
+}
+if (!/<button\b[^>]*id="overall-view"[^>]*data-narrative-id="hongduyuan"/.test(html)) {
+  throw new Error("The first narrative node must participate in active-state synchronization");
 }
 const removedIds = ["menu-trigger", "menu-page", "data-page", "artifact-popover", "artifacts-page", "narrative-artifacts", "start-artifacts-playback", "return-space"];
 for (const id of removedIds) {
@@ -101,7 +104,8 @@ if ((main.match(/cameraIndex:\s*0/g) || []).length < 2 || !main.includes("primar
   throw new Error("The chamber must support more than one narrative point");
 }
 const narrativeHeader = html.match(/<header\b[^>]*class="narrative-head"[^>]*>([\s\S]*?)<\/header>/)?.[1] || "";
-if (!narrativeHeader.includes("EXCAVATION BRIEF") || !narrativeHeader.includes("《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》") || !narrativeHeader.includes("考古简报空间叙事")) {
+if (!narrativeHeader.includes("《陕西咸阳唐李将军魏公故卢夫人墓发掘简报》空间叙事")
+  || !narrativeHeader.includes("Excavation report space storytelling")) {
   throw new Error("The shared excavation-brief source heading is incomplete");
 }
 if (/<article\b[^>]*id="narrative-card"[\s\S]*?<cite>/.test(html)) {
@@ -236,7 +240,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   stepAtResume({ type: "artifact", narrativeId: "chamber", name: "骑马俑", locationKey: "" }),
-  { type: "narrative", narrativeId: "epitaph" },
+  { type: "narrative", narrativeId: "niches" },
   "A manually selected duplicate chamber artifact must resume at the next chapter"
 );
 assert.deepEqual(
@@ -251,7 +255,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   stepAtResume({ type: "epitaph-close", narrativeId: "epitaph" }),
-  { type: "narrative", narrativeId: "theft" },
+  { type: "narrative", narrativeId: "chamber" },
   "Playback must continue to the next chapter after closing the epitaph"
 );
 for (const [name, asset] of [["风帽俑", "fengmao-figurine.png"], ["笼冠俑", "longguan-figurine.png"], ["陶羊", "sheep.png"]]) {
