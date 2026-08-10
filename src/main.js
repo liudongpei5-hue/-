@@ -374,6 +374,8 @@ let artifactReturnFocus = null;
 let selectedFocusIndices = [];
 let narrativeCardOpen = false;
 let activeNarrativeId = "";
+let sceneRenderFrame = 0;
+let continuousRenderUntil = 0;
 let narrativeCardLayout = null;
 const NARRATIVE_LAYOUT_STORAGE_KEY = "tang-tomb:narrative-card-layout:v1";
 const NARRATIVE_CARD_VIEWPORT_GAP = 12;
@@ -1237,14 +1239,17 @@ function setMainVisualModelFocus(index) {
 }
 
 function updateMainVisualModelFocus() {
+  let changed = false;
   mainVisualFocusMaterials.forEach(material => {
     const target = material.userData.focusTargetOpacity ?? material.userData.baseOpacity ?? 1;
     if (Math.abs(material.opacity - target) < .001) {
       material.opacity = target;
       return;
     }
+    changed = true;
     material.opacity = THREE.MathUtils.lerp(material.opacity, target, .12);
   });
+  return changed;
 }
 
 async function loadMainVisualModel() {
@@ -1568,6 +1573,7 @@ function updateArtifactSpatialLocation(name, locationKey = activeArtifactLocatio
         : "简报平面图明确点位";
   }
   host?.setAttribute("aria-label", `${name}，${location.objectId}，出土于${location.label}`);
+  requestSceneRender(1400);
 }
 
 function focusArtifactTopDown(name, locationKey = activeArtifactLocationKey) {
@@ -1585,6 +1591,7 @@ function focusArtifactTopDown(name, locationKey = activeArtifactLocationKey) {
   const endFov = 36;
   const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 760;
   const started = performance.now();
+  requestSceneRender(duration + 120);
 
   const step = now => {
     if (token !== artifactMiniCameraToken || !artifactMiniState) return;
@@ -1642,6 +1649,7 @@ function enterArtifactMiniView(options = {}) {
   artifactLocationLayer.visible = true;
   updateArtifactSpatialLocation(activeArtifactName || ARTIFACT_SEQUENCE[0], activeArtifactLocationKey);
   artifactMiniState.focusedArtifact = "";
+  requestSceneRender();
 }
 
 function exitArtifactMiniView() {
@@ -1660,6 +1668,7 @@ function exitArtifactMiniView() {
   sceneHomeParent.insertBefore(canvas, sceneHomeNextSibling);
   canvas.style.transform = "";
   artifactMiniState = null;
+  requestSceneRender();
 }
 
 function boundsOf(item) {
@@ -2203,7 +2212,10 @@ function addOpenEndedStructureSketch(group, item, seed, vaulted) {
     }
   }
 }
-controls.addEventListener("change", () => normalizeGroundedCameraView());
+controls.addEventListener("change", () => {
+  normalizeGroundedCameraView();
+  requestSceneRender();
+});
 
 function addNicheSketchVolume(group, item, index, seed) {
   const box = boundsOf(item);
@@ -3065,7 +3077,7 @@ function renderNarrativeCard(entry) {
   card.dataset.narrativeId = entry.id;
   const guideIndex = NARRATIVE_AXIS_ORDER.indexOf(entry.id);
   const cardIndex = guideIndex < 0 ? "00" : String(guideIndex + 1).padStart(2, "0");
-  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(NARRATIVE_AXIS_ORDER.length).padStart(2, "0")} · EXCAVATION BRIEF`;
+  document.querySelector("#narrative-card-index").textContent = `${cardIndex} / ${String(NARRATIVE_AXIS_ORDER.length).padStart(2, "0")} · EXCAVATION REPORT`;
   document.querySelector("#narrative-card-title").textContent = entry.name;
   document.querySelector("#narrative-card-subtitle").textContent = entry.title;
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
@@ -3296,6 +3308,7 @@ function selectStructure(index, focusIndices = index < 0 ? [] : [index], narrati
   showNarrativeMeasurements(index, narrativeId);
   syncNarrativeAxis(index, narrativeId);
   applyDepthAwareLineOpacity();
+  requestSceneRender(900);
 }
 
 function buildControls(data) {
@@ -3359,6 +3372,7 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     ? 220
     : THREE.MathUtils.clamp(980 + turnAngle * 520 + zoomChange * 420, 1100, 2200);
   const started = performance.now();
+  requestSceneRender(duration + 120);
   controls.enabled = false;
   document.querySelector("#status").textContent = "镜头移动中 · CAMERA IN MOTION";
   const step = now => {
@@ -3800,6 +3814,7 @@ function setView(view, event) {
   }
   playTransition(event);
   applyViewLayerState(view);
+  if (view === "model") requestSceneRender(1400);
   return Promise.resolve(true);
 }
 
@@ -4017,7 +4032,11 @@ function setupInterface() {
 function bindSlider(id, callback) {
   const input = document.querySelector(`#${id}`);
   const output = document.querySelector(`#${id}-value`);
-  input.addEventListener("input", () => { output.value = input.value; callback(Number(input.value)); });
+  input.addEventListener("input", () => {
+    output.value = input.value;
+    callback(Number(input.value));
+    requestSceneRender();
+  });
 }
 bindSlider("density", value => objects.forEach(group => { const active = selectedIndex < 0 || selectedFocusIndices.includes(group.userData.index); const { understroke, main } = group.userData.lines; main.material.uniforms.uOpacity.value = active ? value / 100 : value / 600; understroke.material.opacity = active ? value / 245 : value / 900; }));
 bindSlider("jitter", value => objects.forEach(group => [group.userData.lines.main, group.userData.lines.echoA, group.userData.lines.echoB].forEach((line, i) => line.material.uniforms.uJitter.value = value / 9000 * (i + 1))));
@@ -4060,6 +4079,7 @@ async function init() {
     setBurialGoodsOpacity(selectedIndex < 0 || selectedIndex === 0 ? 1 : .45);
     summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / ${burialGoodsCount} artifacts`;
     logVisualProcess(`随葬品加载完成：${burialGoodsCount} 个点位，代表性模型优先`);
+    requestSceneRender();
   }).catch(error => {
     summary.textContent = `${data.summary.vertex_count} vertices / ${data.summary.edge_count} edges / artifacts unavailable`;
     logVisualProcess("随葬品加载失败：主视觉保留体量和空间线稿");
@@ -4094,21 +4114,41 @@ function updateStructurePlanContrast() {
   structurePlanElement.classList.toggle("contrast-boosted", contrast > .16);
 }
 
-function animate(now = 0) {
+function requestSceneRender(duration = 0) {
+  continuousRenderUntil = Math.max(continuousRenderUntil, performance.now() + duration);
+  if (document.hidden || appElement?.dataset.view === "home" || sceneRenderFrame) return;
+  sceneRenderFrame = requestAnimationFrame(renderSceneFrame);
+}
+
+function renderSceneFrame(now = 0) {
+  sceneRenderFrame = 0;
+  if (document.hidden || appElement?.dataset.view === "home") return;
   resize();
   if (artifactLocationHalo?.visible && artifactLocationLayer?.visible) {
     const pulse = 1 + Math.sin(now * .0042) * .14;
     artifactLocationHalo.scale.setScalar(pulse);
     artifactLocationHalo.material.opacity = .32 + (Math.sin(now * .0042) + 1) * .1;
   }
-  controls.update();
+  const controlsChanged = controls.update();
   normalizeGroundedCameraView();
-  updateMainVisualModelFocus();
+  const focusChanged = updateMainVisualModelFocus();
   updateStructurePlanContrast();
   applyDepthAwareLineOpacity();
   sketchPipeline.render(now);
-  requestAnimationFrame(animate);
+  if (controlsChanged || focusChanged || now < continuousRenderUntil) requestSceneRender();
 }
 
-init().catch(error => { document.querySelector("#status").textContent = error.message; console.error(error); });
-animate();
+window.addEventListener("resize", () => requestSceneRender(250));
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (sceneRenderFrame) cancelAnimationFrame(sceneRenderFrame);
+    sceneRenderFrame = 0;
+    return;
+  }
+  requestSceneRender();
+});
+
+init().then(() => requestSceneRender()).catch(error => {
+  document.querySelector("#status").textContent = error.message;
+  console.error(error);
+});

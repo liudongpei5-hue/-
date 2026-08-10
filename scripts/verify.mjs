@@ -325,6 +325,14 @@ if (!planBuilderSource.includes('document.createElement("span")')
 for (const marker of ["function updateStructurePlanContrast()", '"--plan-boost"', 'classList.toggle("contrast-boosted"', "updateStructurePlanContrast();"]) {
   if (!main.includes(marker)) throw new Error(`Adaptive plan contrast is missing: ${marker}`);
 }
+for (const marker of ["function requestSceneRender(duration = 0)", "function renderSceneFrame(now = 0)",
+  'appElement?.dataset.view === "home"', 'document.addEventListener("visibilitychange"',
+  "controlsChanged || focusChanged || now < continuousRenderUntil"]) {
+  if (!main.includes(marker)) throw new Error(`Demand-driven scene rendering is missing: ${marker}`);
+}
+if (/function animate\([^)]*\)\s*\{[\s\S]*?requestAnimationFrame\(animate\)/.test(main)) {
+  throw new Error("The WebGL scene must not keep a perpetual animation loop while idle");
+}
 for (const marker of [".structure-plan:before", "mix-blend-mode:screen", "backdrop-filter:blur(calc(", ".structure-plan.contrast-boosted", "@keyframes planAdaptiveGlow"]) {
   if (!style.includes(marker)) throw new Error(`Adaptive plan glow styling is missing: ${marker}`);
 }

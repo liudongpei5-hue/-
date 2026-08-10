@@ -255,15 +255,15 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-card.open{opacity:1;visibility:visible;pointer-events:auto;transform:none}
 .narrative-card.dragging{cursor:grabbing;transition:none}
 .narrative-layout-export{position:absolute;z-index:11;right:3.2vw;top:calc(5.2vh + 68px);min-height:0;padding:5px 1px;border:0;border-bottom:1px solid rgba(154,63,48,.4);background:transparent;color:#8d473a;font:8px/1.2 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.08em;cursor:pointer}
-.narrative-close{position:absolute;right:10px;top:8px;width:24px;height:24px;min-height:0;padding:0;border:0;background:transparent;color:#8d8277;font:16px/1 Arial,sans-serif;cursor:pointer}
-.narrative-card-index{margin:0 26px 9px 0;color:#9a3f30;font:7px Arial,sans-serif;letter-spacing:.13em}
+.narrative-card>.narrative-close{position:absolute;z-index:3;right:10px;top:8px;width:24px;height:24px;min-height:0;padding:0;border:0;background:transparent;color:#8d8277;font:16px/1 Arial,sans-serif;cursor:pointer}
+.narrative-card-index{margin:0 26px 9px 0;color:#9a3f30;font:12px Arial,sans-serif;letter-spacing:.13em}
 .narrative-card h2{margin:0;color:#302c27;font:400 clamp(20px,2vw,28px)/1.1 "STKaiti","KaiTi",serif;letter-spacing:.06em}
-.narrative-card-subtitle{margin:5px 0 13px;color:#9a3f30;font:8px "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.12em}
-.narrative-card-summary{margin:0 0 12px;font:11px/1.75 "DengXian","Microsoft YaHei",sans-serif}
-.narrative-card blockquote{margin:0 0 10px;padding:0 0 0 10px;border-left:1px solid rgba(154,63,48,.4);color:#70685e;font:9px/1.72 "DengXian","Microsoft YaHei",sans-serif}
-@media(max-width:1180px) and (min-width:801px){.narrative-axis{width:min(326px,35vw);grid-template-columns:108px minmax(0,206px);gap:12px}.narrative-head cite{font-size:4.8px}.narrative-node{grid-template-columns:18px minmax(0,1fr)}.narrative-node small{display:none}.narrative-card{width:min(206px,calc(100vw - 32px));padding:15px 16px}.narrative-card-summary{font-size:10px}}
+.narrative-card-subtitle{margin:5px 0 13px;color:#9a3f30;font:12px "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.12em}
+.narrative-card-summary{margin:0 0 12px;font:12px/1.75 "DengXian","Microsoft YaHei",sans-serif}
+.narrative-card blockquote{margin:0 0 10px;padding:0 0 0 10px;border-left:1px solid rgba(154,63,48,.4);color:#70685e;font:12px/1.72 "DengXian","Microsoft YaHei",sans-serif}
+@media(max-width:1180px) and (min-width:801px){.narrative-axis{width:min(326px,35vw);grid-template-columns:108px minmax(0,206px);gap:12px}.narrative-head cite{font-size:4.8px}.narrative-node{grid-template-columns:18px minmax(0,1fr)}.narrative-node small{display:none}.narrative-card{width:min(206px,calc(100vw - 32px));padding:15px 16px}.narrative-card-summary{font-size:12px}}
 @media(max-height:700px) and (min-width:801px){.narrative-axis{top:118px;bottom:125px}.narrative-head{margin-bottom:6px}.narrative-node{min-height:29px}.narrative-card{max-height:165px}.narrative-card blockquote{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3}}
-@media(max-width:800px){.narrative-axis{left:14px;top:15vh;bottom:158px;width:42px;display:grid;grid-template-columns:42px;gap:0}.narrative-head{height:51px;margin:0;padding:0 0 8px 10px}.narrative-head span,.narrative-head cite{display:none}.narrative-head small{writing-mode:vertical-rl;font-size:7px;letter-spacing:.16em}.narrative-list{justify-content:flex-start;gap:3px;padding-left:10px}.narrative-node{display:grid;grid-template-columns:1fr;width:32px;min-height:34px;padding:0;text-align:center}.narrative-node:before{left:-14px}.narrative-node em{font-size:8px}.narrative-node span{display:none}.narrative-card{right:auto;width:calc(100vw - 76px);max-height:32vh;padding:14px 16px;background:linear-gradient(90deg,rgba(244,240,230,.97),rgba(244,240,230,.87) 84%,rgba(244,240,230,.42))}.narrative-card h2{font-size:23px}.narrative-card-summary{font-size:10px}.narrative-card blockquote{font-size:8px}.narrative-layout-export{right:14px;top:72px}}
+@media(max-width:800px){.narrative-axis{left:14px;top:15vh;bottom:158px;width:42px;display:grid;grid-template-columns:42px;gap:0}.narrative-head{height:51px;margin:0;padding:0 0 8px 10px}.narrative-head span,.narrative-head cite{display:none}.narrative-head small{writing-mode:vertical-rl;font-size:7px;letter-spacing:.16em}.narrative-list{justify-content:flex-start;gap:3px;padding-left:10px}.narrative-node{display:grid;grid-template-columns:1fr;width:32px;min-height:34px;padding:0;text-align:center}.narrative-node:before{left:-14px}.narrative-node em{font-size:8px}.narrative-node span{display:none}.narrative-card{right:auto;width:calc(100vw - 76px);max-height:32vh;padding:14px 16px;background:linear-gradient(90deg,rgba(244,240,230,.97),rgba(244,240,230,.87) 84%,rgba(244,240,230,.42))}.narrative-card h2{font-size:23px}.narrative-card-summary{font-size:12px}.narrative-card blockquote{font-size:12px}.narrative-layout-export{right:14px;top:72px}}
 
 .artifact-playback-status{position:fixed;z-index:11;right:3.2vw;top:calc(5.2vh + 68px);display:flex;align-items:center;justify-content:flex-end;gap:9px;width:clamp(122px,10vw,152px);color:#847b71;font:8px/1 Arial,sans-serif;letter-spacing:.18em;opacity:.58;pointer-events:none;transition:color .35s,opacity .35s}
 .artifact-playback-status:before{content:"AUTO SEQUENCE";margin-right:auto;font-size:6px;letter-spacing:.13em}
@@ -436,7 +436,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-photo-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid rgba(70,64,54,.13)}
 .narrative-photo-strip figure{min-width:0;margin:0}
 .narrative-photo-strip img{display:block;width:100%;height:76px;object-fit:cover;filter:grayscale(.3) sepia(.08) contrast(.94);mix-blend-mode:multiply}
-.narrative-photo-strip figcaption{margin-top:5px;color:#847b71;font:6px/1.35 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.06em}
+.narrative-photo-strip figcaption{margin-top:5px;color:#847b71;font:12px/1.35 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.06em}
 .narrative-artifact-list{scrollbar-width:none}
 .narrative-artifact-list::-webkit-scrollbar{display:none}
 
@@ -504,24 +504,23 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-card.open{transform:none!important}
 .narrative-card:before{content:"";position:absolute;z-index:-1;inset:-36px -48px -42px -58px;pointer-events:none;background:radial-gradient(ellipse at 58% 43%,rgb(252 249 240 / calc(.52 + var(--ui-boost) * .36)) 0%,rgb(248 243 231 / calc(.28 + var(--ui-boost) * .34)) 48%,transparent 78%);mix-blend-mode:screen;backdrop-filter:blur(calc(4px + var(--ui-boost) * 10px)) brightness(calc(1.05 + var(--ui-boost) * .2));-webkit-backdrop-filter:blur(calc(4px + var(--ui-boost) * 10px)) brightness(calc(1.05 + var(--ui-boost) * .2));filter:drop-shadow(0 14px 26px rgba(67,52,38,.055))}
 .narrative-card>*:not(.narrative-photo-strip){position:relative;z-index:2;text-shadow:0 1px 5px rgba(252,249,240,.96),0 0 calc(5px + var(--ui-boost) * 8px) rgba(252,249,240,.9)}
-.narrative-close{right:-2px;top:0}
+.narrative-card>.narrative-close{position:absolute!important;z-index:3;right:-2px;top:0}
 .narrative-layout-export{display:none!important}
 .narrative-photo-strip{position:absolute;z-index:1;inset:0;margin:0!important;padding:0!important;border:0!important;display:block!important;pointer-events:none;overflow:visible}
-.narrative-photo-strip figure{position:absolute;width:clamp(92px,8.4vw,128px);margin:0!important;opacity:0;transform-origin:center;filter:drop-shadow(0 10px 13px rgba(50,39,29,.19))}
-.narrative-photo-strip figure:first-child{left:clamp(-154px,-10vw,-112px);top:18%;transform:translate(88px,18px) scale(.35) rotate(7deg)}
-.narrative-photo-strip figure:nth-child(2){right:4px;bottom:clamp(-118px,-10vh,-82px);transform:translate(-35px,-72px) scale(.35) rotate(-6deg)}
-.narrative-photo-strip figure:nth-child(3){left:clamp(-158px,-10.5vw,-116px);bottom:3%;transform:translate(82px,-12px) scale(.35) rotate(-5deg)}
-.narrative-photo-strip figure:nth-child(4){right:8px;top:clamp(-108px,-9vh,-76px);transform:translate(-30px,66px) scale(.35) rotate(6deg)}
-.narrative-photo-strip figure:nth-child(5){left:14%;bottom:clamp(-126px,-11vh,-92px);transform:translate(24px,-64px) scale(.35) rotate(-4deg)}
-.narrative-photo-strip img{width:100%!important;height:clamp(62px,6.3vw,88px)!important;border-radius:10px!important;object-fit:cover;filter:grayscale(.08) sepia(.04) contrast(.98)!important;mix-blend-mode:normal!important;background:#eee7d9;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
-.narrative-photo-strip figcaption{max-width:100%;margin:5px 2px 0!important;color:#6f675f!important;font-size:10px!important;line-height:1.45!important;text-shadow:0 1px 5px rgba(250,247,238,.98)}
+.narrative-photo-strip figure{position:absolute;width:clamp(123px,11.2vw,171px);margin:0!important;opacity:0;transform-origin:center;filter:drop-shadow(0 10px 13px rgba(50,39,29,.19))}
+.narrative-photo-strip figure:first-child{left:clamp(-204px,-13.3vw,-149px);top:2%;transform:translate(116px,24px) scale(.35) rotate(7deg)}
+.narrative-photo-strip figure:nth-child(2){right:-6px;top:clamp(-182px,-15vh,-129px);transform:translate(-46px,88px) scale(.35) rotate(-6deg)}
+.narrative-photo-strip figure:nth-child(3){left:clamp(-208px,-14vw,-155px);top:calc(50% + 30px);transform:translate(109px,-16px) scale(.35) rotate(-5deg)}
+.narrative-photo-strip figure:nth-child(4){right:-4px;top:calc(50% + 108px);transform:translate(-40px,88px) scale(.35) rotate(6deg)}
+.narrative-photo-strip figure:nth-child(5){left:calc(50% - 85px);bottom:calc(clamp(-220px,-18vh,-154px) - 88px);transform:translate(32px,-85px) scale(.35) rotate(-4deg)}
+.narrative-photo-strip img{width:100%!important;height:clamp(83px,8.4vw,117px)!important;border-radius:10px!important;object-fit:cover;filter:grayscale(.08) sepia(.04) contrast(.98)!important;mix-blend-mode:normal!important;background:#eee7d9;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
+.narrative-photo-strip figcaption{max-width:100%;margin:5px 2px 0!important;color:#6f675f!important;font-size:12px!important;line-height:1.45!important;text-shadow:0 1px 5px rgba(250,247,238,.98)}
 .narrative-card.note-burst .narrative-photo-strip figure{animation:fieldPhotoSpring .82s cubic-bezier(.18,1.32,.32,1) forwards}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(2){animation-delay:.11s}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(3){animation-delay:.18s}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(4){animation-delay:.25s}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(5){animation-delay:.32s}
 .narrative-card[data-narrative-id="chamber"] .narrative-photo-strip figure:first-child{top:6%;left:clamp(-166px,-11vw,-118px)}
-.narrative-card[data-narrative-id="niches"] .narrative-photo-strip figure:first-child{top:42%;left:clamp(-158px,-10vw,-112px)}
 @keyframes fieldPhotoSpring{0%{opacity:0}68%{opacity:1;transform:translate(0,0) scale(1.045) rotate(0)}100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.narrative-card.note-burst .narrative-photo-strip figure{animation:none;opacity:1;transform:none}}
 @media(max-width:800px){.narrative-card{left:70px!important;right:12px!important;top:96px!important;width:auto!important;max-height:calc(100dvh - 24px)!important;padding:12px 10px!important;overflow-y:auto!important}.narrative-photo-strip{position:relative;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px!important}.narrative-photo-strip figure{position:relative;inset:auto!important;width:auto;opacity:1;transform:none!important}}
