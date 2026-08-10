@@ -524,7 +524,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-card[data-narrative-id="niches"] .narrative-photo-strip figure:first-child{top:42%;left:clamp(-158px,-10vw,-112px)}
 @keyframes fieldPhotoSpring{0%{opacity:0}68%{opacity:1;transform:translate(0,0) scale(1.045) rotate(0)}100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.narrative-card.note-burst .narrative-photo-strip figure{animation:none;opacity:1;transform:none}}
-@media(max-width:800px){.narrative-card{left:70px!important;right:12px!important;top:96px!important;width:auto!important;max-height:46vh!important;padding:12px 10px!important}.narrative-photo-strip{position:relative;display:flex!important;gap:8px;margin-top:12px!important}.narrative-photo-strip figure{position:relative;inset:auto!important;width:min(120px,42%);opacity:1;transform:none!important}.narrative-photo-strip figure:nth-child(2){margin-left:auto!important}}
+@media(max-width:800px){.narrative-card{left:70px!important;right:12px!important;top:96px!important;width:auto!important;max-height:calc(100dvh - 24px)!important;padding:12px 10px!important;overflow-y:auto!important}.narrative-photo-strip{position:relative;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px!important}.narrative-photo-strip figure{position:relative;inset:auto!important;width:auto;opacity:1;transform:none!important}}
 @media(max-width:800px){
   .model-action{min-height:36px;padding:6px 8px;font-size:10px}
   .model-action b{display:none}
@@ -545,7 +545,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
   .narrative-artifact-list li{flex:0 0 auto}
   .narrative-artifact-option{min-height:30px;padding:6px 9px}
   .narrative-card{width:min(310px,calc(100vw - 178px));max-height:calc(100dvh - 24px)}
-  .narrative-photo-strip{grid-template-columns:1fr}
+  .narrative-photo-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .narrative-photo-strip img{height:92px}
 }
 

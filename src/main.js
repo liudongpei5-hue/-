@@ -582,8 +582,7 @@ const NARRATIVE_PHOTOS = {
     ["/assets/narrative/west-niche.png", "西壁龛"]
   ],
   "shaft-sequence": [
-    ["/assets/report/tomb-plan-section.png", "三重天井与过洞剖面"],
-    ["/assets/report/excavation-context.png", "天井发掘现场"]
+    ["/assets/report/卡片照片/井洞平剖面图.png", "井洞平剖面图"]
   ],
   ramp: [
     ["/assets/narrative/tomb-road-south-north.png", "墓道自南向北"]
