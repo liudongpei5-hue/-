@@ -291,8 +291,8 @@ if (vertexCount !== geometry.summary.vertex_count || edgeCount !== geometry.summ
 if (!main.includes("cultivationThickness: .32") || !main.includes("loessThickness: .30")) {
   throw new Error("Measured soil-layer thicknesses are missing");
 }
-if (!main.includes("CubicBezierCurve3") || !main.includes("easeBreath")) {
-  throw new Error("Camera path or breathing easing is missing");
+if (!main.includes("directionRotation") || !main.includes("zoomChange") || !main.includes("easeBreath")) {
+  throw new Error("Shortest-arc camera navigation or breathing easing is missing");
 }
 if (!main.includes("applyResponsiveShotOffset") || !main.includes("narrowFactor") || !main.includes("narrativeFactor")) {
   throw new Error("Responsive close-up safe-area compensation is missing");

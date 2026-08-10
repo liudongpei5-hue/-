@@ -490,11 +490,11 @@ const ARTIFACT_CONTEXT_LOCATIONS = {
   }
 };
 const AUTO_TIMING = {
-  model: 8200,
-  artifact: 4800,
+  model: 5600,
+  artifact: 3000,
   epitaph: 6500,
-  transition: 1050,
-  restart: 2200,
+  transition: 1400,
+  restart: 3000,
   idle: 9000
 };
 const NARRATIVE_ENTRIES = [
@@ -514,14 +514,14 @@ const NARRATIVE_ENTRIES = [
   },
   {
     id: "shaft-sequence", no: "03", name: "三重井洞", title: "六段相接 · 三次见天",
-    cameraIndex: 4, mode: "overall", focusIndices: [2, 3, 4, 5, 6, 7], triggerIndices: [2, 3, 4, 5, 6, 7],
+    cameraIndex: 4, focusIndices: [2, 3, 4, 5, 6, 7], triggerIndices: [2, 3, 4, 5, 6, 7],
     summary: "三段斜向拱顶过洞延续墓道坡度，三座上下贯通的天井插入其间。封闭土洞与竖向开口交替，使向北行进不再是重复的六次停顿，而成为一组完整的空间节奏。",
     quote: "过洞3个，均为斜向拱顶土洞……底面与墓道底面为同一斜坡。天井3个，平面均呈南北向长方形，上下贯通。",
     artifacts: NARRATIVE_ARTIFACTS["shaft-sequence"]
   },
   {
     id: "niches", no: "04", name: "东西壁龛", title: "第三过洞两侧的器物空间",
-    cameraIndex: 11, focusIndices: [3, 11, 12], triggerIndices: [11, 12],
+    cameraIndex: 11, focusIndices: [11, 12], triggerIndices: [11, 12],
     summary: "最后一段过洞向两侧展开壁龛：东龛为拱顶平底，西龛则口部小、内部大。两种尺度不同的侧向空间共同容纳随葬品，其中东龛后来受到盗洞D1的严重扰动。",
     quote: "壁龛2个，均位于第三过洞内……东一号龛为拱顶平底土洞结构；西一号龛为平顶底土洞结构，口部小，内部大。",
     artifacts: NARRATIVE_ARTIFACTS.niches
@@ -549,7 +549,7 @@ const NARRATIVE_ENTRIES = [
   },
   {
     id: "theft", no: "08", name: "两处盗洞", title: "D1至壁龛 · D2抵墓室",
-    cameraIndex: 10, mode: "overall", focusIndices: [9, 10], triggerIndices: [9, 10],
+    cameraIndex: 10, focusIndices: [9, 10], triggerIndices: [9, 10],
     summary: "两次早期盗扰选择了最短路径：D1从第三天井直抵壁龛，严重扰动东龛；D2垂直打穿甬道北侧顶部，直接抵达墓室。它们也是今天理解遗物缺失与保存差异的重要空间证据。",
     quote: "盗洞D1……位于第三天井上口，打破天井两壁直抵壁龛位置所在。盗洞D2……位于甬道北侧，垂直打破甬道顶部后直抵墓室。",
     artifacts: NARRATIVE_ARTIFACTS.theft
@@ -633,36 +633,23 @@ const CAMERA_PRESETS = {
   11: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] },
   12: { position: [-5.74, 7.70, 2.83], target: [.18, -.52, -2.26], fov: 40, focus: [11, 12] }
 };
-const STRUCTURE_SHOT_OFFSETS = {
-  default: [-7.2, 9.4, 5.2],
-  0: [-8.6, 10.4, 6.2],
-  1: [-6.2, 8.1, 4.5],
-  2: [-6.8, 8.8, 4.9],
-  3: [-6.8, 8.8, 4.9],
-  4: [-6.8, 8.8, 4.9],
-  5: [-6.8, 8.8, 4.9],
-  6: [-6.8, 8.8, 4.9],
-  7: [-6.8, 8.8, 4.9],
-  8: [-9.8, 11.8, 6.6],
-  9: [-5.6, 7.2, 4.1],
-  10: [-5.6, 7.2, 4.1],
-  11: [-5.2, 6.8, 3.3],
-  12: [-5.2, 6.8, 3.3]
-};
-const STRUCTURE_SHOT_FOV = {
-  0: 45,
-  1: 37,
-  2: 39,
-  3: 39,
-  4: 39,
-  5: 39,
-  6: 39,
-  7: 39,
-  8: 42,
-  9: 35,
-  10: 35,
-  11: 34,
-  12: 34
+// Blender reference shots: direction is target -> camera in the model's Z-up space.
+// Distance is intentionally authored per subject instead of derived from its bounds.
+const STRUCTURE_SHOTS = {
+  default: { direction: [-.34, 1, .42], distance: 10.2, fov: 40 },
+  0: { direction: [-.04, 1, .58], distance: 8.8, fov: 42 },
+  1: { direction: [-.55, 1, .42], distance: 8.4, fov: 40 },
+  2: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  3: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  4: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  5: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  6: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  7: { direction: [.02, 1, .28], distance: 14.8, fov: 43 },
+  8: { direction: [0, 1, .20], distance: 10.8, fov: 39 },
+  9: { direction: [.03, 1, .18], distance: 12.8, fov: 42 },
+  10: { direction: [.03, 1, .18], distance: 12.8, fov: 42 },
+  11: { direction: [-.55, 1, .55], distance: 10.8, fov: 40 },
+  12: { direction: [-.55, 1, .55], distance: 10.8, fov: 40 }
 };
 
 const vertexShader = `
@@ -3360,14 +3347,21 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
   const startFov = camera.fov;
-  const distance = startPosition.distanceTo(endPosition);
-  const lift = THREE.MathUtils.clamp(distance * .04, .2, .7);
-  const controlA = startPosition.clone().lerp(endPosition, .3).add(new THREE.Vector3(0, 0, lift));
-  const controlB = startPosition.clone().lerp(endPosition, .7).add(new THREE.Vector3(0, 0, lift * .72));
-  const curve = new THREE.CubicBezierCurve3(startPosition, controlA, controlB, endPosition);
+  const startOffset = startPosition.clone().sub(startTarget);
+  const endOffset = endPosition.clone().sub(endTarget);
+  const startDistance = Math.max(startOffset.length(), .001);
+  const endDistance = Math.max(endOffset.length(), .001);
+  const startDirection = startOffset.normalize();
+  const endDirection = endOffset.normalize();
+  const directionRotation = new THREE.Quaternion().setFromUnitVectors(startDirection, endDirection);
+  const interpolatedRotation = new THREE.Quaternion();
+  const interpolatedDirection = new THREE.Vector3();
+  const interpolatedTarget = new THREE.Vector3();
+  const turnAngle = startDirection.angleTo(endDirection);
+  const zoomChange = Math.abs(Math.log(endDistance / startDistance));
   const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
     ? 220
-    : THREE.MathUtils.clamp(760 + distance * 48, 1000, 1900);
+    : THREE.MathUtils.clamp(980 + turnAngle * 520 + zoomChange * 420, 1100, 2200);
   const started = performance.now();
   controls.enabled = false;
   document.querySelector("#status").textContent = "镜头移动中 · CAMERA IN MOTION";
@@ -3375,8 +3369,11 @@ function animateCamera(endPosition, endTarget, endFov, onComplete, endUp = SPATI
     if (token !== cameraMoveToken) return;
     const raw = Math.min(1, (now - started) / duration);
     const t = easeBreath(raw);
-    camera.position.copy(curve.getPoint(t));
-    controls.target.lerpVectors(startTarget, endTarget, t);
+    controls.target.copy(interpolatedTarget.lerpVectors(startTarget, endTarget, t));
+    interpolatedRotation.identity().slerp(directionRotation, t);
+    interpolatedDirection.copy(startDirection).applyQuaternion(interpolatedRotation).normalize();
+    const orbitDistance = Math.exp(THREE.MathUtils.lerp(Math.log(startDistance), Math.log(endDistance), t));
+    camera.position.copy(controls.target).addScaledVector(interpolatedDirection, orbitDistance);
     camera.up.copy(SPATIAL_CAMERA_UP);
     camera.fov = THREE.MathUtils.lerp(startFov, endFov, t);
     camera.updateProjectionMatrix();
@@ -3417,10 +3414,12 @@ function focusBoundsForIndices(focusIndices, fallbackGroup) {
   return bounds;
 }
 
-function cameraOffsetForStructure(index, focusSize) {
-  const offset = new THREE.Vector3(...(STRUCTURE_SHOT_OFFSETS[index] || STRUCTURE_SHOT_OFFSETS.default));
-  const scale = THREE.MathUtils.clamp(focusSize / 7.2, .72, 1.38);
-  return offset.multiplyScalar(scale);
+function cameraShotForStructure(index) {
+  const shot = STRUCTURE_SHOTS[index] || STRUCTURE_SHOTS.default;
+  return {
+    offset: new THREE.Vector3(...shot.direction).normalize().multiplyScalar(shot.distance),
+    fov: shot.fov
+  };
 }
 
 function navigateToStructure(index, options = {}) {
@@ -3433,12 +3432,12 @@ function navigateToStructure(index, options = {}) {
   const focusBounds = focusBoundsForIndices(focusIndices, group);
   const focusSizeVector = focusBounds.getSize(new THREE.Vector3());
   const target = focusBounds.isEmpty() ? geometricTarget : focusBounds.getCenter(new THREE.Vector3());
-  target.z += THREE.MathUtils.clamp(focusSizeVector.z * .05, .04, .22);
-  const size = focusBounds.isEmpty() ? new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3()).length() : focusSizeVector.length();
-  const endPosition = target.clone().add(cameraOffsetForStructure(index, size));
+  target.z += THREE.MathUtils.clamp(focusSizeVector.z * .025, .02, .12);
+  const shot = cameraShotForStructure(index);
+  const endPosition = target.clone().add(shot.offset);
   selectStructure(index, focusIndices, options.narrativeId);
-  logVisualProcess(`镜头切换：${group.userData.name}，同侧连续观察`);
-  animateCamera(endPosition, target, STRUCTURE_SHOT_FOV[index] || preset?.fov || 42, () => {
+  logVisualProcess(`镜头切换：${group.userData.name}，Blender 参考角度连续观察`);
+  animateCamera(endPosition, target, shot.fov || preset?.fov || 42, () => {
     const focusNames = focusIndices.map(focusIndex => objects.find(item => item.userData.index === focusIndex)?.userData.name).filter(Boolean);
     document.querySelector("#status").textContent = `${focusNames.join(" ＋ ")} · ${focusNames.length > 1 ? "组合特写" : "特写视角"}`;
   });
