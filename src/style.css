@@ -246,7 +246,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-node:before{content:"";position:absolute;left:-18px;top:50%;width:7px;height:7px;border:1px solid rgba(154,63,48,.72);border-radius:50%;background:rgba(244,241,231,.94);box-shadow:0 0 0 3px rgba(244,241,231,.35);transform:translateY(-50%);transition:width .35s,height .35s,background .35s,box-shadow .35s}
 .narrative-node em{color:#9a3f30;font:7px Georgia,serif;font-style:normal;letter-spacing:.08em}
 .narrative-node span{display:grid;gap:2px;min-width:0}
-.narrative-node b{overflow:hidden;font:10px/1.2 "DengXian","Microsoft YaHei",sans-serif;font-weight:400;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}
+.narrative-node b{justify-self:start;max-width:100%;overflow:hidden;font:10px/1.2 "DengXian","Microsoft YaHei",sans-serif;font-weight:400;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}
 .narrative-node small{overflow:hidden;color:#938a80;font:7px/1.2 "DengXian","Microsoft YaHei",sans-serif;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}
 .narrative-node:hover,.narrative-node:focus-visible,.narrative-node.active{color:#2f2b26;transform:translateX(4px)}
 .narrative-node.active:before{width:11px;height:11px;background:#9a3f30;box-shadow:0 0 0 5px rgba(154,63,48,.1),0 0 18px rgba(154,63,48,.18)}

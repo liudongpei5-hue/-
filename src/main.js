@@ -2996,10 +2996,10 @@ function positionNarrativeArtifactBranch() {
     branch.style.removeProperty("--connector-y");
     return;
   }
-  const linkLength = THREE.MathUtils.clamp(innerWidth * .042, 48, 68);
+  const linkLength = THREE.MathUtils.clamp(innerWidth * .018, 22, 34);
   const nodeCenter = nodeRect.top + nodeRect.height / 2;
   const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 14, innerHeight - branchRect.height - 14);
-  const rightAnchor = titleRect.right + 10;
+  const rightAnchor = titleRect.right + 8;
   const rightLeft = rightAnchor + linkLength;
   const openLeft = rightLeft + branchRect.width > innerWidth - 18;
   const leftAnchor = titleRect.left - 10;
@@ -3160,6 +3160,11 @@ function setupNarrativeAxis() {
   loadNarrativeCardLayout();
   setupNarrativeCardDragging();
   const list = document.querySelector("#narrative-list");
+  const artifactBranch = document.querySelector("#narrative-artifact-branch");
+  const modelInterface = document.querySelector(".model-interface");
+  if (artifactBranch && modelInterface && artifactBranch.parentElement !== modelInterface) {
+    modelInterface.append(artifactBranch);
+  }
   let settleTimer = 0;
   let branchPositionFrame = 0;
   const scheduleBranchPosition = () => {
