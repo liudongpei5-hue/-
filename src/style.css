@@ -510,10 +510,16 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 .narrative-photo-strip figure{position:absolute;width:clamp(92px,8.4vw,128px);margin:0!important;opacity:0;transform-origin:center;filter:drop-shadow(0 10px 13px rgba(50,39,29,.19))}
 .narrative-photo-strip figure:first-child{left:clamp(-154px,-10vw,-112px);top:18%;transform:translate(88px,18px) scale(.35) rotate(7deg)}
 .narrative-photo-strip figure:nth-child(2){right:4px;bottom:clamp(-118px,-10vh,-82px);transform:translate(-35px,-72px) scale(.35) rotate(-6deg)}
+.narrative-photo-strip figure:nth-child(3){left:clamp(-158px,-10.5vw,-116px);bottom:3%;transform:translate(82px,-12px) scale(.35) rotate(-5deg)}
+.narrative-photo-strip figure:nth-child(4){right:8px;top:clamp(-108px,-9vh,-76px);transform:translate(-30px,66px) scale(.35) rotate(6deg)}
+.narrative-photo-strip figure:nth-child(5){left:14%;bottom:clamp(-126px,-11vh,-92px);transform:translate(24px,-64px) scale(.35) rotate(-4deg)}
 .narrative-photo-strip img{width:100%!important;height:clamp(62px,6.3vw,88px)!important;border-radius:10px!important;object-fit:cover;filter:grayscale(.08) sepia(.04) contrast(.98)!important;mix-blend-mode:normal!important;background:#eee7d9;box-shadow:0 0 0 1px rgba(255,255,255,.5)}
 .narrative-photo-strip figcaption{max-width:100%;margin:5px 2px 0!important;color:#6f675f!important;font-size:10px!important;line-height:1.45!important;text-shadow:0 1px 5px rgba(250,247,238,.98)}
 .narrative-card.note-burst .narrative-photo-strip figure{animation:fieldPhotoSpring .82s cubic-bezier(.18,1.32,.32,1) forwards}
 .narrative-card.note-burst .narrative-photo-strip figure:nth-child(2){animation-delay:.11s}
+.narrative-card.note-burst .narrative-photo-strip figure:nth-child(3){animation-delay:.18s}
+.narrative-card.note-burst .narrative-photo-strip figure:nth-child(4){animation-delay:.25s}
+.narrative-card.note-burst .narrative-photo-strip figure:nth-child(5){animation-delay:.32s}
 .narrative-card[data-narrative-id="chamber"] .narrative-photo-strip figure:first-child{top:6%;left:clamp(-166px,-11vw,-118px)}
 .narrative-card[data-narrative-id="niches"] .narrative-photo-strip figure:first-child{top:42%;left:clamp(-158px,-10vw,-112px)}
 @keyframes fieldPhotoSpring{0%{opacity:0}68%{opacity:1;transform:translate(0,0) scale(1.045) rotate(0)}100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}}
@@ -588,9 +594,11 @@ button:focus-visible,summary:focus-visible,input:focus-visible{outline:1px solid
 
 /* Keep each artifact branch visually attached to its active chapter. */
 @media(min-width:801px){
-  .narrative-artifact-branch{position:fixed;width:clamp(156px,14vw,204px);max-height:min(46vh,344px);padding:5px 0 5px 14px;background:transparent}
-  .narrative-artifact-list{background:linear-gradient(90deg,rgba(249,246,237,.58),rgba(246,241,229,.16) 82%,transparent)!important;box-shadow:0 10px 30px rgba(63,48,34,.035)}
-  .narrative-artifact-option{min-height:30px;padding:6px 9px;background:linear-gradient(90deg,rgba(246,242,232,.56),rgba(246,242,232,.08) 82%,transparent)}
+  .narrative-artifact-branch{position:fixed;z-index:22;width:clamp(180px,16vw,230px);height:auto!important;max-height:min(44vh,360px)!important;padding:18px 0 5px 14px;background:transparent!important;isolation:isolate}
+  .narrative-artifact-label{z-index:2;left:14px;top:0;color:#973c2f!important;font-size:12px!important;font-weight:500;text-shadow:0 1px 7px rgba(250,247,238,.98),0 0 14px rgba(250,247,238,.96)}
+  .narrative-artifact-list{max-height:min(40vh,326px)!important;background:linear-gradient(90deg,rgba(248,244,234,.76),rgba(248,244,234,.42) 74%,rgba(248,244,234,.08))!important;box-shadow:0 10px 32px rgba(63,48,34,.045);backdrop-filter:blur(7px) brightness(1.08);-webkit-backdrop-filter:blur(7px) brightness(1.08)}
+  .narrative-artifact-option{min-height:34px;padding:7px 10px;background:transparent!important;color:#514b43!important;font-size:12px!important;font-weight:400;text-shadow:0 1px 7px rgba(250,247,238,.98),0 0 12px rgba(250,247,238,.9)}
+  .narrative-artifact-option:hover,.narrative-artifact-option:focus-visible,.narrative-artifact-option.active{color:#27231f!important;background:linear-gradient(90deg,rgba(154,63,48,.1),transparent 82%)!important}
   .narrative-artifact-branch.open-left{padding:5px 14px 5px 0;border-left:0;border-right:1px solid rgba(166,63,46,.82)}
   .narrative-artifact-branch.open-left:before{left:100%;background:linear-gradient(90deg,rgba(154,63,48,.9),rgba(154,63,48,.55))}
   .narrative-artifact-branch.open-left:after{left:calc(100% + var(--branch-link) - 5px)}

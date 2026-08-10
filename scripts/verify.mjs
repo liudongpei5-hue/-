@@ -22,7 +22,7 @@ const overviewModels = ["lu_1", "lu_2", "lu_3", "lu_4", "lu_7", "lu_28", "lu_32"
 const artifactSequence = ["镇墓兽", "镇墓武士俑", "墓志", "铜钱", "玻璃串珠", "贝壳", "银环", "铜钵", "骑马俑", "风帽俑", "笼冠俑", "女侍俑", "陶羊"];
 const narrativeRoute = ["hongduyuan", "epitaph", "chamber", "niches", "threshold", "shaft-sequence", "ramp", "theft"];
 
-const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "overall-view", "auto-play", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-photo-primary", "narrative-photo-secondary", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
+const requiredIds = ["app", "home-page", "scene", "structure-list", "structure-hotspots", "overall-view", "auto-play", "transition-veil", "report-narrative", "narrative-list", "narrative-card", "narrative-photo-strip", "export-narrative-layout", "narrative-artifact-branch", "narrative-artifact-list", "artifact-detail", "artifact-detail-close", "artifact-progress", "artifact-model-canvas", "artifact-spatial-inset", "artifact-scene-host", "artifact-location-index", "artifact-location-caption", "artifact-location-certainty"];
 for (const id of requiredIds) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing required interface layer: #${id}`);
 }

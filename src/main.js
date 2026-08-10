@@ -559,36 +559,34 @@ const GUIDE_ORDER = ["epitaph", "chamber", "niches", "threshold", "shaft-sequenc
 const NARRATIVE_AXIS_ORDER = ["hongduyuan", ...GUIDE_ORDER];
 const NARRATIVE_PHOTOS = {
   hongduyuan: [
-    ["/assets/report/site-orthophoto.png", "发掘区正射影像"],
-    ["/assets/report/excavation-context.png", "墓葬发掘现场"]
+    ["/assets/narrative/m2338-plan.png", "M2338平面分布图"],
+    ["/assets/narrative/site-orthophoto.png", "出土现场正射影像"],
+    ["/assets/narrative/waliu-location.png", "瓦刘墓地地理位置图"]
   ],
   epitaph: [
-    ["/assets/artifacts/catalog/epitaph-rubbing.png", "卢夫人墓志拓片"],
-    ["/assets/artifacts/location-epitaph.jpg", "墓志出土位置"]
+    ["/assets/narrative/epitaph-cover-rubbing.png", "墓志盖拓片"],
+    ["/assets/narrative/epitaph-text-rubbing.png", "墓志文拓片"],
+    ["/assets/narrative/epitaph-excavation.png", "墓志出土状况"]
   ],
   chamber: [
-    ["/assets/report/chamber-orthophoto.png", "墓室正射影像"],
-    ["/assets/report/coffin-bed.png", "墓室西侧棺床"]
+    ["/assets/narrative/chamber-orthophoto.png", "墓室正射影像"],
+    ["/assets/narrative/chamber-entrance.png", "墓室入口视角"],
+    ["/assets/narrative/chamber-artifacts.png", "墓室内随葬品"],
+    ["/assets/narrative/coffin-bed-north-south.png", "棺床自北向南"]
   ],
   niches: [
-    ["/assets/report/east-niche.png", "东壁龛发掘影像"],
-    ["/assets/report/west-niche.png", "西壁龛发掘影像"]
-  ],
-  threshold: [
-    ["/assets/report/tomb-passage.png", "甬道与墓室入口"],
-    ["/assets/report/niche-context.png", "第三过洞空间关系"]
+    ["/assets/narrative/third-passage-niches.png", "第三过洞内壁龛"],
+    ["/assets/narrative/east-niche.png", "东壁龛"],
+    ["/assets/narrative/east-niche-artifacts.png", "东壁龛内随葬品"],
+    ["/assets/narrative/west-niche-artifacts.png", "西壁龛内随葬品"],
+    ["/assets/narrative/west-niche.png", "西壁龛"]
   ],
   "shaft-sequence": [
     ["/assets/report/tomb-plan-section.png", "三重天井与过洞剖面"],
     ["/assets/report/excavation-context.png", "天井发掘现场"]
   ],
   ramp: [
-    ["/assets/report/tomb-passage.png", "墓道发掘影像"],
-    ["/assets/report/tomb-plan-section.png", "墓道剖面"]
-  ],
-  theft: [
-    ["/assets/report/site-orthophoto.png", "墓区正射影像"],
-    ["/assets/report/tomb-plan.png", "两处盗洞平面位置"]
+    ["/assets/narrative/tomb-road-south-north.png", "墓道自南向北"]
   ]
 };
 const NARRATIVE_MEASURE_INDICES = {
@@ -2998,7 +2996,7 @@ function positionNarrativeArtifactBranch() {
   }
   const linkLength = THREE.MathUtils.clamp(innerWidth * .018, 22, 34);
   const nodeCenter = nodeRect.top + nodeRect.height / 2;
-  const top = THREE.MathUtils.clamp(nodeCenter - branchRect.height / 2, 14, innerHeight - branchRect.height - 14);
+  const top = THREE.MathUtils.clamp(nodeCenter - 20, 36, innerHeight - branchRect.height - 24);
   const rightAnchor = titleRect.right + 8;
   const rightLeft = rightAnchor + linkLength;
   const openLeft = rightLeft + branchRect.width > innerWidth - 18;
@@ -3087,19 +3085,18 @@ function renderNarrativeCard(entry) {
   document.querySelector("#narrative-card-summary").textContent = entry.summary;
   document.querySelector("#narrative-card-quote").textContent = `“${entry.quote}”`;
   const photos = NARRATIVE_PHOTOS[entry.id] || [];
-  ["primary", "secondary"].forEach((slot, index) => {
-    const figure = card.querySelector(`#narrative-photo-${slot}`)?.closest("figure");
-    const image = card.querySelector(`#narrative-photo-${slot}`);
-    const caption = card.querySelector(`#narrative-photo-${slot}-caption`);
-    const photo = photos[index];
-    if (!figure || !image || !caption) return;
-    figure.hidden = !photo;
-    if (photo) {
-      image.src = photo[0];
-      image.alt = photo[1];
-      caption.textContent = photo[1];
-    }
-  });
+  const photoStrip = card.querySelector(".narrative-photo-strip");
+  photoStrip.replaceChildren(...photos.map(([src, captionText]) => {
+    const figure = document.createElement("figure");
+    const image = document.createElement("img");
+    const caption = document.createElement("figcaption");
+    image.src = src;
+    image.alt = captionText;
+    caption.textContent = captionText;
+    figure.append(image, caption);
+    return figure;
+  }));
+  photoStrip.hidden = photos.length === 0;
   card.classList.remove("note-burst");
   void card.offsetWidth;
   card.classList.add("note-burst");
