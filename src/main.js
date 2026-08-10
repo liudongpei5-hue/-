@@ -2982,6 +2982,13 @@ function positionNarrativeArtifactBranch() {
   const title = node.querySelector("b");
   const nodeRect = node.getBoundingClientRect();
   const titleRect = title?.getBoundingClientRect() || nodeRect;
+  const textRight = [title, node.querySelector("small")]
+    .filter(Boolean)
+    .reduce((right, label) => {
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      return Math.max(right, range.getBoundingClientRect().right);
+    }, titleRect.right);
   const branchRect = branch.getBoundingClientRect();
   branch.style.position = "fixed";
   if (matchMedia("(max-width: 800px)").matches) {
@@ -2992,10 +2999,10 @@ function positionNarrativeArtifactBranch() {
     branch.style.removeProperty("--connector-y");
     return;
   }
-  const linkLength = THREE.MathUtils.clamp(innerWidth * .018, 22, 34);
+  const linkLength = 10;
   const nodeCenter = nodeRect.top + nodeRect.height / 2;
   const top = THREE.MathUtils.clamp(nodeCenter - 20, 36, innerHeight - branchRect.height - 24);
-  const rightAnchor = titleRect.right + 8;
+  const rightAnchor = textRight;
   const rightLeft = rightAnchor + linkLength;
   const openLeft = rightLeft + branchRect.width > innerWidth - 18;
   const leftAnchor = titleRect.left - 10;
